@@ -8,9 +8,10 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * The samurai's body through their G (2.144.0, on jointed limbs): the feet stand on the ground but in the leap, nothing
- * pops between frames (but across the dash, its one cut), the elbows and knees bend, the hands are on the sword and the
- * scabbard where the moment has them, the cuts pass through the one marked, and the sword goes home in two.
+ * The samurai's body through their G (2.144.0, on jointed limbs; 2.144.1: the sword spun twice and put away, as the
+ * video has it): the feet stand on the ground, nothing pops between frames (but across the dash, its one cut), the elbows
+ * and knees bend, the hands are on the sword and the scabbard where the moment has them, the draw and the second spin
+ * pass through the one marked, the blade goes round twice between them, and the sword goes home in two.
  */
 class SamuraiKataTest {
     static final Vec3d FEET=new Vec3d(3.5,70,-8.5);
@@ -20,17 +21,13 @@ class SamuraiKataTest {
     static double dist(double[] a,double[] b){return Math.sqrt((a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])+(a[2]-b[2])*(a[2]-b[2]));}
     static double[] of(Vec3d v){return new double[]{-v.x,v.y,v.z};}
 
-    @Test void theFeetStandOnTheGroundButInTheLeap(){
+    @Test void theFeetStandOnTheGround(){
         for(float s=0;s<SamuraiKata.LENGTH;s+=1/60f){
             double[][] p=KataPreviewDump.points(s);
             double low=Math.min(p[FOOT_R][1],p[FOOT_L][1]);
             assertTrue(low>-.035,"no foot under the ground at "+s+": "+low);
-            boolean air=s>2.08f&&s<2.5f;
-            if(!air)assertTrue(low<.06,"a foot on the ground at "+s+": "+low);
+            assertTrue(low<.06,"a foot on the ground at "+s+": "+low);
         }
-        // the leap leaves it
-        double[][] up=KataPreviewDump.points(SamuraiKata.WHIRL);
-        assertTrue(Math.min(up[FOOT_R][1],up[FOOT_L][1])>.25,"both feet in the air in the whirl");
         assertEquals(SamuraiKata.LENGTH,SamuraiKata.CLIP.length(),1e-6);
     }
     @Test void nothingPopsButAcrossTheDash(){
@@ -74,15 +71,14 @@ class SamuraiKataTest {
             // the sword at the left hip, pointing back
             assertTrue(hb[1].z<-.5,"the sheathed sword pointing back at "+s);
         }
-        // the two-handed cuts: the left hand on the hilt under the right
-        for(float s=1.49f;s<1.93f;s+=.02f){
-            var hb=SamuraiKata.blade(Vec3d.ZERO,0,s);
+        // through the spins the scabbard is worn at the hip, the sword out of it, the left hand still on the scabbard
+        for(float s=1.2f;s<SamuraiKata.NOTO-.2f;s+=.04f){
+            assertEquals(0,SamuraiKata.along(s),1e-6);assertEquals(0,SamuraiKata.home(s),1e-6);
+            var sh=SamuraiKata.sheath(Vec3d.ZERO,0,s);
             double[] left=KataPreviewDump.points(s)[HAND_L];
-            Vec3d hilt=hb[0].subtract(hb[1].multiply(SamuraiKata.HOLD_HILT));
-            assertTrue(dist(left,of(hilt))<.1,"the left hand on the hilt at "+s+": "+dist(left,of(hilt)));
+            Vec3d hold=sh[0].add(sh[1].multiply(SamuraiKata.HOLD_SCABBARD));
+            assertTrue(dist(left,of(hold))<.09,"the left hand on the scabbard at "+s+": "+dist(left,of(hold)));
         }
-        // through the cuts the scabbard is worn at the hip, the sword out of it
-        for(float s=1.2f;s<2.3f;s+=.1f){assertEquals(0,SamuraiKata.along(s),1e-6);assertEquals(0,SamuraiKata.home(s),1e-6);}
         // nothing of it jumps
         Vec3d before=null;
         for(float s=1.01f;s<SamuraiKata.LENGTH;s+=1/120f){
@@ -107,13 +103,23 @@ class SamuraiKataTest {
             }
             assertTrue(through,"the blade passes through the one marked between "+at[0]+" and "+at[1]);
         }
-        // each cut is fast at its middle, and the fastest is the whirl or the draw
+        // between them the blade goes round twice, the one way (to the left: its azimuth falling), never back
+        double round=0,was=azimuth(1.39f),back=0;
+        for(float s=1.39f+1/240f;s<=2.33f;s+=1/240f){
+            double now=azimuth(s),step=MathHelper.wrapDegrees(now-was);
+            round+=step;back=Math.max(back,step);was=now;
+        }
+        assertTrue(round<-700&&round>-760,"twice round: "+round);
+        assertTrue(back<1.5,"never back: "+back);
+        // the first over the head: the sword hand above the head's height as the blade passes behind
+        assertTrue(KataPreviewDump.points(1.67f)[HAND_R][1]>KataPreviewDump.points(1.67f)[0][1]-.05,"the hand over the head in the first spin");
+        // each cut is fast at its middle
         for(float[] c:SamuraiKata.CUTS){
             double speed=SamuraiKata.tip(Vec3d.ZERO,0,c[0]-1/120f).distanceTo(SamuraiKata.tip(Vec3d.ZERO,0,c[0]+1/120f))*60;
             assertTrue(speed>14,"the cut at "+c[0]+": "+speed+" blocks a second");
         }
         // between the cuts and after them the blade rests
-        for(float s:new float[]{1.34f,2.72f,3.4f,5f}){
+        for(float s:new float[]{1.34f,3.02f,3.4f,5f}){
             double speed=SamuraiKata.tip(Vec3d.ZERO,0,s-1/120f).distanceTo(SamuraiKata.tip(Vec3d.ZERO,0,s+1/120f))*60;
             assertTrue(speed<3,"at rest at "+s+": "+speed);
         }

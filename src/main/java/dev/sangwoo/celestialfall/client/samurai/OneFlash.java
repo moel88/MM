@@ -154,7 +154,7 @@ public final class OneFlash implements Fx.Skill {
     /** The cutscene's camera's jolts at {@code sec}: {yaw, pitch, roll} degrees (each comes in over a frame or two and dies away). */
     static float[] jolt(float sec){
         float yaw=0,pitch=0,roll=0;
-        float[][] hits={{SamuraiScene.CLOSE,1.5f},{1.535f,.9f},{1.69f,.6f},{1.89f,.8f},{SamuraiKata.WHIRL,1.5f},{2.49f,.7f},{SamuraiKata.FLICK,.5f},{SamuraiKata.CLICK,1.1f},{SLASH_SEC[0],1.6f},{SLASH_SEC[1],1.8f},{SLASH_SEC[2],1.8f},{SLASH_SEC[3],2.2f}};
+        float[][] hits={{SamuraiScene.CLOSE,1.5f},{SamuraiKata.SPIN,.5f},{SamuraiKata.WHIRL,1.4f},{SamuraiKata.CLICK,1.1f},{SLASH_SEC[0],1.6f},{SLASH_SEC[1],1.8f},{SLASH_SEC[2],1.8f},{SLASH_SEC[3],2.2f}};
         for(int k=0;k<hits.length;k++){
             float a=sec-hits[k][0];if(a<0||a>.3f)continue;
             float e=FxLib.kick(sec,hits[k][0],.05f)*hits[k][1];
@@ -440,7 +440,7 @@ public final class OneFlash implements Fx.Skill {
                 m.needle(from,to,(.05+.13*g[1])*(1-u*u)+.012,.55,WHITE,(1-u*u*u)*out);
             }
         }
-        // the whirl: a ring thrown out level from them as the blade goes round
+        // the second spin: a ring thrown out level from them as the blade goes round through the one marked
         float wh=s-(SamuraiKata.WHIRL-.04f);
         if(wh>=0&&wh<.34f&&v.live(SamuraiKata.WHIRL)){
             float u=wh/.34f;Vec3d at=v.feet.add(0,1.25,0);
@@ -448,31 +448,8 @@ public final class OneFlash implements Fx.Skill {
             if(light)FxLib.ring(m,at,r,.7,RED,.4f*(1-u)*out);
             else{FxLib.ring(m,at,r,.13*(1-u)+.015,WHITE,(1-u*u)*out);FxLib.ring(m,at.add(0,-.5,0),r*.72,.05*(1-u)+.01,WHITE,.7f*(1-u)*out);}
         }
-        // the one marked cut by the whirl: red off them along the blade's way
+        // the one marked cut by it: red off them along the blade's way
         spray(v,m,light,SamuraiKata.WHIRL,97,out);
-        // landed: the dust thrown out along the ground
-        float ld=s-2.47f;
-        if(ld>=0&&ld<.36f&&!light){
-            float u=ld/.36f,on=(1-u)*Math.min(1,ld/.03f)*out;Vec3d g=v.feet.add(0,.1,0);
-            for(int k=0;k<6;k++)arc(m,g.add(0,.04*k,0),new Vec3d(1,0,0),new Vec3d(0,0,1),.7+2.4*u+.25*k,k*1.1+u*2,1.7+.5*(k%3),.06+.04*(k%2),WHITE,.8f*on,18);
-            for(int k=0;k<9;k++){double ang=k*.7+2,r=.6+2.1*u;m.softDisc(g.add(Math.cos(ang)*r,.14,Math.sin(ang)*r),.55,0xf4f6f8,.28f*on);}
-        }
-        // the blood flicked off the blade: drops thrown from its point down to the ground, where they lie a moment
-        float fl=s-SamuraiKata.FLICK;
-        if(fl>=0&&fl<.8f&&!light&&v.live(SamuraiKata.FLICK)){
-            Vec3d[] line=cutLine(v,SamuraiKata.FLICK);double floor=v.feet.y+.03;
-            for(int k=0;k<16;k++){
-                double fast=5+7*SamuraiScene.hash(k,331),lift=1.2*(SamuraiScene.hash(k,332)-.3);
-                Vec3d vel=line[1].multiply(fast).add(v.hand.multiply(1.6*(SamuraiScene.hash(k,333)-.5))).add(0,lift,0);
-                Vec3d from=line[0].subtract(line[1].multiply(.5*SamuraiScene.hash(k,334)));
-                // (it falls until it lands)
-                double fall=14,vy=vel.y,h=from.y-floor,land=(vy+Math.sqrt(vy*vy+2*fall*h))/fall,t=Math.min(fl,land);
-                Vec3d at=from.add(vel.x*t,vy*t-.5*fall*t*t,vel.z*t);
-                float on=(1-SamuraiScene.smooth((fl-.5f)/.3f))*out;double size=.04+.05*SamuraiScene.hash(k,335);
-                if(fl<land){Vec3d tail=at.subtract(vel.add(0,-fall*t,0).normalize().multiply(.22));m.needle(tail,at,size*1.6,.8,0xc00a1a,.95f*on);}
-                else m.quad(at.add(size*2,0,0),at.add(0,0,size*1.4),at.add(-size*2,0,0),at.add(0,0,-size*1.4),0xa00814,.9f*on);
-            }
-        }
         // the sword laid at the scabbard's mouth: light off the blade, glints running down it, and the flash as it goes home
         float lit=noto(s);
         if(lit>0){

@@ -97,7 +97,7 @@ public final class SamuraiClient {
 
     /** Its sounds (ones the map has: Kageno's sword's four, the clash): {seconds on its clock, the sound, its loudness, its pitch}. */
     static final Object[][] CUES={
-        {SamuraiScene.DASH,"kageno_m1_4",1f,1f},{1.5f,"kageno_m1_1",.85f,1.05f},{1.66f,"kageno_m1_2",.7f,1.18f},{1.86f,"kageno_m1_2",.85f,1.04f},{SamuraiKata.WHIRL-.04f,"kageno_m1_3",.95f,.96f},{SamuraiKata.FLICK-.03f,"kageno_m1_1",.55f,1.3f},
+        {SamuraiScene.DASH,"kageno_m1_4",1f,1f},{SamuraiKata.SPIN-.1f,"kageno_m1_2",.7f,1.15f},{SamuraiKata.WHIRL-.06f,"kageno_m1_3",.95f,.96f},
         {SamuraiScene.FLASH,"kageno_m1_4",1f,.82f},
         {SLASH_SEC[0],"kageno_m1_1",1f,.95f},{SLASH_SEC[1],"kageno_m1_2",1f,1f},{SLASH_SEC[2],"kageno_m1_3",1f,1.05f},{SLASH_SEC[3],"kageno_m1_4",1f,1.1f},
         {SamuraiKata.SNAP-.02f,"clash",1f,1f}};

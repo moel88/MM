@@ -32,7 +32,7 @@ class OneFlashTest {
         for(float[] c:SamuraiKata.CUTS)assertTrue(c[0]>=SamuraiScene.DASH&&c[0]<SamuraiKata.NOTO);
         // the lines they leave: the white the shortest, the red the longest, all gone before the next part
         assertTrue(OneFlash.LINE_WHITE<OneFlash.LINE_INK&&OneFlash.LINE_INK<OneFlash.LINE_RED);
-        assertTrue(SamuraiKata.FLICK+OneFlash.LINE_RED<SamuraiScene.FLASH);
+        assertTrue(SamuraiKata.WHIRL+OneFlash.LINE_RED<SamuraiScene.FLASH);
     }
     @Test void theRingOfInkIsBrushedRoundOnceAndScatteredByTheDash(){
         assertEquals(0,OneFlash.ensoDrawn(0),1e-6);assertEquals(1,OneFlash.ensoDrawn(OneFlash.ENSO_TO),1e-6);
@@ -48,7 +48,7 @@ class OneFlashTest {
         assertTrue(OneFlash.ENSO_ROUND<Math.PI*2-.3);
     }
     @Test void theLightOffTheBladeIsTheSheathingsAlone(){
-        assertEquals(0,OneFlash.noto(SamuraiKata.WHIRL));assertEquals(0,OneFlash.noto(SamuraiKata.FLICK));assertEquals(0,OneFlash.noto(SamuraiKata.CLICK+.05f));assertEquals(0,OneFlash.noto(1.5f));
+        assertEquals(0,OneFlash.noto(SamuraiKata.WHIRL));assertEquals(0,OneFlash.noto(SamuraiKata.SPIN));assertEquals(0,OneFlash.noto(SamuraiKata.CLICK+.05f));assertEquals(0,OneFlash.noto(1.5f));
         for(float s=SamuraiKata.NOTO+.04f;s<SamuraiKata.CLICK-.06f;s+=.02f)assertEquals(1,OneFlash.noto(s),1e-4,"at "+s);
         // (a flash as the sword is laid there)
         assertTrue(OneFlash.noto(SamuraiKata.NOTO+.01f)>1);
@@ -57,7 +57,7 @@ class OneFlashTest {
     }
     @Test void theCameraJoltsAtItsBlowsAndNowhereElse(){
         for(float s:new float[]{1.0f,1.19f,3.6f,5f,6f}){float[] j=OneFlash.jolt(s);assertEquals(0,Math.abs(j[0])+Math.abs(j[1])+Math.abs(j[2]),1e-4,"at "+s);}
-        float[] blows={SLASH_SEC[0],SLASH_SEC[1],SLASH_SEC[2],SLASH_SEC[3],1.535f,SamuraiKata.WHIRL,SamuraiKata.CLICK};
+        float[] blows={SLASH_SEC[0],SLASH_SEC[1],SLASH_SEC[2],SLASH_SEC[3],SamuraiKata.SPIN,SamuraiKata.WHIRL,SamuraiKata.CLICK};
         for(float at:blows){
             float most=0;
             for(float s=at;s<at+.1f;s+=1/120f){float[] j=OneFlash.jolt(s);most=Math.max(most,Math.abs(j[0])+Math.abs(j[1])+Math.abs(j[2]));}
