@@ -1008,6 +1008,7 @@ public final class SkillShots implements ClientModInitializer {
         p.getItemCooldownManager().remove(CelestialFall.ATOMIC_SWORD);
         // the figure shots: no player in the picture (and no stand of theirs), last entry's figures gone
         for(var f:p.getServerWorld().getEntitiesByClass(dev.sangwoo.celestialfall.stand.StarPlatinumEntity.class,p.getBoundingBox().expand(64),e->true))f.discard();
+        for(var f:p.getServerWorld().getEntitiesByClass(dev.sangwoo.celestialfall.stand.GoldExperienceEntity.class,p.getBoundingBox().expand(64),e->true))f.discard();
         boolean figure="STAND".equals(current);p.setInvisible(figure);
         // the stand of the entry: none for the figure, Star Platinum (in) for SUMMON, Kageno for the rest
         String stand=figure?"none":"SUMMON".equals(current)?"star_platinum":"kageno";
@@ -1581,6 +1582,8 @@ public final class SkillShots implements ClientModInitializer {
                         if(age==at){log.append("  key ").append(what).append(" at ").append(age).append('\n');key(code,down);}continue;}
                     if(what.startsWith("STANCE_")){if(age==at)server(p->{int stance=dev.sangwoo.celestialfall.stand.StarPlatinumStance.NAMES.indexOf(what.substring(7).toLowerCase(Locale.ROOT));
                             for(var f:p.getServerWorld().getEntitiesByClass(dev.sangwoo.celestialfall.stand.StarPlatinumEntity.class,p.getBoundingBox().expand(64),e->true))f.setStance(stance);
+                            int gold=dev.sangwoo.celestialfall.stand.GoldExperienceStance.NAMES.indexOf(what.substring(7).toLowerCase(Locale.ROOT));
+                            if(gold>=0)for(var f:p.getServerWorld().getEntitiesByClass(dev.sangwoo.celestialfall.stand.GoldExperienceEntity.class,p.getBoundingBox().expand(64),e->true))f.setStance(gold);
                             log.append("  stance ").append(what.substring(7)).append(" at ").append(age).append('\n');});continue;}
                     // "WHEEL_DOWN@n"/"WHEEL_UP@n" (2.73.0): a notch of the mouse wheel where the pointer is, through
                     // Minecraft's own mouse handler (over the player list it scrolls the list)
@@ -1820,8 +1823,16 @@ public final class SkillShots implements ClientModInitializer {
             // 2.60.0: a stand shot's actors walk from their START (shot ticks), for the Star Finger's slow
             case "SUMMON"->{if(!actors.isEmpty())server(p->{spot=p.getPos();serverStart=p.getWorld().getTime();});}
             case "STAND"->server(p->{
-                var w=p.getServerWorld();var figure=dev.sangwoo.celestialfall.stand.StarPlatinum.TYPE.create(w);
+                var w=p.getServerWorld();
                 var at=p.getPos().add(net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw()).multiply(opt("sfw",3)));float yaw=p.getYaw()+180+opt("syaw",0);
+                // 2.145.0: "figure=gold" stands Gold Experience's figure there instead (stance=idle|hero|stand)
+                if("gold".equals(opts.get("figure"))){
+                    var gold=dev.sangwoo.celestialfall.stand.GoldExperience.TYPE.create(w);
+                    gold.refreshPositionAndAngles(at.x,at.y,at.z,yaw,0);gold.setHeadYaw(yaw);gold.setBodyYaw(yaw);
+                    gold.setStance(Math.max(0,dev.sangwoo.celestialfall.stand.GoldExperienceStance.NAMES.indexOf(opts.getOrDefault("stance","idle"))));
+                    log.append("  gold figure ").append(w.spawnEntity(gold)?"stands":"refused").append(String.format(Locale.ROOT," at (%.2f, %.2f, %.2f) facing %.0f%n",at.x,at.y,at.z,yaw));return;
+                }
+                var figure=dev.sangwoo.celestialfall.stand.StarPlatinum.TYPE.create(w);
                 figure.refreshPositionAndAngles(at.x,at.y,at.z,yaw,0);figure.setHeadYaw(yaw);figure.setBodyYaw(yaw);
                 figure.setStance(Math.max(0,dev.sangwoo.celestialfall.stand.StarPlatinumStance.NAMES.indexOf(opts.getOrDefault("stance","idle"))));
                 log.append("  figure ").append(w.spawnEntity(figure)?"stands":"refused").append(String.format(Locale.ROOT," at (%.2f, %.2f, %.2f) facing %.0f%n",at.x,at.y,at.z,yaw));});

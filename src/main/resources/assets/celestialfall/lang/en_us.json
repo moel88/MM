@@ -219,5 +219,8 @@
   "subtitles.celestialfall.meteor_craft": "Stand arrow crafted",
   "entity.celestialfall.star_platinum": "Star Platinum",
   "message.botand.platinum_spawned": "Summoned %s",
-  "message.botand.platinum_cleared": "Removed %s Star Platinum figure(s)"
+  "message.botand.platinum_cleared": "Removed %s Star Platinum figure(s)",
+  "entity.celestialfall.gold_experience": "Gold Experience",
+  "message.botand.gold_spawned": "Summoned %s",
+  "message.botand.gold_cleared": "Removed %s Gold Experience figure(s)"
 }

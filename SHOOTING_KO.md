@@ -373,6 +373,15 @@
 - 배율은 20입니다. 가까이서 착지를 찍는 장면은 30입니다.
 - 근접 장면은 `time=`을 꼭 적습니다. 적지 않으면 앞 항목의 밤이 이어집니다.
 
+### 골드 익스피리언스 (모델, 2.145.0)
+- 모델링이라 영상은 찍지 않고 실제 게임 화면 사진만 보냅니다.
+- `python3 tools/kageno/shots/run_shots.py OUT "STAND;figure=gold;stance=idle|hero|stand;len=16;time=6000;fov=50;orbit=R/UP/0/START/3/0/CY" 1280x720 8`
+  - 몸 전체: `orbit=3.0/1.25/0/0/3/0/1.2`(앞), `3.0/1.5/0/35/3/0/1.2`(비스듬히), `3.0/1.5/0/180/3/0/1.2`(뒤). 얼굴 가까이: `fov=40;orbit=1.5/1.9/0/12/3/0/1.85`. 원화 자세: `stance=hero;orbit=3.0/1.4/0/-20/3/0/1.25`와 `…/150/…`.
+  - 한 실행에 여섯 항목을 넣으면 약 6분입니다. 항목마다 마지막에서 둘째 프레임을 씁니다(자세가 다 든 뒤).
+  - `then=STANCE_HERO@n`으로 자세를 바꿉니다(스타플래티나와 같은 단계 이름).
+- 모양을 고치는 동안에는 `python3 tools/stand/make_gold_experience.py 폴더` 뒤 `python3 -I tools/stand/preview_geo.py 폴더/geo/entity/gold_experience.geo.json 폴더/textures/entity/gold_experience.png 출력.png "0,2,20,112;30,5,20,112;180,2,20,112" 420x760 폴더/stands/gold_experience_poses.json:stand`로 봅니다(생성 약 30초). 게임 화면이 아니므로 검증 결과로 보내지 않고, 시안으로 보일 때는 그 점을 밝힙니다.
+- 비율을 볼 때는 원작 설정화 옆에 같은 높이로 나란히 놓습니다. 미리보기의 색은 게임보다 어둡고 칙칙하게 나옵니다(게임에서는 밝은 크림 금색).
+
 ### 스타플래티나
 - **모델(전시용):** `python3 tools/kageno/shots/run_shots.py OUT "STAND;stance=idle;len=…;orbit=R/UP/DEGPS/START/3/0/CY;fov=50" 1280x730 8`
   - 배율 8이어야 반복 프레임이 0입니다.

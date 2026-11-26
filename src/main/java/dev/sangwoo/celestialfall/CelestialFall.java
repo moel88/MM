@@ -72,6 +72,8 @@ public final class CelestialFall implements ModInitializer {
         dev.sangwoo.celestialfall.samurai.SamuraiUltimate.initialize();
         dev.sangwoo.celestialfall.meteor.MeteorRegistry.initialize();
         dev.sangwoo.celestialfall.stand.StarPlatinum.initialize();
+        // (2.145.0) Gold Experience: so far its looks, a figure to see its model
+        dev.sangwoo.celestialfall.stand.GoldExperience.initialize();
         dev.sangwoo.celestialfall.loot.LootRegistry.initialize();
         dev.sangwoo.celestialfall.terrain.TerrainRestoration.initialize();
         dev.sangwoo.celestialfall.town.TownBlocks.initialize();
@@ -155,6 +157,7 @@ public final class CelestialFall implements ModInitializer {
             dev.sangwoo.celestialfall.gacha.GachaServer.add(botand);
             botand.then(dev.sangwoo.celestialfall.meteor.MeteorManager.commands());
             botand.then(dev.sangwoo.celestialfall.stand.StarPlatinum.commands());
+            botand.then(dev.sangwoo.celestialfall.stand.GoldExperience.commands());
             botand.then(dev.sangwoo.celestialfall.boss.Bosses.commands());
             // (2.113.0) Lee So-sang's H gauge set (OP)
             botand.then(dev.sangwoo.celestialfall.isosang.IsosangAttack.commands());

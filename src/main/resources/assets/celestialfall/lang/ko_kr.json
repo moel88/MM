@@ -219,5 +219,8 @@
   "subtitles.celestialfall.meteor_craft": "스탠드 화살을 만듦",
   "entity.celestialfall.star_platinum": "스타 플래티나",
   "message.botand.platinum_spawned": "%s 소환 완료",
-  "message.botand.platinum_cleared": "스타 플래티나 %s개를 치움"
+  "message.botand.platinum_cleared": "스타 플래티나 %s개를 치움",
+  "entity.celestialfall.gold_experience": "골드 익스피리언스",
+  "message.botand.gold_spawned": "%s 소환 완료",
+  "message.botand.gold_cleared": "골드 익스피리언스 %s개를 치움"
 }
