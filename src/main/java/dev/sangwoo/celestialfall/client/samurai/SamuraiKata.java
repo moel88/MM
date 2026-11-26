@@ -23,13 +23,18 @@ import static dev.sangwoo.celestialfall.client.kageno.Anim.k;
  * sword an inch out. From the dash they are beside the one marked (the clip's facing turns with the cut,
  * SamuraiClient.facing; the one marked stands behind them to the right): they come in turning, the sword drawn in the turn
  * through the one marked (the scabbard pulled back at the hip) and held low out to the right. Then, as the video has it
- * (2.144.1, user: "원본은 그냥 맞추면 검을 2번 돌리고 납도를 하긴해"; 2.144.0 had three two-handed cuts, a leaping whirl
- * and a flick of the blood here, mine: gone), the sword is spun twice and put away: once round flat over the head on the
- * wrist ({@link #SPIN}), the body rising under it; and once more, wider and tilted, down behind through the one marked
- * ({@link #WHIRL}), the body sinking and turning into it; up off that over the right shoulder, the blade laid down to the
- * scabbard's mouth at the left hip and slid slowly home ({@link #NOTO} to {@link #CLICK}) but for its last inch; they
- * stand so, head down, while the four blades cut; and as the world comes back the thumb's width is pushed home
- * ({@link #SNAP}): the pillar of light goes up at that. The left hand is on the scabbard throughout.
+ * (2.144.1, user: "원본은 그냥 맞추면 검을 2번 돌리고 납도를 하긴해", and of my first two spins, flat over the head on the
+ * wrist: "영상을 봐 저렇게 안 돌리잖어"; 2.144.0 had three two-handed cuts, a leaping whirl and a flick of the blood here,
+ * mine: gone), the sword is swung round twice with the whole arm before them and put away, read from the video frame by
+ * frame at sixty a second. The first: up from low on the right across the front to high on the left as they rise and turn
+ * with it, the right foot coming off the ground; on over the head and down behind the back; out again backhand, level
+ * across the front at the neck's height to the right, the arm leading and the blade whipping through after it. The second,
+ * a wheel in the plane before them: up on the right, over the head, down on the left, low across the front, out to the
+ * right and up again. From there the blade is turned over the head and laid down to the scabbard's mouth at the left hip
+ * and slid slowly home ({@link #NOTO} to {@link #CLICK}) but for its last inch; they stand so, head down, while the four
+ * blades cut; and as the world comes back the thumb's width is pushed home ({@link #SNAP}): the pillar of light goes up at
+ * that. The left hand is on the scabbard throughout. ({@link #WHIRL} is the server's second blow, as the second wheel
+ * comes up.)
  * <p>
  * The scabbard ({@link #sheath}): along the blade, its mouth as far up it as the sword is home ({@link #home}), while the
  * sword is in it or going in; worn at the left hip through the cuts ({@link #along}).
@@ -37,9 +42,9 @@ import static dev.sangwoo.celestialfall.client.kageno.Anim.k;
 public final class SamuraiKata {
     private SamuraiKata(){}
     /** The clip's moments (seconds of the cast's clock). */
-    public static final float BURST=.6f,DASH=1f,ARRIVE=1.2f,SPIN=1.59f,WHIRL=2.25f,NOTO=2.44f,CLICK=2.93f,SNAP=6.8f,LENGTH=7.5f;
-    /** Its cuts: {when the blade is through its middle, how big}: the draw, the first spin (across the front), the second (through the one marked). */
-    public static final float[][] CUTS={{ARRIVE,1f},{SPIN,.8f},{WHIRL,1.4f}};
+    public static final float BURST=.6f,DASH=1f,ARRIVE=1.2f,WHIRL=2.25f,NOTO=2.37f,CLICK=2.93f,SNAP=6.8f,LENGTH=7.5f;
+    /** Its cuts: {when the blade is through its middle, how big}: the draw; the first swing's rise across the front and its backhand; the second's fall on the left and its way out to the right. */
+    public static final float[][] CUTS={{ARRIVE,1f},{1.49f,1.2f},{1.765f,.9f},{1.985f,1.1f},{2.085f,1f}};
     /** The sword along its line from the hand: the guard and the point (blocks; Kageno's sword's, ComboSkill). */
     public static final double GUARD=.24,TIP=1.35;
     /** The scabbard's length and half its width and depth (blocks). */
@@ -182,27 +187,43 @@ public final class SamuraiKata {
     static final R6.Pose IN_OUT=on(0,.48,-.34,-140,24,3,d(-20,118),d(-5,65),d(-40,40),.12,.24,-.2,.8,120,6);
     static final R6.Pose IN_CUT=on(0,.36,-.36,-108,22,6,d(-8,150),d(0,165),d(-40,10),.14,.26,-.45,.55,90,4);
     static final R6.Pose IN_THROUGH=on(0,.14,-.38,-48,19,6,d(-2,118),d(2,128),d(-42,-50),.2,.34,-.45,-.15,40,4);
-    static final R6.Pose DRAWN=on(0,.02,-.38,-8,16,4,d(2,76),d(4,84),d(-44,-90),.26,.42,-.24,-.48,0,4);
-    static final R6.Pose DRAWN_HELD=on(0,0,-.36,-4,14,3,d(4,80),d(6,86),d(-44,-90),.26,.42,-.24,-.48,0,2);
-    // the first spin: the blade round once flat over the head, on the wrist (front, left, behind, right), the body rising under it
-    static final R6.Pose S1_FRONT=on(0,0,-.3,4,10,2,d(34,62),d(9,40),L_SAYA,.26,.42,-.24,-.48,0,0);
-    static final R6.Pose S1_LEFT=on(0,.01,-.22,14,4,0,d(60,-5),d(12,-40),L_SAYA,.26,.42,-.24,-.48,0,-4);
-    static final R6.Pose S1_BACK=on(0,.02,-.18,20,-1,-2,d(70,-120),d(12,-130),L_SAYA,.26,.42,-.24,-.48,0,-6);
-    static final R6.Pose S1_ROUND=on(0,.01,-.18,8,0,0,d(70,145),d(10,140),L_SAYA,.26,.42,-.24,-.48,0,-4);
-    static final R6.Pose S1_OUT=on(0,0,-.2,-6,3,2,d(60,88),d(6,86),L_SAYA,.26,.42,-.24,-.48,0,-2);
-    // the second: wider and tilted, high before them to the left and low behind through the one marked, the body sinking and turning into it
-    static final R6.Pose S2_HELD=on(0,0,-.21,-6,4,2,d(58,86),d(4,84),L_SAYA,.26,.42,-.24,-.48,0,-2);
-    static final R6.Pose S2_IN=on(0,.01,-.2,0,2,1,d(57,58),d(12,51),L_SAYA,.26,.42,-.24,-.48,0,-3);
-    static final R6.Pose S2_FRONT=on(0,.02,-.17,14,-2,-1,d(60,0),d(24,-12),L_SAYA,.26,.42,-.24,-.48,-4,-6);
-    static final R6.Pose S2_LEFT=on(.02,0,-.18,26,0,-3,d(64,-75),d(28,-90),L_SAYA,.26,.42,-.24,-.48,-6,-6);
-    static final R6.Pose S2_BACK=on(.06,-.05,-.27,-8,6,0,d(58,178),d(10,-160),L_SAYA,.26,.42,-.24,-.48,20,0);
-    static final R6.Pose S2_CUT=on(.12,-.12,-.4,-58,14,4,d(4,127),d(-8,133),L_SAYA,.26,.42,-.24,-.48,70,6);
-    static final R6.Pose S2_OUT=on(.1,-.1,-.36,-38,12,4,d(10,86),d(6,76),L_SAYA,.26,.42,-.24,-.48,40,6);
-    // up off it over the right shoulder
-    static final R6.Pose RAISED=on(.08,-.06,-.24,-6,6,3,d(26,68),d(68,40),L_SAYA,.25,.3,-.22,-.34,0,2);
+    static final R6.Pose DRAWN=on(0,.02,-.38,-8,16,4,d(-23,74),d(-21,92),d(-44,-90),.26,.42,-.24,-.48,0,4);
+    static final R6.Pose DRAWN_HELD=on(0,0,-.37,-5,16,4,d(-26,74),d(-24,94),d(-44,-90),.26,.42,-.24,-.48,0,4);
+    // the wide stance the swings are made in (the feet's places: right, ahead)
+    private static final double RR=.42,RF=.16,LR=-.42,LF=-.1;
+    /** A key as {@link #on} in the wide stance but the right foot off the ground, its leg along a world way. */
+    private static R6.Pose lifted(double rt,double fw,double up,float yaw,float pitch,float roll,double[] rArm,double[] blade,double[] rLeg,float head,float down){
+        R6.Pose p=on(rt,fw,up,yaw,pitch,roll,rArm,blade,L_SAYA,RR,RF,LR,LF,head,down);
+        p.rLeg=R6.local(p,rLeg[0],rLeg[1]);
+        return p;
+    }
+    // the first swing (the video's 1.43 to 1.8): up from low on the right across the front to high on the left, rising and turning with it;
+    static final R6.Pose A_RISE=on(0,.04,-.3,16,10,-2,d(-4,28),d(14,6),L_SAYA,.3,.32,-.34,-.3,0,2);
+    static final R6.Pose A_HIGH=lifted(-.04,.04,-.16,52,-4,-6,d(56,-38),d(55,-62),d(-52,122),-10,-4);
+    // on over the head, the right foot off the ground, and down behind the back;
+    static final R6.Pose A_OVER=lifted(-.07,.04,-.13,78,-4,-4,d(72,-25),d(14,150),d(-38,140),-30,-2);
+    static final R6.Pose A_BEHIND=lifted(-.06,.03,-.15,62,0,-2,d(64,-5),d(-38,165),d(-46,126),-20,0);
+    // out backhand level across the front to the right: the arm leads, the blade whips through after it
+    static final R6.Pose A_ACROSS=on(-.02,.02,-.2,18,6,0,d(8,-18),d(24,-84),L_SAYA,RR,RF,LR,LF,0,2);
+    static final R6.Pose A_LEAD=on(.01,.02,-.21,-14,8,2,d(4,50),d(12,-30),L_SAYA,RR,RF,LR,LF,6,2);
+    static final R6.Pose A_WHIP=on(.03,.02,-.215,-28,9,3,d(4,74),d(2,38),L_SAYA,RR,RF,LR,LF,9,3);
+    static final R6.Pose A_OUT=on(.04,.02,-.22,-40,10,4,d(4,88),d(-12,100),L_SAYA,RR,RF,LR,LF,12,4);
+    // the second (1.8 to 2.25), a wheel before them: up on the right, over the head, down on the left, low across the front, out to the right, up
+    static final R6.Pose B_UP_RIGHT=on(.04,.02,-.18,-28,-4,2,d(48,88),d(42,96),L_SAYA,RR,RF,LR,LF,8,-4);
+    static final R6.Pose B_UP=on(.02,.02,-.14,-8,-6,0,d(78,70),d(76,-60),L_SAYA,RR,RF,LR,LF,0,-6);
+    static final R6.Pose B_OVER=on(-.02,.02,-.15,58,2,-4,d(62,-40),d(42,-80),L_SAYA,RR,RF,LR,LF,-30,0);
+    static final R6.Pose B_LEFT=on(-.04,.03,-.2,52,12,-3,d(2,-32),d(2,-88),L_SAYA,RR,RF,LR,LF,-20,4);
+    static final R6.Pose B_LOW_LEFT=on(-.03,.04,-.28,34,18,-2,d(-52,-12),d(-36,-78),L_SAYA,RR,RF,LR,LF,-8,8);
+    static final R6.Pose B_LOW=on(0,.05,-.31,4,22,0,d(-52,24),d(-34,4),L_SAYA,RR,RF,LR,LF,0,10);
+    static final R6.Pose B_LOW_RIGHT=on(.03,.04,-.29,-24,17,3,d(-30,78),d(-26,72),L_SAYA,RR,RF,LR,LF,10,8);
+    static final R6.Pose B_OUT=on(.05,.03,-.24,-40,10,4,d(0,92),d(2,98),L_SAYA,RR,RF,LR,LF,24,4);
+    static final R6.Pose B_RISE=on(.04,.02,-.19,-24,0,3,d(44,90),d(54,95),L_SAYA,RR,RF,LR,LF,10,-2);
+    static final R6.Pose B_HIGH=on(.02,.01,-.15,-10,-5,2,d(68,84),d(80,80),L_SAYA,RR,RF,LR,LF,0,-4);
+    // turned over the head toward the left hip
+    static final R6.Pose TURNED=on(.01,0,-.16,4,-1,2,d(66,70),d(6,-86),L_SAYA,.36,.14,-.36,-.1,-6,0);
     // the blade laid to the scabbard's mouth and slid home (the hands are put: hands); standing so; the last inch; done
-    static final R6.Pose LAID=on(.06,-.03,-.18,14,6,2,d(30,60),d(-36,-110),L_SAYA,.24,.2,-.2,-.24,-10,8);
-    static final R6.Pose SLID=on(.02,0,-.24,12,12,2,R_HILT,B_HILT,L_SAYA,.24,.2,-.2,-.24,-14,14);
+    static final R6.Pose LAID=on(0,0,-.18,14,6,2,d(30,60),d(-36,-110),L_SAYA,.3,.14,-.3,-.12,-10,8);
+    static final R6.Pose SLID=on(0,0,-.24,12,12,2,R_HILT,B_HILT,L_SAYA,.3,.14,-.3,-.12,-14,14);
     static final R6.Pose STOOD=on(0,0,-.12,8,5,0,R_HILT,B_HILT,L_SAYA,.18,.12,-.18,-.12,0,10);
     static final R6.Pose READY=on(0,0,-.19,10,8,0,R_HILT,B_HILT,L_SAYA,.18,.12,-.18,-.12,0,14);
     static final R6.Pose SNAPPED=on(0,0,-.23,10,10,0,R_HILT,B_HILT,L_SAYA,.18,.12,-.18,-.12,0,16);
@@ -223,20 +244,27 @@ public final class SamuraiKata {
         k(1.21,IN_THROUGH,Anim.Ease.LINEAR),
         k(1.31,DRAWN,Anim.Ease.OUT),
         k(1.39,DRAWN_HELD),
-        // the sword spun twice (the middle keys at an even turn: no stop on the way round)
-        k(1.47,S1_FRONT,Anim.Ease.IN),
-        k(1.55,S1_LEFT,Anim.Ease.LINEAR),
-        k(1.63,S1_BACK,Anim.Ease.LINEAR),
-        k(1.71,S1_ROUND,Anim.Ease.LINEAR),
-        k(1.8,S1_OUT,Anim.Ease.OUT),
-        k(1.84,S2_HELD),
-        k(1.9,S2_IN,Anim.Ease.IN),
-        k(2.0,S2_FRONT,Anim.Ease.LINEAR),
-        k(2.1,S2_LEFT,Anim.Ease.LINEAR),
-        k(2.18,S2_BACK,Anim.Ease.LINEAR),
-        k(WHIRL,S2_CUT,Anim.Ease.LINEAR),
-        k(2.33,S2_OUT,Anim.Ease.OUT),
-        k(2.39,RAISED),
+        // the sword swung round twice (the middle keys at an even pace: no stop on the way round)
+        k(1.43,DRAWN_HELD),
+        k(1.49,A_RISE,Anim.Ease.IN),
+        k(1.535,A_HIGH,Anim.Ease.LINEAR),
+        k(1.61,A_OVER,Anim.Ease.LINEAR),
+        k(1.665,A_BEHIND,Anim.Ease.LINEAR),
+        k(1.705,A_ACROSS,Anim.Ease.LINEAR),
+        k(1.75,A_LEAD,Anim.Ease.LINEAR),
+        k(1.775,A_WHIP,Anim.Ease.LINEAR),
+        k(1.8,A_OUT,Anim.Ease.LINEAR),
+        k(1.85,B_UP_RIGHT,Anim.Ease.LINEAR),
+        k(1.895,B_UP,Anim.Ease.LINEAR),
+        k(1.935,B_OVER,Anim.Ease.LINEAR),
+        k(1.968,B_LEFT,Anim.Ease.LINEAR),
+        k(2.0,B_LOW_LEFT,Anim.Ease.LINEAR),
+        k(2.035,B_LOW,Anim.Ease.LINEAR),
+        k(2.07,B_LOW_RIGHT,Anim.Ease.LINEAR),
+        k(2.105,B_OUT,Anim.Ease.LINEAR),
+        k(2.165,B_RISE,Anim.Ease.LINEAR),
+        k(2.225,B_HIGH,Anim.Ease.OUT),
+        k(2.285,TURNED),
         k(NOTO,LAID),
         k(CLICK,SLID),
         k(3.12,STOOD),

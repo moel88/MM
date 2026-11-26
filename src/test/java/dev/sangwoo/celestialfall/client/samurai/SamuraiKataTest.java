@@ -8,10 +8,10 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * The samurai's body through their G (2.144.0, on jointed limbs; 2.144.1: the sword spun twice and put away, as the
- * video has it): the feet stand on the ground, nothing pops between frames (but across the dash, its one cut), the elbows
- * and knees bend, the hands are on the sword and the scabbard where the moment has them, the draw and the second spin
- * pass through the one marked, the blade goes round twice between them, and the sword goes home in two.
+ * The samurai's body through their G (2.144.0, on jointed limbs; 2.144.1: the sword swung round twice and put away, as
+ * the video has it): a foot is always on the ground, nothing pops between frames (but across the dash, its one cut), the
+ * elbows and knees bend, the hands are on the sword and the scabbard where the moment has them, the draw passes through
+ * the one marked, the blade is where the video has it through the two swings, and the sword goes home in two.
  */
 class SamuraiKataTest {
     static final Vec3d FEET=new Vec3d(3.5,70,-8.5);
@@ -21,7 +21,7 @@ class SamuraiKataTest {
     static double dist(double[] a,double[] b){return Math.sqrt((a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])+(a[2]-b[2])*(a[2]-b[2]));}
     static double[] of(Vec3d v){return new double[]{-v.x,v.y,v.z};}
 
-    @Test void theFeetStandOnTheGround(){
+    @Test void aFootIsAlwaysOnTheGround(){
         for(float s=0;s<SamuraiKata.LENGTH;s+=1/60f){
             double[][] p=KataPreviewDump.points(s);
             double low=Math.min(p[FOOT_R][1],p[FOOT_L][1]);
@@ -93,7 +93,7 @@ class SamuraiKataTest {
     @Test void theCutsPassThroughTheOneMarked(){
         // the one marked stands behind them to the right: 1.4 right, 1.3 behind
         double foe=Math.toDegrees(Math.atan2(1.4,-1.3));
-        for(float[] at:new float[][]{{1.05f,1.25f},{SamuraiKata.WHIRL-.09f,SamuraiKata.WHIRL+.09f}}){
+        for(float[] at:new float[][]{{1.05f,1.25f}}){
             boolean through=false;double before=MathHelper.wrapDegrees(azimuth(at[0])-foe);
             for(float s=at[0];s<=at[1];s+=1/240f){
                 double now=MathHelper.wrapDegrees(azimuth(s)-foe);
@@ -103,16 +103,27 @@ class SamuraiKataTest {
             }
             assertTrue(through,"the blade passes through the one marked between "+at[0]+" and "+at[1]);
         }
-        // between them the blade goes round twice, the one way (to the left: its azimuth falling), never back
-        double round=0,was=azimuth(1.39f),back=0;
-        for(float s=1.39f+1/240f;s<=2.33f;s+=1/240f){
-            double now=azimuth(s),step=MathHelper.wrapDegrees(now-was);
-            round+=step;back=Math.max(back,step);was=now;
+        // the two swings, as the video has them (the blade's way: right of them, up, ahead; the camera before them):
+        // the first up across the front to high on the left, over the head and behind, out level to the right;
+        double[][] first={{1.535,-1,1,0},{1.61,1,0,-1},{1.705,-1,0,0},{1.8,1,0,0}};
+        // the second a wheel before them: up, left, down, right, up; then turned over toward the left hip
+        double[][] second={{1.895,0,1,0},{1.968,-1,0,0},{2.035,0,-1,0},{2.105,1,0,0},{2.225,0,1,0},{2.285,-1,0,0}};
+        for(double[][] swing:new double[][][]{first,second})for(double[] w:swing){
+            Vec3d b=SamuraiKata.blade(Vec3d.ZERO,0,(float)w[0])[1];
+            double along=-b.x*w[1]+b.y*w[2]+b.z*w[3],most=Math.sqrt(w[1]*w[1]+w[2]*w[2]+w[3]*w[3]);
+            assertTrue(along/most>.55,"the blade at "+w[0]+": "+(-b.x)+" "+b.y+" "+b.z);
         }
-        assertTrue(round<-700&&round>-760,"twice round: "+round);
-        assertTrue(back<1.5,"never back: "+back);
-        // the first over the head: the sword hand above the head's height as the blade passes behind
-        assertTrue(KataPreviewDump.points(1.67f)[HAND_R][1]>KataPreviewDump.points(1.67f)[0][1]-.05,"the hand over the head in the first spin");
+        // the wheel goes round the one way before them (its angle from the right, up positive, ever rising but where the blade points at or away from the camera)
+        double was=Math.toDegrees(Math.atan2(SamuraiKata.blade(Vec3d.ZERO,0,1.8f)[1].y,-SamuraiKata.blade(Vec3d.ZERO,0,1.8f)[1].x)),round=0;
+        for(float t=1.8f+1/240f;t<=2.225f;t+=1/240f){
+            Vec3d b=SamuraiKata.blade(Vec3d.ZERO,0,t)[1];double now=Math.toDegrees(Math.atan2(b.y,-b.x)),step=MathHelper.wrapDegrees(now-was);
+            if(b.x*b.x+b.y*b.y>.3)assertTrue(step>-2,"the wheel never back at "+t+": "+step);
+            round+=step;was=now;
+        }
+        assertTrue(round>400&&round<500,"once round and up again: "+round);
+        // the right foot comes off the ground as they turn under the first, the left stays
+        double[][] turn=KataPreviewDump.points(1.61f);
+        assertTrue(turn[FOOT_R][1]>.12&&turn[FOOT_L][1]<.05,"the right foot up at 1.61: "+turn[FOOT_R][1]);
         // each cut is fast at its middle
         for(float[] c:SamuraiKata.CUTS){
             double speed=SamuraiKata.tip(Vec3d.ZERO,0,c[0]-1/120f).distanceTo(SamuraiKata.tip(Vec3d.ZERO,0,c[0]+1/120f))*60;

@@ -154,7 +154,7 @@ public final class OneFlash implements Fx.Skill {
     /** The cutscene's camera's jolts at {@code sec}: {yaw, pitch, roll} degrees (each comes in over a frame or two and dies away). */
     static float[] jolt(float sec){
         float yaw=0,pitch=0,roll=0;
-        float[][] hits={{SamuraiScene.CLOSE,1.5f},{SamuraiKata.SPIN,.5f},{SamuraiKata.WHIRL,1.4f},{SamuraiKata.CLICK,1.1f},{SLASH_SEC[0],1.6f},{SLASH_SEC[1],1.8f},{SLASH_SEC[2],1.8f},{SLASH_SEC[3],2.2f}};
+        float[][] hits={{SamuraiScene.CLOSE,1.5f},{1.49f,.8f},{1.765f,.6f},{1.985f,.8f},{2.085f,.9f},{SamuraiKata.CLICK,1.1f},{SLASH_SEC[0],1.6f},{SLASH_SEC[1],1.8f},{SLASH_SEC[2],1.8f},{SLASH_SEC[3],2.2f}};
         for(int k=0;k<hits.length;k++){
             float a=sec-hits[k][0];if(a<0||a>.3f)continue;
             float e=FxLib.kick(sec,hits[k][0],.05f)*hits[k][1];
@@ -440,15 +440,7 @@ public final class OneFlash implements Fx.Skill {
                 m.needle(from,to,(.05+.13*g[1])*(1-u*u)+.012,.55,WHITE,(1-u*u*u)*out);
             }
         }
-        // the second spin: a ring thrown out level from them as the blade goes round through the one marked
-        float wh=s-(SamuraiKata.WHIRL-.04f);
-        if(wh>=0&&wh<.34f&&v.live(SamuraiKata.WHIRL)){
-            float u=wh/.34f;Vec3d at=v.feet.add(0,1.25,0);
-            double r=1.1+3.2*(1-(1-u)*(1-u));
-            if(light)FxLib.ring(m,at,r,.7,RED,.4f*(1-u)*out);
-            else{FxLib.ring(m,at,r,.13*(1-u)+.015,WHITE,(1-u*u)*out);FxLib.ring(m,at.add(0,-.5,0),r*.72,.05*(1-u)+.01,WHITE,.7f*(1-u)*out);}
-        }
-        // the one marked cut by it: red off them along the blade's way
+        // the one marked cut again as the second swing comes up (the server's second blow): red off them along the blade's way
         spray(v,m,light,SamuraiKata.WHIRL,97,out);
         // the sword laid at the scabbard's mouth: light off the blade, glints running down it, and the flash as it goes home
         float lit=noto(s);
