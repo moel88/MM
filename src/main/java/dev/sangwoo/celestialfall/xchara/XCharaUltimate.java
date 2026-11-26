@@ -114,6 +114,8 @@ public final class XCharaUltimate {
             // H with the hack on: the terrain delete (2.133.0, user request: "지금 H를 q활성화 H를 바꾸고 기존 H는 삭제해": in the
             // cleave's place, 2.125.0 to 2.132.5, gone), asked with where the middle of their screen points (XCharaAttack.erase,
             // XCharaErase); (2.134.0) with it off the great X slash (XCharaAttack.xslash: the way they face as it begins)
+            // (2.139.0) H is the boss's alone: a player's press is dropped (XCharaRules.playersH)
+            if(skill==H&&!playersH)return;
             if(skill==H){server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))XCharaAttack.erase(player,aim);else XCharaAttack.xslash(player);});return;}
             if(skill!=G)return;
             // G: with the hack on the sword dance; (2.128.0) with it off the slam (XCharaAttack.slam)

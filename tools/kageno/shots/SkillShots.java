@@ -1022,6 +1022,8 @@ public final class SkillShots implements ClientModInitializer {
         // (for X Chara's terrain delete, whose grounds go under the ones near); gone with the next shot
         for(int id:EXTRA_DUMMIES){var old=p.getServerWorld().getEntityById(id);if(old!=null)old.discard();}
         EXTRA_DUMMIES.clear();
+        // "xh=1" (2.139.0): X Chara's H skills from the player's hand for this shot (they are the boss's alone)
+        dev.sangwoo.celestialfall.xchara.XCharaRules.playersH=opt("xh",0)>0;
         // "wall=FW" (2.138.1): a stone wall five wide and four high FW blocks in front of the player, square to the way
         // they face (for X Chara's Z, which stops before a wall); "wallrt=R" puts it R blocks to their right, "pane=1"
         // makes it of glass panes. It is gone with the next shot (the blocks that were there put back).

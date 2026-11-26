@@ -684,7 +684,9 @@ public final class MpClient implements ClientModInitializer {
      * (2 past it). Z and the caster struck as it flickers ("HITME": it goes all the same). Z walking ("W+": moved
      * from where they walked to). A wall 3 blocks ahead ("WALL+": three wide, three high): Z stops short of it. (2.138.1)
      * A row of glass panes 2 blocks ahead ("PANE+"): stopped before it. A pillar whose corner only the side of their
-     * body would cut ("POST+": the middle of their body passes it by 0.1): stopped before it too. Both
+     * body would cut ("POST+": the middle of their body passes it by 0.1): stopped before it too. (2.139.0) H is the boss's
+     * alone: the caster's H with the hack off and on ("H": their client does not take the key) and the press sent
+     * all the same ("HRAW": the server drops it) begin nothing (the server notes the knife's skills as they begin: the T after them, the corruption knives, is noted). Both
      * clients log the casts as they hear of them, where the caster is and is drawn, and its sound.
      */
     private static final String[] XCHARAZ_SCRIPT={
@@ -697,7 +699,8 @@ public final class MpClient implements ClientModInitializer {
         "330 DIST8","335 WALL+","350 Z","375 WALL-",
         "400 DIST8","405 PANE+","420 Z","445 PANE-",
         "470 DIST8","475 POST+","490 Z","515 POST-",
-        "530 Q","540 NOCDOFF","560 END"};
+        "530 Q","540 NOCDOFF",
+        "550 H","560 HRAW","575 Q","590 H","600 HRAW","620 Q","635 T","670 END"};
     private static final String[] XCHARAY_SCRIPT={
         "5 XCHARA","8 NOCDOFF","40 DIST8","45 HEAL",
         "60 Y","80 Q",
@@ -857,6 +860,8 @@ public final class MpClient implements ClientModInitializer {
 
     @Override public void onInitializeClient(){
         if(ROLE==null)return;caster=ROLE.equals("caster");
+        // (2.139.0) X Chara's H skills are the boss's alone; their own checks look at them from a player's hand
+        dev.sangwoo.celestialfall.xchara.XCharaRules.playersH=ONLY.equals("xcharax")||ONLY.equals("xcharaerase");
         ClientTickEvents.END_CLIENT_TICK.register(client->{mc=client;try{tick();}catch(Throwable t){fail(t);}});
     }
     private Path dir(){return OUT.resolve(ROLE);}
@@ -1002,7 +1007,7 @@ public final class MpClient implements ClientModInitializer {
                     if(ONLY.equals("glow"))glowWatch();
                     if(ONLY.equals("vanilla"))vanillaWatch();
                     if(ONLY.equals("isosanggauge")||ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh"))watcherStill();
-                    if(age>(ONLY.equals("xcharax")?900:ONLY.equals("xcharaerase")?1700:ONLY.equals("xcharacut")?760:ONLY.equals("xcharaslam")?1000:ONLY.equals("xcharay")?700:ONLY.equals("xcharaz")?640:ONLY.equals("xcharat")?1500:ONLY.equals("xcharae")?2400:ONLY.equals("xcharaplain")?1000:ONLY.equals("xcharaq")?900:ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("xcharax")?900:ONLY.equals("xcharaerase")?1700:ONLY.equals("xcharacut")?760:ONLY.equals("xcharaslam")?1000:ONLY.equals("xcharay")?700:ONLY.equals("xcharaz")?900:ONLY.equals("xcharat")?1500:ONLY.equals("xcharae")?2400:ONLY.equals("xcharaplain")?1000:ONLY.equals("xcharaq")?900:ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -1084,6 +1089,10 @@ public final class MpClient implements ClientModInitializer {
             wallPut=post?new int[]{bx+1,by,bz+n,bx+1,by+2,bz+n}:new int[]{bx-1,by,bz+n,bx+1,by+2,bz+n};
             command(String.format(Locale.ROOT,"fill %d %d %d %d %d %d %s",wallPut[0],wallPut[1],wallPut[2],wallPut[3],wallPut[4],wallPut[5],pane?"minecraft:glass_pane":"minecraft:stone"));}return;}
         if(step.equals("WALL-")||step.equals("PANE-")||step.equals("POST-")){if(down&&wallPut!=null){command(String.format(Locale.ROOT,"fill %d %d %d %d %d %d minecraft:air",wallPut[0],wallPut[1],wallPut[2],wallPut[3],wallPut[4],wallPut[5]));wallPut=null;}return;}
+        // (2.139.0) X Chara's H asked of the server as a client of old would ask it (the key itself is no longer theirs)
+        if(step.equals("HRAW")){if(down){var b=net.fabricmc.fabric.api.networking.v1.PacketByteBufs.create();b.writeByte(dev.sangwoo.celestialfall.xchara.XCharaRules.H);
+            boolean hack=dev.sangwoo.celestialfall.client.xchara.HackMode.on(mc.player);if(hack){b.writeDouble(mc.player.getX());b.writeDouble(mc.player.getY());b.writeDouble(mc.player.getZ()+6);}
+            net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(dev.sangwoo.celestialfall.xchara.XCharaUltimate.INPUT,b);note("H's press sent to the server all the same (hack "+hack+")");}return;}
         if(step.equals("NOCDON")||step.equals("NOCDOFF")){if(down)command("botand nocooldown "+(step.equals("NOCDON")?"on":"off"));return;}
         if(step.equals("JAB+")||step.equals("JAB-")){if(down){try{if(step.equals("JAB+"))Files.writeString(OUT.resolve("jab"),"jab");else Files.deleteIfExists(OUT.resolve("jab"));}catch(Exception e){note("ERROR "+e);}note(step.equals("JAB+")?"the watcher asked to strike as the glow begins":"the watcher asked to strike no more");}return;}
         if(step.equals("SLAIN")){if(down)command("damage @s 1000 minecraft:player_attack by Watcher");return;}

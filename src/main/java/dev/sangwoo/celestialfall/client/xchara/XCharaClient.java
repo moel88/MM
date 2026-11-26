@@ -263,6 +263,9 @@ public final class XCharaClient {
             return true;
         }
         if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_H){
+            // (2.139.0, user request: "일반 플레이어는 q비활성화 h q활성화 h 모두 못 쓰게 이건 보스 전용 스킬이야") the two H
+            // skills are the boss's alone: for a player H is no key of X Chara's, as for a Star Platinum not awakened
+            if(!playersH)return false;
             // (2.133.0, user request: "지금 H를 q활성화 H를 바꾸고 기존 H는 삭제해") H with the hack on, the terrain delete
             // (XCharaAttack.erase): asked with where the middle of the screen points (ErasePress.aimPoint: the ground marked
             // where they look). (2.134.0) With the hack off, the great X slash (XCharaAttack.xslash: the way they look as it

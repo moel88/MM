@@ -42,6 +42,8 @@ public final class MpServer implements ModInitializer {
 
     @Override public void onInitialize(){
         if(!Boolean.getBoolean("botand.mp.server"))return;
+        // (2.139.0) X Chara's H skills are the boss's alone; their own checks look at them from a player's hand
+        dev.sangwoo.celestialfall.xchara.XCharaRules.playersH=XCHARAX_ONLY||XCHARAERASE_ONLY;
         ServerLifecycleEvents.SERVER_STARTED.register(this::started);
         ServerPlayConnectionEvents.JOIN.register((handler,sender,server)->server.execute(()->joined(handler.player)));
         ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->note(server,"left "+handler.player.getGameProfile().getName()));
@@ -852,11 +854,18 @@ public final class MpServer implements ModInitializer {
      * then and how far from the watcher; when the caster is moved more than a block in a tick; the caster's health
      * as it changes; when it is ready again.
      */
+    private boolean blinkCleave,blinkHack;
     private void xcharaBlink(MinecraftServer server){
         long now=server.getOverworld().getTime();
         var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
         var watcher=server.getPlayerManager().getPlayerList().stream().filter(q->!caster(q)).findFirst().orElse(null);
-        if(caster==null||watcher==null)return;
+        if(caster==null)return;
+        // (noted with or without the watcher there: it may have left by the end of the script)
+        // (2.139.0) a skill of the knife's begun or over (H's two are the boss's alone: none begins from the caster's H)
+        boolean cleave=dev.sangwoo.celestialfall.xchara.XCharaAttack.cleaving(caster);
+        if(cleave!=blinkCleave){blinkCleave=cleave;note(server,"caster's knife skill "+(cleave?"begun":"over")+" at "+now+" (hack "+dev.sangwoo.celestialfall.xchara.XCharaHack.on(caster)+")");}
+        if(dev.sangwoo.celestialfall.xchara.XCharaHack.on(caster)!=blinkHack){blinkHack=!blinkHack;note(server,"caster's hack "+(blinkHack?"on":"off")+" at "+now+"; knife skill running "+cleave+", busy "+dev.sangwoo.celestialfall.combat.CombatManager.busy(caster));}
+        if(watcher==null)return;
         boolean on=dev.sangwoo.celestialfall.xchara.XCharaBlink.casting(caster);
         long ready=dev.sangwoo.celestialfall.xchara.XCharaBlink.ready(caster);
         double far=Math.hypot(watcher.getX()-caster.getX(),watcher.getZ()-caster.getZ());

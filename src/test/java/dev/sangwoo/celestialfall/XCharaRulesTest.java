@@ -79,4 +79,8 @@ class XCharaRulesTest {
         assertEquals(400,HEAL_COOLDOWN);
         assertEquals(100+HEAL_LENGTH+HEAL_COOLDOWN,healReady(100));
     }
+    @Test void theTwoHSkillsAreTheBosssAlone(){
+        // (2.139.0, "일반 플레이어는 q비활성화 h q활성화 h 모두 못 쓰게 이건 보스 전용 스킬이야") a player's H is not taken
+        assertFalse(XCharaRules.playersH,"a player's H is dropped unless a tool turns it on");
+    }
 }

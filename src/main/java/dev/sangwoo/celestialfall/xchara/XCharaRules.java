@@ -19,6 +19,14 @@ package dev.sangwoo.celestialfall.xchara;
  */
 public final class XCharaRules {
     private XCharaRules(){}
+    /**
+     * (2.139.0, user request: "일반 플레이어는 q비활성화 h q활성화 h 모두 못 쓰게 이건 보스 전용 스킬이야") Whether a
+     * player's H is taken: no. X Chara's two H skills (the terrain delete with the hack on, the great X slash with it
+     * off) are the boss's alone (XCharaBrain asks XCharaAttack for them itself). A player's client does not take the key
+     * (it goes where it would without the mod's hand) and the server drops the press if one is sent all the same. Only
+     * the capture and multiplayer tools turn this on, to look at the two skills from a player's hand.
+     */
+    public static boolean playersH=false;
     /** Its casts' place among the effects' skills (KagenoSkills: Kageno's 0 to 9, Lee So-sang's 15). */
     public static final int SKILL=14;
     /** The press asks for G (xchara_skill_v1's first byte): with the hack on the sword dance; (2.128.0) with it off the slam (XCharaAttack.slam, SlamRules). */
