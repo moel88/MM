@@ -7,20 +7,29 @@ import static org.junit.jupiter.api.Assertions.*;
 class ProgressionTest {
     @Test void defaultsAreFreshAndKagenoIsAStand() {
         assertEquals(new ProgressProfile(1,0,0,"none"),ProgressProfile.NEW);
-        assertEquals(200,StandStats.get("none").health());assertEquals(200,StandStats.get("kageno").health());
+        assertEquals(350,StandStats.get("none").health());assertEquals(325,StandStats.get("kageno").health());
         assertTrue(StandStats.known("kageno"));assertEquals("none",new ProgressProfile(1,0,0,null).stand());
+    }
+    @Test void eachCharacterHasItsOwnHealth() {
+        // (2.140.0, "스탠드 없음은 hp 350 이소상은 300 엑스차라는 375 스타플래티나는 400 카게노 325")
+        assertEquals(350,StandStats.get("none").health());assertEquals(300,StandStats.get("isosang").health());
+        assertEquals(375,StandStats.get("x_chara").health());assertEquals(400,StandStats.get("star_platinum").health());
+        assertEquals(325,StandStats.get("kageno").health());
+        // one the mod does not know is as one with none
+        assertEquals(350,StandStats.get("nobody").health());
+        for(String id:StandStats.ids())assertTrue(StandStats.known(id)&&StandStats.get(id).health()>=300,id);
     }
     @Test void leeSoSangIsACharacterTheAdminCommandGives() {
         // (2.76.0) given by /botand progress stand <targets> isosang, which offers every id
         assertTrue(StandStats.known("isosang"));assertEquals("이소상",StandStats.get("isosang").korean());
-        assertEquals("stand.botand.isosang",StandStats.get("isosang").translation());assertEquals(200,StandStats.get("isosang").health());
+        assertEquals("stand.botand.isosang",StandStats.get("isosang").translation());assertEquals(300,StandStats.get("isosang").health());
         assertTrue(java.util.Arrays.asList(StandStats.ids()).contains("isosang"));
         assertEquals("isosang",new ProgressProfile(1,0,0,"isosang").stand());
     }
     @Test void xCharaIsACharacterTheAdminCommandGives() {
         // (2.111.0) given by /botand progress stand <targets> x_chara, which offers every id
         assertTrue(StandStats.known("x_chara"));assertEquals("엑스 차라",StandStats.get("x_chara").korean());
-        assertEquals("stand.botand.x_chara",StandStats.get("x_chara").translation());assertEquals(200,StandStats.get("x_chara").health());
+        assertEquals("stand.botand.x_chara",StandStats.get("x_chara").translation());assertEquals(375,StandStats.get("x_chara").health());
         assertTrue(java.util.Arrays.asList(StandStats.ids()).contains("x_chara"));
         assertEquals("x_chara",new ProgressProfile(1,0,0,"x_chara").stand());
     }

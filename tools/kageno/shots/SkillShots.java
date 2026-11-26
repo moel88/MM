@@ -358,6 +358,10 @@ public final class SkillShots implements ClientModInitializer {
     private final Set<UUID> castsLogged=new HashSet<>();private long dashLogged=-1000;private List<String> listLogged=List.of();private int hitsLogged;private String glowLogged="";
     /** One row of motion.csv for this client tick, and for M1 the hits whose sound has just started (sound.csv). */
     private void logTick()throws Exception{
+        // (2.140.0) each character's health: the player's as their client has it and as the server has it, once the entry has settled
+        if(age==14&&mc.player!=null&&mc.getServer()!=null){var sp=mc.getServer().getPlayerManager().getPlayer(mc.player.getUuid());
+            log.append(String.format(Locale.ROOT,"  health at %d: client %.1f / %.1f (stand %s); server %s%n",age,mc.player.getHealth(),mc.player.getMaxHealth(),dev.sangwoo.celestialfall.client.ProgressClient.profile.stand(),
+                sp==null?"-":String.format(Locale.ROOT,"%.1f / %.1f (stand %s)",sp.getHealth(),sp.getMaxHealth(),ProgressManager.profile(sp).stand())));}
         if("UI".equals(current)||mapShot()||"SUMMON".equals(current)&&("none".equals(opts.get("stand"))||opts.containsKey("cool")))logInterface();
         if(mapShot()&&mc.player!=null&&mc.world!=null)logMeteors();
         if(AUDIO&&phase==4)tickRows.append(String.format(Locale.ROOT,"%.3f,%d%n",clock()-mc.getTickDelta(),System.nanoTime()));
