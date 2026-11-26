@@ -190,7 +190,7 @@ public final class SamuraiKata {
     static final R6.Pose DRAWN=on(0,.02,-.38,-8,16,4,d(-23,74),d(-21,92),d(-44,-90),.26,.42,-.24,-.48,0,4);
     static final R6.Pose DRAWN_HELD=on(0,0,-.37,-5,16,4,d(-26,74),d(-24,94),d(-44,-90),.26,.42,-.24,-.48,0,4);
     // the wide stance the swings are made in (the feet's places: right, ahead)
-    private static final double RR=.42,RF=.16,LR=-.42,LF=-.1;
+    private static final double RR=.52,RF=.16,LR=-.52,LF=-.1;
     /** A key as {@link #on} in the wide stance but the right foot off the ground, its leg along a world way. */
     private static R6.Pose lifted(double rt,double fw,double up,float yaw,float pitch,float roll,double[] rArm,double[] blade,double[] rLeg,float head,float down){
         R6.Pose p=on(rt,fw,up,yaw,pitch,roll,rArm,blade,L_SAYA,RR,RF,LR,LF,head,down);
@@ -199,34 +199,34 @@ public final class SamuraiKata {
     }
     // the first swing (the video's 1.43 to 1.8): up from low on the right across the front to high on the left, rising and turning with it;
     static final R6.Pose A_RISE=on(0,.04,-.3,16,10,-2,d(-4,28),d(14,6),L_SAYA,.3,.32,-.34,-.3,0,2);
-    static final R6.Pose A_HIGH=lifted(-.04,.04,-.16,52,-4,-6,d(56,-38),d(55,-62),d(-52,122),-10,-4);
+    static final R6.Pose A_HIGH=lifted(-.04,.04,-.24,52,-4,-6,d(56,-38),d(55,-62),d(-42,124),-10,-4);
     // on over the head, the right foot off the ground, and down behind the back;
-    static final R6.Pose A_OVER=lifted(-.07,.04,-.13,78,-4,-4,d(72,-25),d(14,150),d(-38,140),-30,-2);
-    static final R6.Pose A_BEHIND=lifted(-.06,.03,-.15,62,0,-2,d(64,-5),d(-38,165),d(-46,126),-20,0);
+    static final R6.Pose A_OVER=lifted(-.07,.04,-.21,78,-4,-4,d(72,-25),d(14,150),d(-28,140),-30,-2);
+    static final R6.Pose A_BEHIND=lifted(-.06,.03,-.23,62,0,-2,d(64,-5),d(-38,165),d(-36,128),-20,0);
     // out backhand level across the front to the right: the arm leads, the blade whips through after it
-    static final R6.Pose A_ACROSS=on(-.02,.02,-.2,18,6,0,d(8,-18),d(24,-84),L_SAYA,RR,RF,LR,LF,0,2);
-    static final R6.Pose A_LEAD=on(.01,.02,-.21,-14,8,2,d(4,50),d(12,-30),L_SAYA,RR,RF,LR,LF,6,2);
-    static final R6.Pose A_WHIP=on(.03,.02,-.215,-28,9,3,d(4,74),d(2,38),L_SAYA,RR,RF,LR,LF,9,3);
-    static final R6.Pose A_OUT=on(.04,.02,-.22,-40,10,4,d(4,88),d(-12,100),L_SAYA,RR,RF,LR,LF,12,4);
+    static final R6.Pose A_ACROSS=on(-.02,.02,-.28,18,6,0,d(8,-18),d(24,-84),L_SAYA,RR,RF,LR,LF,0,2);
+    static final R6.Pose A_LEAD=on(.01,.02,-.29,-14,8,2,d(4,50),d(12,-30),L_SAYA,RR,RF,LR,LF,6,2);
+    static final R6.Pose A_WHIP=on(.03,.02,-.29,-28,9,3,d(4,74),d(2,38),L_SAYA,RR,RF,LR,LF,9,3);
+    static final R6.Pose A_OUT=on(.04,.02,-.30,-40,10,4,d(4,88),d(-12,100),L_SAYA,RR,RF,LR,LF,12,4);
     // the second (1.8 to 2.25), a wheel before them: up on the right, over the head, down on the left, low across the front, out to the right, up
-    static final R6.Pose B_UP_RIGHT=on(.04,.02,-.18,-28,-4,2,d(48,88),d(42,96),L_SAYA,RR,RF,LR,LF,8,-4);
-    static final R6.Pose B_UP=on(.02,.02,-.14,-8,-6,0,d(78,70),d(76,-60),L_SAYA,RR,RF,LR,LF,0,-6);
-    static final R6.Pose B_OVER=on(-.02,.02,-.15,58,2,-4,d(62,-40),d(42,-80),L_SAYA,RR,RF,LR,LF,-30,0);
-    static final R6.Pose B_LEFT=on(-.04,.03,-.2,52,12,-3,d(2,-32),d(2,-88),L_SAYA,RR,RF,LR,LF,-20,4);
-    static final R6.Pose B_LOW_LEFT=on(-.03,.04,-.28,34,18,-2,d(-52,-12),d(-36,-78),L_SAYA,RR,RF,LR,LF,-8,8);
-    static final R6.Pose B_LOW=on(0,.05,-.31,4,22,0,d(-52,24),d(-34,4),L_SAYA,RR,RF,LR,LF,0,10);
-    static final R6.Pose B_LOW_RIGHT=on(.03,.04,-.29,-24,17,3,d(-30,78),d(-26,72),L_SAYA,RR,RF,LR,LF,10,8);
-    static final R6.Pose B_OUT=on(.05,.03,-.24,-40,10,4,d(0,92),d(2,98),L_SAYA,RR,RF,LR,LF,24,4);
-    static final R6.Pose B_RISE=on(.04,.02,-.19,-24,0,3,d(44,90),d(54,95),L_SAYA,RR,RF,LR,LF,10,-2);
-    static final R6.Pose B_HIGH=on(.02,.01,-.15,-10,-5,2,d(68,84),d(80,80),L_SAYA,RR,RF,LR,LF,0,-4);
+    static final R6.Pose B_UP_RIGHT=on(.04,.02,-.26,-28,-4,2,d(48,88),d(42,96),L_SAYA,RR,RF,LR,LF,8,-4);
+    static final R6.Pose B_UP=on(.02,.02,-.22,-8,-6,0,d(78,70),d(76,-60),L_SAYA,RR,RF,LR,LF,0,-6);
+    static final R6.Pose B_OVER=on(-.02,.02,-.23,58,2,-4,d(62,-40),d(42,-80),L_SAYA,RR,RF,LR,LF,-30,0);
+    static final R6.Pose B_LEFT=on(-.04,.03,-.28,52,12,-3,d(2,-32),d(2,-88),L_SAYA,RR,RF,LR,LF,-20,4);
+    static final R6.Pose B_LOW_LEFT=on(-.03,.04,-.36,34,18,-2,d(-52,-12),d(-36,-78),L_SAYA,RR,RF,LR,LF,-8,8);
+    static final R6.Pose B_LOW=on(0,.05,-.39,4,22,0,d(-52,24),d(-34,4),L_SAYA,RR,RF,LR,LF,0,10);
+    static final R6.Pose B_LOW_RIGHT=on(.03,.04,-.37,-24,17,3,d(-30,78),d(-26,72),L_SAYA,RR,RF,LR,LF,10,8);
+    static final R6.Pose B_OUT=on(.05,.03,-.32,-40,10,4,d(0,92),d(2,98),L_SAYA,RR,RF,LR,LF,24,4);
+    static final R6.Pose B_RISE=on(.04,.02,-.27,-24,0,3,d(44,90),d(54,95),L_SAYA,RR,RF,LR,LF,10,-2);
+    static final R6.Pose B_HIGH=on(.02,.01,-.23,-10,-5,2,d(68,84),d(80,80),L_SAYA,RR,RF,LR,LF,0,-4);
     // turned over the head toward the left hip
-    static final R6.Pose TURNED=on(.01,0,-.16,4,-1,2,d(66,70),d(6,-86),L_SAYA,.36,.14,-.36,-.1,-6,0);
+    static final R6.Pose TURNED=on(.01,0,-.24,4,-1,2,d(66,70),d(6,-86),L_SAYA,.5,.15,-.5,-.1,-6,0);
     // the blade laid to the scabbard's mouth and slid home (the hands are put: hands); standing so; the last inch; done
-    static final R6.Pose LAID=on(0,0,-.18,14,6,2,d(30,60),d(-36,-110),L_SAYA,.3,.14,-.3,-.12,-10,8);
-    static final R6.Pose SLID=on(0,0,-.24,12,12,2,R_HILT,B_HILT,L_SAYA,.3,.14,-.3,-.12,-14,14);
-    static final R6.Pose STOOD=on(0,0,-.12,8,5,0,R_HILT,B_HILT,L_SAYA,.18,.12,-.18,-.12,0,10);
-    static final R6.Pose READY=on(0,0,-.19,10,8,0,R_HILT,B_HILT,L_SAYA,.18,.12,-.18,-.12,0,14);
-    static final R6.Pose SNAPPED=on(0,0,-.23,10,10,0,R_HILT,B_HILT,L_SAYA,.18,.12,-.18,-.12,0,16);
+    static final R6.Pose LAID=on(0,0,-.25,14,6,2,d(30,60),d(-36,-110),L_SAYA,.48,.14,-.48,-.1,-10,8);
+    static final R6.Pose SLID=on(0,0,-.29,12,12,2,R_HILT,B_HILT,L_SAYA,.48,.14,-.48,-.1,-14,14);
+    static final R6.Pose STOOD=on(0,0,-.2,8,5,0,R_HILT,B_HILT,L_SAYA,.4,.12,-.4,-.1,0,10);
+    static final R6.Pose READY=on(0,0,-.25,10,8,0,R_HILT,B_HILT,L_SAYA,.4,.12,-.4,-.1,0,14);
+    static final R6.Pose SNAPPED=on(0,0,-.29,10,10,0,R_HILT,B_HILT,L_SAYA,.4,.12,-.4,-.1,0,16);
     static final R6.Pose DONE=on(0,0,-.05,4,2,0,R_HILT,B_HILT,L_SAYA,.14,.05,-.14,-.05,0,4);
 
     private static final Anim.Fix BENT=IsosangLimbs.natural(IsosangLimbs.FLOOR);
