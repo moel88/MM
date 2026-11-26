@@ -752,6 +752,20 @@ POSES = {
         'hide_1': {'rot': (10, 0, 0)}, 'hide_2': {'rot': (12, 0, -4)},
         'left_ring': {'rot': (-6, 0, 6)},
     },
+    # (2.146.0) coming out of its user (Q) and going back into them: curled up, its forearms crossed before its chest,
+    # its knees drawn up, its head down
+    'summon': {
+        'root': {'pos': (0, 2.5, 0)},
+        'hips': {'rot': (6, 0, 0)},
+        'torso': {'rot': (14, 0, 0)},
+        'chest': {'rot': (12, 0, 0)},
+        'head': {'rot': (16, 0, 0)},
+        'right_arm': {'reach': ((2.6, SHOULDER_Y - 2.6, -4.4), (-1, -.6, .3))},
+        'left_arm': {'reach': ((-2.6, SHOULDER_Y - 3.6, -5.0), (1, -.6, .3))},
+        'right_leg': {'rot': (-64, 0, 5)}, 'right_shin': {'rot': (98, 0, 0)}, 'right_foot': {'rot': (28, 0, 0)},
+        'left_leg': {'rot': (-50, 0, -5)}, 'left_shin': {'rot': (92, 0, 0)}, 'left_foot': {'rot': (28, 0, 0)},
+        'right_wing': {'rot': (0, -18, 0)}, 'left_wing': {'rot': (0, 18, 0)},
+    },
 }
 
 

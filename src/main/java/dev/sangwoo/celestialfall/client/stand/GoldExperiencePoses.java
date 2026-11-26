@@ -36,6 +36,31 @@ final class GoldExperiencePoses {
         float calm=1-(to==GoldExperienceStance.STAND?k:0)-(from==GoldExperienceStance.STAND?1-k:0);
         motions.computeIfAbsent(bone,GoldExperienceMotion::of).add(out,seconds,Math.max(0,calm));
     }
+    /**
+     * (2.146.0) The bone's pose for a stand's look: its stances weighed together (each turn taken the short way to the
+     * next, in the order of the stances), and the bone's own movement on top, stilled as it stands curled up or straight.
+     */
+    void blend(String bone,float[] weights,double seconds,float[] out){
+        var all=stances();var rest=rests().getOrDefault(bone,REST);
+        float acc=0;int held=0;
+        for(int i=0;i<weights.length&&i<all.size();i++){
+            float w=weights[i];if(w<=1e-4f)continue;
+            float[] a=all.get(i).getOrDefault(bone,REST);held++;
+            if(acc==0){System.arraycopy(a,0,out,0,6);StarPlatinumPoses.quat(rest[0]+a[0],rest[1]+a[1],rest[2]+a[2],qa);acc=w;continue;}
+            float k=w/(acc+w);
+            for(int j=0;j<6;j++)out[j]+=(a[j]-out[j])*k;
+            StarPlatinumPoses.quat(rest[0]+a[0],rest[1]+a[1],rest[2]+a[2],qb);StarPlatinumPoses.slerp(qa,qb,k);acc+=w;
+        }
+        if(held==0)System.arraycopy(all.get(GoldExperienceStance.IDLE).getOrDefault(bone,REST),0,out,0,6);
+        else if(held>1){
+            StarPlatinumPoses.euler(qa,e);
+            double[] near={out[0]+rest[0],out[1]+rest[1],out[2]+rest[2]},other={e[0]+180,180-e[1],e[2]+180};
+            double[] pick=StarPlatinumPoses.distance(e,near)<=StarPlatinumPoses.distance(other,near)?e:other;
+            for(int i=0;i<3;i++)out[i]=(float)(near[i]+StarPlatinumPoses.wrap(pick[i]-near[i])-rest[i]);
+        }
+        float calm=1-weights[GoldExperienceStance.STAND]-.75f*weights[GoldExperienceStance.SUMMON];
+        motions.computeIfAbsent(bone,GoldExperienceMotion::of).add(out,seconds,Math.max(0,Math.min(1,calm)));
+    }
     /** The stances alone, without the bone's own movement. */
     void stance(String bone,int from,int to,float k,float[] out){
         var all=stances();

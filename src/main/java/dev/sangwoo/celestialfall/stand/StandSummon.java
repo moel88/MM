@@ -38,8 +38,8 @@ public final class StandSummon {
         ServerLifecycleEvents.SERVER_STOPPED.register(server->NEXT_REQUEST.clear());
     }
     public static boolean out(ServerPlayerEntity p){return ((StandHolder)p).botand$isStandOut();}
-    /** What having the stand out takes: Star Platinum as the stand, alive and awake on the map. */
-    public static boolean canBeOut(ServerPlayerEntity p){return StandManager.starPlatinum(p)&&!p.isSleeping();}
+    /** What having the stand out takes: Star Platinum or (2.146.0) Gold Experience as the stand, alive and awake on the map. */
+    public static boolean canBeOut(ServerPlayerEntity p){return (StandManager.starPlatinum(p)||StandManager.goldExperience(p))&&!p.isSleeping();}
     /**
      * Q: out if it is in and the user may have it out, in if it is out. Returns whether it is out now. Not while its
      * user is incapacitated (2.60.0: their guard broken or struck by a Star Finger; their client sends no Q then either),

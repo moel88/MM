@@ -83,6 +83,7 @@
   "stand.botand.isosang": "이소상",
   "stand.botand.x_chara": "엑스 차라",
   "stand.botand.samurai": "사무라이",
+  "stand.botand.gold_experience": "골드 익스피리언스",
   "message.botand.status": "레벨 %s/50 · 환생 %s/15 · 초월 %s · 스탠드 %s · 체력 %s/%s",
   "message.botand.rebirth_button": "[환생]",
   "message.botand.transcend_button": "[초월]",

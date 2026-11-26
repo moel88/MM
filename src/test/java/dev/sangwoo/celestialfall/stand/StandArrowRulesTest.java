@@ -14,8 +14,8 @@ class StandArrowRulesTest {
     @Test void oneInFiveDiesAndTheRestAwakenStarPlatinum(){
         assertTrue(whole(),"the table makes up the whole");
         assertEquals(100,ODDS);assertEquals(20,DEATH);
-        assertEquals(20,share(DIE));assertEquals(80,share("star_platinum"));assertEquals(0,share("kageno"),"Kageno is the gacha's, not the arrow's");
-        for(int r=0;r<ODDS;r++)assertEquals(r<20?DIE:"star_platinum",outcome(r),"roll "+r);
+        assertEquals(20,share(DIE));assertEquals(40,share("star_platinum"));assertEquals(40,share("gold_experience"),"2.146.0: half of Star Platinum's 80");assertEquals(0,share("kageno"),"Kageno is the gacha's, not the arrow's");
+        for(int r=0;r<ODDS;r++)assertEquals(r<20?DIE:r<60?"star_platinum":"gold_experience",outcome(r),"roll "+r);
         assertThrows(IllegalArgumentException.class,()->outcome(-1));
         assertThrows(IllegalArgumentException.class,()->outcome(ODDS));
     }
@@ -23,12 +23,12 @@ class StandArrowRulesTest {
         var random=new Random(70);var seen=new HashMap<String,Integer>();int n=200_000;
         for(int i=0;i<n;i++)seen.merge(roll(()->random.nextInt(ODDS)),1,Integer::sum);
         assertEquals(.20,seen.get(DIE)/(double)n,.005,"death");
-        assertEquals(.80,seen.get("star_platinum")/(double)n,.005,"Star Platinum");
-        assertEquals(2,seen.size(),"nothing else");
+        assertEquals(.40,seen.get("star_platinum")/(double)n,.005,"Star Platinum");assertEquals(.40,seen.get("gold_experience")/(double)n,.005,"Gold Experience");
+        assertEquals(3,seen.size(),"nothing else");
     }
     @Test void onlyOneWithNoStandMayUseIt(){
         assertTrue(canUse("none"));
-        assertFalse(canUse("kageno"));assertFalse(canUse("star_platinum"));
+        assertFalse(canUse("kageno"));assertFalse(canUse("star_platinum"));assertFalse(canUse("gold_experience"));
     }
     /** About ten seconds from the use to what the arrow does (2.71.0, user request: "화살 꽂는 모션이 10초는 됐으면 좋겠어"). */
     @Test void theArrowGoesInThenItsChoiceShowsThenItIsMade(){

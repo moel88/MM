@@ -21,6 +21,8 @@ public final class StandManager {
     public static boolean xChara(PlayerEntity p){return has(p,"x_chara");}
     /** The samurai's player on the map (2.143.0): a test character who fights in person; their G, the one flash (samurai/SamuraiUltimate). */
     public static boolean samurai(PlayerEntity p){return has(p,"samurai");}
+    /** Gold Experience's user on the map (2.146.0): Q brings it out beside its user and sends it back (StandSummon); no skills yet. */
+    public static boolean goldExperience(PlayerEntity p){return has(p,"gold_experience");}
     private static boolean has(PlayerEntity p,String stand){
         // (2.110.0) the map as it is for them: one in their vanilla mode has no stand nor character (VanillaMode)
         return p!=null&&MapGate.enabled(p)&&p.isAlive()&&!p.isSpectator()

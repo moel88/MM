@@ -49,6 +49,8 @@ public class GoldExperienceEntity extends MobEntity implements GeoEntity {
         return GoldExperienceStance.crossfade(clock-changedAt);
     }
     public int previousStance(){return previousStance;}
+    /** Its look as a stand beside its user (2.146.0, the client's body of one: GoldPuppet), or null for the figure, which goes by its stance. */
+    public GoldExperienceLook look(float delta){return null;}
     @Override public void writeCustomDataToNbt(NbtCompound nbt){super.writeCustomDataToNbt(nbt);nbt.putString("Stance",GoldExperienceStance.NAMES.get(stance()));}
     @Override public void readCustomDataFromNbt(NbtCompound nbt){super.readCustomDataFromNbt(nbt);setStance(Math.max(0,GoldExperienceStance.NAMES.indexOf(nbt.getString("Stance"))));}
     /** Only what gets past invulnerability (/kill, the void) removes it; "/botand gold clear" is the usual way. */

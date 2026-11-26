@@ -15,6 +15,8 @@ class ProgressionTest {
         assertEquals(350,StandStats.get("none").health());assertEquals(300,StandStats.get("isosang").health());
         assertEquals(375,StandStats.get("x_chara").health());assertEquals(400,StandStats.get("star_platinum").health());
         assertEquals(325,StandStats.get("kageno").health());
+        // (2.146.0, the user's answer when asked) Gold Experience 375
+        assertEquals(375,StandStats.get("gold_experience").health());assertTrue(StandStats.known("gold_experience"));
         // one the mod does not know is as one with none
         assertEquals(350,StandStats.get("nobody").health());
         for(String id:StandStats.ids())assertTrue(StandStats.known(id)&&StandStats.get(id).health()>=300,id);

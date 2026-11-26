@@ -136,7 +136,7 @@ public final class StandArrow {
         // the one chosen none since 2.71.2: the stand bursting out of them says it)
         if(!dies(s.outcome)){
             ProgressManager.set(p,ProgressManager.profile(p).withStand(s.outcome));
-            if(StandManager.starPlatinum(p))((StandHolder)p).botand$setStandOut(true);
+            if(StandSummon.canBeOut(p))((StandHolder)p).botand$setStandOut(true);
             // (2.74.0, user request: "화살로 뽑아도 처음으로 쿨타임 돌게") the long cooldowns begin in full: since 2.74.1 only
             // the new stand's ("그냥 사용하는 스탠드의 긴 쿨타임 애들만"), since 2.74.3 whatever they were, even never used
             // ("그냥 단순하게 스탠드를 새로 얻거나 죽으면 쿨타임 다시 처음부터 돌게"; the time stop only for the awakened)

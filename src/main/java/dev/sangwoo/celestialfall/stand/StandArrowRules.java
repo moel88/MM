@@ -19,8 +19,11 @@ public final class StandArrowRules {
     public record Awakening(String stand,int weight){}
     /** The table's whole, and the share of it that dies. */
     public static final int ODDS=100,DEATH=20;
-    /** The stands the arrow awakens and their shares (with DEATH they make up ODDS; adjusted as stands are added). */
-    public static final List<Awakening> STANDS=List.of(new Awakening("star_platinum",80));
+    /**
+     * The stands the arrow awakens and their shares (with DEATH they make up ODDS; adjusted as stands are added). 2.146.0:
+     * Gold Experience takes half of Star Platinum's 80 (the user's answer when asked: "스탠드 화살에도 넣기", 40 each).
+     */
+    public static final List<Awakening> STANDS=List.of(new Awakening("star_platinum",40),new Awakening("gold_experience",40));
     /** The death's word in the events and the captures' rig (a stand's word is its id). */
     public static final String DIE="death";
 

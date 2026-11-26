@@ -8,8 +8,9 @@ public final class GoldExperienceStance {
      * Floating at rest; the pose of the picture the user sent (floating with its legs crossed, its left hand on its hip
      * and its right hand hanging at its thigh); and standing straight as the model is built, for looking at it.
      */
-    public static final List<String> NAMES=List.of("idle","hero","stand");
-    public static final int IDLE=0,HERO=1,STAND=2;
+    public static final List<String> NAMES=List.of("idle","hero","stand","summon");
+    /** SUMMON (2.146.0): curled up behind its crossed forearms, as it comes out of its user and goes back into them. */
+    public static final int IDLE=0,HERO=1,STAND=2,SUMMON=3;
     /** How long the figure takes to go over from one stance to another (ticks). */
     public static final float CROSSFADE=12;
     private GoldExperienceStance(){}

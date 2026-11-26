@@ -73,7 +73,7 @@ public final class StandPresence {
         var mc=MinecraftClient.getInstance();if(key!=GLFW.GLFW_KEY_Q||window!=mc.getWindow().getHandle())return false;
         if(action==GLFW.GLFW_RELEASE){if(!held)return false;held=false;return true;}
         if(held)return true;
-        if(action!=GLFW.GLFW_PRESS||mc.currentScreen!=null||(modifiers&GLFW.GLFW_MOD_CONTROL)!=0||!StandManager.starPlatinum(mc.player))return false;
+        if(action!=GLFW.GLFW_PRESS||mc.currentScreen!=null||(modifiers&GLFW.GLFW_MOD_CONTROL)!=0||!(StandManager.starPlatinum(mc.player)||StandManager.goldExperience(mc.player)))return false;
         held=true;
         if(CombatClient.combatInput()&&ClientPlayNetworking.canSend(StandSummon.TOGGLE))ClientPlayNetworking.send(StandSummon.TOGGLE,PacketByteBufs.empty());
         return true;
@@ -142,7 +142,10 @@ public final class StandPresence {
         StarPlatinumRenderer.frame();DRAWN.clear();
         var mc=MinecraftClient.getInstance();if(mc.world==null||c.consumers()==null)return;
         // (2.112.0) none in X Chara's G's strange space: only its two are there
-        if(ALL.isEmpty()||(dev.sangwoo.celestialfall.client.xchara.XCharaClient.spaceHidden()||dev.sangwoo.celestialfall.client.samurai.SamuraiClient.flat())){glow(mc,c,new ArrayList<>(),0);return;}
+        boolean hidden=dev.sangwoo.celestialfall.client.xchara.XCharaClient.spaceHidden()||dev.sangwoo.celestialfall.client.samurai.SamuraiClient.flat();
+        // (2.146.0) every Gold Experience that is out, before the auras are laid
+        GoldPresence.render(mc,c,hidden,DRAWN);
+        if(ALL.isEmpty()||hidden){glow(mc,c,new ArrayList<>(),0);return;}
         float delta=c.tickDelta();var cam=c.camera().getPos();var dispatcher=mc.getEntityRenderDispatcher();frames++;
         for(var s:ALL.values()){
             s.drawn=false;
@@ -236,6 +239,8 @@ public final class StandPresence {
         for(var g:dev.sangwoo.celestialfall.client.CutsceneFlash.glowing(mc,c.tickDelta()))
             if(shows(c,g.player()))bearers.add(new StandAuraLayer.Bearer(g.player(),StandAuraLayer.GLOW,g.strength()));
         // (2.137.0) X Chara the boss is wrapped in it too, its glow torn across as a glitch (StandAuraLayer's Glitch)
+        // (2.146.0) Gold Experience and its user, in gold
+        flare=Math.max(flare,GoldPresence.bearers(mc,c,bearers));
         dev.sangwoo.celestialfall.client.xchara.BossAura.bearers(mc,(e,k)->{if(e instanceof PlayerEntity p&&shows(c,p))bearers.add(new StandAuraLayer.Bearer(p,StandAuraLayer.USER,k,true));});
         StandAuraLayer.draw(c,bearers,(ticks-1d+c.tickDelta())/20,flare);
     }

@@ -28,7 +28,9 @@ public final class GoldExperienceModel extends GeoModel<GoldExperienceEntity> {
         double t=(e.age+delta)/20.0;
         for(CoreGeoBone bone:getAnimationProcessor().getRegisteredBones()){
             var rest=bone.getInitialSnapshot();if(rest==null)continue;
-            poses.pose(bone.getName(),e.previousStance(),e.stance(),k,t,pose);
+            var look=e.look(delta);
+            // (2.146.0) a stand beside its user goes by its look; the figure by its stance
+            if(look!=null)poses.blend(bone.getName(),look.weights,t,pose);else poses.pose(bone.getName(),e.previousStance(),e.stance(),k,t,pose);
             // the poses are written the way Blockbench writes a turn; GeckoLib keeps x and y turned the other way
             bone.setRotX(rest.getRotX()-(float)Math.toRadians(pose[0]));
             bone.setRotY(rest.getRotY()-(float)Math.toRadians(pose[1]));

@@ -22,6 +22,7 @@ uniform float Front;         // 1 when the users are nearer the camera than the 
 uniform float Glow;          // 1 when any body glows sky blue
 uniform vec4 GlitchBox;      // the screen box (pixels) of those whose aura glitches (2.137.0, X Chara the boss); empty if x1<x0
 uniform float GlitchTime;    // seconds
+uniform vec4 GoldBox;        // the screen box (pixels) of those whose aura is golden (2.146.0, Gold Experience and its user); empty if x1<x0
 in vec2 texCoord;
 out vec4 fragColor;
 
@@ -42,6 +43,7 @@ vec3 glitch(vec2 px){
     return vec3(on*(r2-0.5)*Scale*(0.35+0.5*fit),on*sign(r2-0.5),step(0.94,hash(vec2(band+5.0,stp*1.3))));
 }
 vec4 aura(vec2 px){
+    vec2 px0=px;
     vec3 gz=glitch(px);
     // (its edges in blocks of pixels there, as a screen's)
     if(GlitchBox.z>=GlitchBox.x&&px.x>=GlitchBox.x&&px.x<=GlitchBox.z&&px.y>=GlitchBox.y&&px.y<=GlitchBox.w){float cell=max(Scale*0.045,1.0);px=(floor(px/cell)+0.5)*cell;}
@@ -69,6 +71,8 @@ vec4 aura(vec2 px){
     float heat=clamp(max(h0.x,h0.y)*1.4,0.0,1.0);
     float cover=min(total,1.0)*0.72*(1.0-gz.z);
     vec3 col=tone(heat);
+    // Gold Experience's and its user's: deep amber out in the tongues, a bright yellow gold close to the body
+    if(GoldBox.z>=GoldBox.x&&px0.x>=GoldBox.x&&px0.x<=GoldBox.z&&px0.y>=GoldBox.y&&px0.y<=GoldBox.w)col=mix(vec3(1.0,0.64,0.07),vec3(1.0,0.87,0.32),heat);
     // a thrown band's light is split: pink one way, cyan the other
     if(gz.y>0.5)col=mix(col,vec3(1.0,0.25,0.84),0.7);else if(gz.y<-0.5)col=mix(col,vec3(0.2,0.92,1.0),0.6);
     return vec4(col*cover*1.25,cover);

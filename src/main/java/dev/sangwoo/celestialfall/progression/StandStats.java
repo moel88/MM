@@ -15,6 +15,8 @@ public final class StandStats {
     public static final double NONE_HEALTH=350,KAGENO_HEALTH=325,STAR_PLATINUM_HEALTH=400,ISOSANG_HEALTH=300,X_CHARA_HEALTH=375;
     /** (2.143.0) The test samurai's (mine: Kageno's, the other one who fights with a katana). */
     public static final double SAMURAI_HEALTH=325;
+    /** (2.146.0) Gold Experience's (the user's answer when asked: 375). */
+    public static final double GOLD_EXPERIENCE_HEALTH=375;
     /** {@code korean}: the name the Korean screens write (the menu, the shop); "없음" for no stand. */
     public record Definition(String id,String translation,double health,String korean) {}
     private static final Map<String,Definition> DEFINITIONS=Map.ofEntries(
@@ -30,10 +32,14 @@ public final class StandStats {
         Map.entry("x_chara",new Definition("x_chara","stand.botand.x_chara",X_CHARA_HEALTH,"엑스 차라")),
         // 2.143.0: the samurai, a test character (user request: "그냥 테스트용 사무라이 캐릭터 G스킬이고"): given by the admin
         // command only; their one skill is G (samurai/SamuraiUltimate)
-        Map.entry("samurai",new Definition("samurai","stand.botand.samurai",SAMURAI_HEALTH,"사무라이")));
+        Map.entry("samurai",new Definition("samurai","stand.botand.samurai",SAMURAI_HEALTH,"사무라이")),
+        // 2.146.0: Gold Experience, a stand that comes out (Q) and floats beside its user in a golden aura, as Star
+        // Platinum does (user request: "이제 이걸 플레이어 q스킬로 이식하고 q누르면 나오게 바꾸고 골익과 플레이어에게
+        // 황금색 아우라가 생기게"); no skills yet
+        Map.entry("gold_experience",new Definition("gold_experience","stand.botand.gold_experience",GOLD_EXPERIENCE_HEALTH,"골드 익스피리언스")));
     private StandStats() {}
     public static Definition get(String id){return DEFINITIONS.getOrDefault(id,DEFINITIONS.get("none"));}
     public static boolean known(String id){return id!=null&&DEFINITIONS.containsKey(id);}
     /** Every stand id with "none" first, for the commands. */
-    public static String[] ids(){return new String[]{"none","kageno","star_platinum","isosang","x_chara","samurai"};}
+    public static String[] ids(){return new String[]{"none","kageno","star_platinum","isosang","x_chara","samurai","gold_experience"};}
 }

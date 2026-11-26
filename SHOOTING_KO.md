@@ -382,6 +382,11 @@
 - 모양을 고치는 동안에는 `python3 tools/stand/make_gold_experience.py 폴더` 뒤 `python3 -I tools/stand/preview_geo.py 폴더/geo/entity/gold_experience.geo.json 폴더/textures/entity/gold_experience.png 출력.png "0,2,20,112;30,5,20,112;180,2,20,112" 420x760 폴더/stands/gold_experience_poses.json:stand`로 봅니다(생성 약 30초). 게임 화면이 아니므로 검증 결과로 보내지 않고, 시안으로 보일 때는 그 점을 밝힙니다.
 - 비율을 볼 때는 원작 설정화 옆에 같은 높이로 나란히 놓습니다. 미리보기의 색은 게임보다 어둡고 칙칙하게 나옵니다(게임에서는 밝은 크림 금색).
 
+### 골드 익스피리언스 스탠드 (Q 소환, 2.146.0)
+- `B="SUMMON;stand=gold_experience;face=180;dummy=0"`로 `$B;len=44;slows=0:2;save=0-1;then=KEY_Q@4/KEY_Q@34`(예열), `$B;len=150;fov=50;time=6000;orbit=5.0/1.7/0/150/0/0/1.1;then=KEY_Q@20/KEY_Q@125`(앞오른쪽 카메라), `$B;len=175;hud=1;time=6000;pitch=15;dist=5;then=KEY_Q@20/KEYDOWN_W@70/KEYUP_W@105/KEYDOWN_D@108/KEYUP_D@128/KEY_Q@150`(게임 카메라, 걷기), `$B;len=150;fov=50;time=18000;orbit=5.0/1.7/45/60/0/0/1.1;then=KEY_Q@10/KEY_Q@130`(밤, 도는 카메라)를 960x540 배율 8로(약 5분 반).
+- 프레임 이름의 둘째 숫자는 장면 시계(틱)입니다(초가 아님). Q를 누른 다음 틱에 나옵니다(로그 'stand out at').
+- 볼 것: 웅크린 채 나와 그림의 자세로 펼치고 대기로 내려앉는지, 스탠드와 플레이어 둘 다 금색 아우라인지(흰색 없이), 걸을 때 기울며 따라오는지, 들어갈 때 웅크리며 빨려 드는지.
+
 ### 스타플래티나
 - **모델(전시용):** `python3 tools/kageno/shots/run_shots.py OUT "STAND;stance=idle;len=…;orbit=R/UP/DEGPS/START/3/0/CY;fov=50" 1280x730 8`
   - 배율 8이어야 반복 프레임이 0입니다.
