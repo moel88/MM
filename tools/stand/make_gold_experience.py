@@ -769,18 +769,96 @@ POSES = {
 }
 
 
+# ---------------------------------------------------------------- the build (2.146.2)
+# The figure above is drawn to the design sheet's lengths. Beside Star Platinum and the player (both built broad, the way
+# the game's bodies are) it read as too thin, and the user chose, from three tried in the game beside Star Platinum, the
+# body a quarter wider and deeper and the head a little larger ("B: 몸 1.25배"). So the model is written out that much
+# broader than it is drawn: every length up the body as it is, everything across it BULK times, the head HEAD_UP times
+# its size about its neck and each wing WING_UP times about its root (those two keep their shapes). The ladybirds keep
+# their size and ride the surfaces they sit on. The texture is painted for the figure as drawn (each face has its texels
+# for the size it is written at), so what is painted across the body is that much wider with it.
+BULK, HEAD_UP, WING_UP = 1.25, 1.08, 1.12
+
+
+def below(root):
+    names, grew = {root}, True
+    while grew:
+        more = {n for n, b in rig.BONES.items() if b.parent in names} - names
+        grew = bool(more)
+        names |= more
+    return names
+
+
+def wide(p):
+    return [p[0] * BULK, p[1], p[2] * BULK]
+
+
+def broadened():
+    """Writes the build into the rig; returns what puts the figure back as it is drawn (for the painting)."""
+    drawn = ([(list(b.pivot),) for b in rig.BONES.values()],
+             [(list(c.origin), list(c.size), None if c.pivot is None else list(c.pivot), c.inflate) for c in rig.CUBES])
+    grown = {}                                 # bone -> (the joint it grows about as drawn, as written, by how much)
+    for root, by in (('head', HEAD_UP), ('right_wing', WING_UP), ('left_wing', WING_UP)):
+        old = list(rig.BONES[root].pivot)
+        for n in below(root):
+            grown[n] = (old, wide(old), by)
+
+    def moved(n, p):
+        if n not in grown:
+            return wide(p)
+        old, new, by = grown[n]
+        return [new[i] + by * (p[i] - old[i]) for i in range(3)]
+    for n, b in rig.BONES.items():
+        b.pivot = moved(n, b.pivot)
+    for c in rig.CUBES:
+        if c.bone in grown:
+            by = grown[c.bone][2]
+            c.origin, c.size, c.inflate = moved(c.bone, c.origin), [v * by for v in c.size], c.inflate * by
+        elif c.mat == 'bug' and c.opts.get('part') == 'bug':
+            # a ladybird: as large as it is drawn, carried by the place its foot stands on
+            foot = list(c.opts['at'])
+            if c.opts.get('layer') == 1:       # the upper disc stands .3 off the lower's foot (badge)
+                k = 0 if c.opts['axis'] == 'x' else 2
+                foot[k] -= .3 * c.opts['out'] * (-c.opts.get('side', -1) if k == 0 else 1)
+            c.origin = [o + w - f for o, w, f in zip(c.origin, wide(foot), foot)]
+        else:
+            c.origin, c.size = wide(c.origin), wide(c.size)
+        if c.pivot is not None:
+            c.pivot = moved(c.bone, c.pivot)
+
+    def back():
+        for b, (pivot,) in zip(rig.BONES.values(), drawn[0]):
+            b.pivot = pivot
+        for c, (origin, size, pivot, inflate) in zip(rig.CUBES, drawn[1]):
+            c.origin, c.size, c.pivot, c.inflate = origin, size, pivot, inflate
+    return back
+
+
+def reaching(spec):
+    """A stance with what its arms reach for carried out with the body."""
+    return {n: ({**e, 'reach': (tuple(wide(e['reach'][0])), e['reach'][1])} if 'reach' in e else e) for n, e in spec.items()}
+
+
 def main():
     for b in rig.check_coplanar():
         print('coplanar overlap (would flicker):', b)
+    drawn = broadened()
+    for b in rig.check_coplanar():
+        print('coplanar overlap as built (would flicker):', b)
     place, height = rig.pack()
+    model = json.dumps(rig.geo(place, height, 'geometry.botand.gold_experience'), indent=1)
+    grips = {k: tuple(wide(v)) for k, v in GRIPS.items()}
+    poses = json.dumps({k: rig.pose_table(reaching(v), grips) for k, v in POSES.items()}, indent=1)
+    top = max(c.origin[1] + c.size[1] for c in rig.CUBES if rig.BONES[c.bone].rot == [0, 0, 0])
+    across = max(max(abs(c.origin[0]), abs(c.origin[0] + c.size[0])) for c in rig.CUBES if c.bone.endswith('_arm'))
+    drawn()
     img = rig.paint(place, height, PAINT, OWN)
     for d in ('geo/entity', 'textures/entity', 'stands'):
         (ROOT / d).mkdir(parents=True, exist_ok=True)
-    (ROOT / 'geo/entity/gold_experience.geo.json').write_text(json.dumps(rig.geo(place, height, 'geometry.botand.gold_experience'), indent=1))
+    (ROOT / 'geo/entity/gold_experience.geo.json').write_text(model)
     Image.fromarray(img, 'RGBA').save(ROOT / 'textures/entity/gold_experience.png', optimize=True)
-    (ROOT / 'stands/gold_experience_poses.json').write_text(json.dumps({k: rig.pose_table(v, GRIPS) for k, v in POSES.items()}, indent=1))
-    top = max(c.origin[1] + c.size[1] for c in rig.CUBES if rig.BONES[c.bone].rot == [0, 0, 0])
-    print(f'{len(rig.BONES)} bones, {len(rig.CUBES)} cubes, texture {rig.ATLAS_W}x{height}, {top:.2f} units tall')
+    (ROOT / 'stands/gold_experience_poses.json').write_text(poses)
+    print(f'{len(rig.BONES)} bones, {len(rig.CUBES)} cubes, texture {rig.ATLAS_W}x{height}, {top:.2f} units tall, {2 * across:.2f} across the shoulders')
 
 
 if __name__ == '__main__':
