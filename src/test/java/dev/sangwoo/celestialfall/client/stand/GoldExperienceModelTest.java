@@ -41,7 +41,7 @@ class GoldExperienceModelTest {
         var bones=bones();
         // the body, the wings on its shoulders, the rings at its belt and the hide behind its hips
         for(String name:new String[]{"root","hips","torso","chest","neck","head","right_arm","left_forearm","right_hand","left_leg","right_shin","left_foot",
-            "right_wing","left_wing_blade_2","right_ring","left_ring","hide_0","hide_2_1","hide_right","hide_left_1"})assertTrue(bones.containsKey(name),name);
+            "right_wing","left_wing_blade_2","right_ring","left_ring","hide_0","hide_2_1","hide_right","hide_left_1","right_fingers","left_fingers"})assertTrue(bones.containsKey(name),name);
         for(var b:bones.values())if(b.has("parent"))assertTrue(bones.containsKey(b.get("parent").getAsString()),b.get("name")+"'s parent");
         var poses=json("/assets/celestialfall/stands/gold_experience_poses.json");
         assertEquals(new java.util.TreeSet<>(GoldExperienceStance.NAMES),new java.util.TreeSet<>(poses.keySet()));

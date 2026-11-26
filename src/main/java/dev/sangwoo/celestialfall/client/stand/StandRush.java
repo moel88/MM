@@ -55,6 +55,11 @@ import static dev.sangwoo.celestialfall.stand.StarPlatinumStance.*;
  * Its sound is the user's two recordings (tools/stand/cut_rush.py): the voice from the rush's start, and the blows on
  * it as loud as the rush strikes someone now, so that striking someone it is the recording with blows and striking no
  * one the voice alone; let go, both fade out at once.
+ * <p>
+ * Since 2.147.0 Gold Experience's muda rush is heard here too (the server's rush runs both and says whose each is,
+ * StarPlatinumRush.KIND): the same E, the same clock, blows and cooldown, its own length (GoldExperienceRules) and its
+ * own one sound (the user's recording of its voice, blows and all). What is drawn of it is GoldRush's and
+ * GoldPresence's; the stances, shapes and afterimages below are Star Platinum's.
  */
 public final class StandRush {
     /** Ticks into the rush its sound starts (a sound held back starts on a client tick, the grid the clock counts on). */
@@ -104,6 +109,8 @@ public final class StandRush {
     /** A rush as heard. */
     public static final class Rush {
         public final long start;final long serverAge,received;final int seed;
+        /** Whose rush it is: Star Platinum's (StarPlatinumRush.STAR) or Gold Experience's (GOLD, 2.147.0). */
+        public int kind;
         /** Its clock (seconds) when it ended, NaN while it is on. */
         public float ended=Float.NaN;
         /** The world tick it is ready again once it ended. */
@@ -123,7 +130,10 @@ public final class StandRush {
         public float age(float delta){return (ticksIn()+Math.max(0,Math.min(1,delta)))/20f;}
         public boolean on(){return Float.isNaN(ended);}
         /** When it ends (seconds on its clock): when it ended, or when it will if it runs out. */
-        float end(){return on()?StarPlatinumRules.RUSH_LENGTH/20f:ended;}
+        float end(){return on()?length()/20f:ended;}
+        /** Ticks it lasts held to its end. */
+        int length(){return gold()?dev.sangwoo.celestialfall.stand.GoldExperienceRules.RUSH_LENGTH:StarPlatinumRules.RUSH_LENGTH;}
+        public boolean gold(){return kind==StarPlatinumRush.GOLD;}
         /** The blows heard, oldest first. */
         public List<Blow> blowsHeard(){return List.copyOf(recent);}
         /** What picks its fists' heights (the same on every client). */
@@ -183,11 +193,13 @@ public final class StandRush {
             int n=b.readVarInt();if(n<0||n>256)return;
             int[] ids=new int[n];Vec3d[] at=new Vec3d[n];boolean[] guarded=new boolean[n];
             for(int i=0;i<n;i++){ids[i]=b.readInt();at[i]=new Vec3d(b.readDouble(),b.readDouble(),b.readDouble());guarded[i]=b.readBoolean();}
+            // (2.147.0) whose rush it is; a server from before says nothing: Star Platinum's
+            int kind=b.readableBytes()>=1?b.readUnsignedByte():StarPlatinumRush.STAR;
             if(!Float.isFinite(yaw))return;
             mc.execute(()->{
                 if(!MapClient.enabled()||mc.world==null||!mc.world.getRegistryKey().getValue().equals(dimension))return;
                 if(world!=mc.world){clear();world=mc.world;}
-                event(mc,user,type,start,serverNow,yaw,ready,ids,at,guarded);
+                event(mc,user,type,start,serverNow,yaw,ready,ids,at,guarded,kind==StarPlatinumRush.GOLD?StarPlatinumRush.GOLD:StarPlatinumRush.STAR);
             });
         });
         ClientTickEvents.START_CLIENT_TICK.register(StandRush::tick);
@@ -202,14 +214,14 @@ public final class StandRush {
         if(r.voice!=null&&!r.voice.isDone())mc.getSoundManager().stop(r.voice);
         if(r.hits!=null&&!r.hits.isDone())mc.getSoundManager().stop(r.hits);
     }
-    private static void event(MinecraftClient mc,UUID id,int type,long start,long serverNow,float yaw,long ready,int[] ids,Vec3d[] at,boolean[] guarded){
+    private static void event(MinecraftClient mc,UUID id,int type,long start,long serverNow,float yaw,long ready,int[] ids,Vec3d[] at,boolean[] guarded,int kind){
         var r=RUSHES.get(id);
         switch(type){
             case StarPlatinumRush.START->{
                 if(r!=null)stopSounds(mc,r);
                 // its start may be a few ticks on (a punch it stopped short turns back to the guard first)
                 r=new Rush(start,serverNow-start,ticks,(int)(start*31+id.getLeastSignificantBits()));
-                r.aim=r.prevAim=yaw;
+                r.aim=r.prevAim=yaw;r.kind=kind;
                 RUSHES.put(id,r);
                 sound(mc,id,r);
             }
@@ -222,14 +234,14 @@ public final class StandRush {
                 for(int i=0;i<ids.length;i++)if(!guarded[i])r.struck.add(ids[i]);
                 // its user's own feedback: the running total on whom it struck, and a streak of blood every eighth blow
                 if(mc.player!=null&&id.equals(mc.player.getUuid()))
-                    for(int i=0;i<ids.length;i++)if(!guarded[i])dev.sangwoo.celestialfall.client.kageno.HitFeedback.hit(mc,ids[i],StarPlatinumRules.RUSH_DAMAGE,yaw,r.blows%8==1);
+                    for(int i=0;i<ids.length;i++)if(!guarded[i])dev.sangwoo.celestialfall.client.kageno.HitFeedback.hit(mc,ids[i],r.gold()?dev.sangwoo.celestialfall.stand.GoldExperienceRules.RUSH_DAMAGE:StarPlatinumRules.RUSH_DAMAGE,yaw,r.blows%8==1);
             }
             case StarPlatinumRush.END->{
                 if(r==null||r.start!=start||!r.on())return;
                 // on this client's clock as the word comes (a stop seen as it is heard, so nothing jumps), never past its own end
-                r.ended=Math.min(r.age(0),StarPlatinumRules.RUSH_LENGTH/20f);r.ready=ready;
+                r.ended=Math.min(r.age(0),r.length()/20f);r.ready=ready;
                 // stopped short: its fists and its sound stop at once (run out, the voice's last "ORA" rings out by itself)
-                if(serverNow-start<StarPlatinumRules.RUSH_LENGTH){if(r.voice!=null)r.voice.fade();if(r.hits!=null)r.hits.fade();}
+                if(serverNow-start<r.length()){if(r.voice!=null)r.voice.fade();if(r.hits!=null)r.hits.fade();}
             }
             default->{}
         }
@@ -241,9 +253,15 @@ public final class StandRush {
         var user=mc.world.getPlayerByUuid(id);
         double far=user==null||user==mc.player?0:user.getPos().distanceTo(mc.player.getPos());
         float volume=(float)(CelestialFall.CONFIG.effectVolume*VOLUME*Math.max(0,1-far/CARRY));if(volume<=.01f)return;
+        int delay=(int)(LEAD-r.serverAge);
+        if(r.gold()){
+            // (2.147.0) the muda rush: the one recording, its blows in it
+            r.voice=new Sound(CelestialFall.id("gold_experience_muda"),r,false,volume);
+            if(delay>0)mc.getSoundManager().play(r.voice,delay);else mc.getSoundManager().play(r.voice);
+            return;
+        }
         r.voice=new Sound(CelestialFall.id("star_platinum_rush"),r,false,volume);
         r.hits=new Sound(CelestialFall.id("star_platinum_rush_hits"),r,true,volume);
-        int delay=(int)(LEAD-r.serverAge);
         if(delay>0){mc.getSoundManager().play(r.voice,delay);mc.getSoundManager().play(r.hits,delay);}
         else{mc.getSoundManager().play(r.voice);mc.getSoundManager().play(r.hits);}
     }
@@ -261,7 +279,7 @@ public final class StandRush {
             if(user!=null){float want=user.getHeadYaw();if(!r.aimed){r.aim=r.prevAim=want;r.aimed=true;}else r.aim+=MathHelper.wrapDegrees(want-r.aim)*(float)(1-Math.exp(-.05/AIM));}
             // where it stands: its fists on whoever is nearest in its way
             float face=user==null?Float.NaN:nearSide(mc,user);
-            float want=Float.isNaN(face)?AHEAD+LUNGE:MathHelper.clamp(face+BITE-fistReach(),NEAR,FAR);
+            float want=Float.isNaN(face)?AHEAD+LUNGE:MathHelper.clamp(face+BITE-(r.gold()?GoldRush.fistReach():fistReach()),NEAR,FAR);
             r.place+=(want-r.place)*(float)(1-Math.exp(-.05/PLACE));
             // the blows sound while it strikes someone (or, before the first blow is heard, while someone stands in its way)
             boolean striking=r.on()&&(ticks-r.struckAt<=STRUCK||r.blows==0&&!Float.isNaN(face));
@@ -281,9 +299,9 @@ public final class StandRush {
         if(key==GLFW.GLFW_KEY_E){
             if(action==GLFW.GLFW_RELEASE){if(!held)return false;held=false;send(false);return true;}
             if(held)return true;
-            if(action!=GLFW.GLFW_PRESS||mc.currentScreen!=null||!MapClient.enabled()||!StandManager.starPlatinum(mc.player))return false;
+            if(action!=GLFW.GLFW_PRESS||mc.currentScreen!=null||!MapClient.enabled()||!rusher(mc.player))return false;
             held=true;
-            if(CombatClient.combatInput()&&StandPresence.out(mc.player)){
+            if(CombatClient.combatInput()&&(StandPresence.out(mc.player)||GoldPresence.out(mc.player))){
                 BotandCamera.prepareInteraction();
                 // the way it goes is the way the player faces now: the turn goes to the server before the press
                 mc.player.networkHandler.sendPacket(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.LookAndOnGround(mc.player.getYaw(),mc.player.getPitch(),mc.player.isOnGround()));
@@ -291,12 +309,14 @@ public final class StandRush {
             }
             return true;
         }
-        if(key==GLFW.GLFW_KEY_I&&action==GLFW.GLFW_PRESS&&mc.currentScreen==null&&MapClient.enabled()&&StandManager.starPlatinum(mc.player)){
+        if(key==GLFW.GLFW_KEY_I&&action==GLFW.GLFW_PRESS&&mc.currentScreen==null&&MapClient.enabled()&&rusher(mc.player)){
             if(!CombatClient.actionLocked())mc.setScreen(new net.minecraft.client.gui.screen.ingame.InventoryScreen(mc.player));
             return true;
         }
         return false;
     }
+    /** Whether E is this player's rush: Star Platinum's user or (2.147.0) Gold Experience's. */
+    static boolean rusher(PlayerEntity p){return p!=null&&(StandManager.starPlatinum(p)||StandManager.goldExperience(p));}
     private static void send(boolean down){
         if(!ClientPlayNetworking.canSend(StarPlatinumRush.INPUT))return;
         var b=PacketByteBufs.create();b.writeByte(down?1:0);ClientPlayNetworking.send(StarPlatinumRush.INPUT,b);
@@ -314,8 +334,10 @@ public final class StandRush {
     public static boolean localRushing(){var p=MinecraftClient.getInstance().player;return p!=null&&rushing(p.getUuid());}
     /** The world tick this player's rush is ready again (0 if it has not run). */
     public static long ready(UUID id){var r=RUSHES.get(id);return r==null||r.on()?0:r.ready;}
-    /** This player's stand is not Star Platinum (2.74.2): the rush's cooldown is gone, as the server forgets it (StandManager). */
-    public static void forget(UUID id){var r=RUSHES.get(id);if(r!=null)r.ready=0;}
+    /** This player's stand is {@code stand} (2.74.2): the cooldown of a rush that is not that stand's is gone, as the server forgets it (StandManager). */
+    public static void forget(UUID id,String stand){var r=RUSHES.get(id);if(r!=null&&!(r.gold()?"gold_experience":"star_platinum").equals(stand))r.ready=0;}
+    /** Whether the rush whose cooldown this player has is Gold Experience's (the list names it so). */
+    public static boolean goldReady(UUID id){var r=RUSHES.get(id);return r!=null&&r.gold();}
     /**
      * Whether this body's cry of pain is held back now: the local player in a rush's blows (the first blow cries out, the
      * rest come with the rush's own sound; the server holds back the cry others would hear). It is held back for as long
@@ -388,7 +410,7 @@ public final class StandRush {
      */
     public static StandPunch.Shape shape(PlayerEntity user,float delta,float back,StandPunch.Shape into){
         var punch=StandAttack.shape(user.getUuid(),delta,back,into);
-        var r=RUSHES.get(user.getUuid());if(r==null)return punch;
+        var r=RUSHES.get(user.getUuid());if(r==null||r.gold())return punch;
         var newest=StandAttack.newest(user.getUuid());
         return combine(punch,newest==null?Float.MAX_VALUE:newest.age(delta)-back,rush(r,delta,back,RUSH),r.age(delta)-back,into);
     }
@@ -398,7 +420,7 @@ public final class StandRush {
      * from it once it is over.
      */
     static float newest(UUID id,float delta,float back){
-        var punch=StandAttack.newest(id);var r=RUSHES.get(id);
+        var punch=StandAttack.newest(id);var r=RUSHES.get(id);if(r!=null&&r.gold())r=null;
         return Math.min(punch==null?Float.MAX_VALUE:punch.age(delta)-back,r==null?Float.MAX_VALUE:r.age(delta)-back);
     }
     /**
@@ -455,7 +477,7 @@ public final class StandRush {
     public static float phantom(UUID id,int i,float delta,dev.sangwoo.celestialfall.stand.StarPlatinumLook into){
         var r=RUSHES.get(id);if(i>=PHANTOMS.length)return 0;
         // (the beatdown's rush throws them as well, 2.64.0)
-        if(r==null)return StandBeatdown.phantom(id,i,delta,into);
+        if(r==null||r.gold())return StandBeatdown.phantom(id,i,delta,into);
         float t=r.age(delta),show=phantomAlpha(r,i,t);if(show<=0)return StandBeatdown.phantom(id,i,delta,into);
         var w=into.weights;java.util.Arrays.fill(w,0);
         barrage(t-PHANTOMS[i][0],phantomSeed(r,i),w,1);

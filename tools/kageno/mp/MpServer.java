@@ -125,6 +125,7 @@ public final class MpServer implements ModInitializer {
         }
         busy|=atomic;
         punched(server);
+        if(GOLDRUSH_ONLY)goldRush(server);
         called(server);
         if(COOLDOWNS_ONLY||SWAP_ONLY||FRESH_ONLY)cooldowns(server);
         if(STAGGER_ONLY||ISOSANG_ONLY)staggers(server);
@@ -365,6 +366,34 @@ public final class MpServer implements ModInitializer {
     }
     private final Map<UUID,Long> thrown=new HashMap<>();private final Map<UUID,Long> flying=new HashMap<>();private int rushBlows;private float rushDamage;
     private boolean thrownLately(ServerPlayerEntity p,MinecraftServer server){Long at=thrown.get(p.getUuid());return at!=null&&server.getOverworld().getTime()-at<200;}
+    /** Only Gold Experience's muda rush's script (2.147.0, MP_ONLY=goldrush). */
+    static final boolean GOLDRUSH_ONLY="goldrush".equals(System.getProperty("botand.mp.only"));
+    private boolean goldOn;private long goldStart;private float goldBefore,goldLast;private net.minecraft.util.math.Vec3d goldAt;private final java.util.List<Long> goldBlows=new java.util.ArrayList<>();
+    /**
+     * The caster's rush as the server runs it (2.147.0, MP_ONLY=goldrush): as it starts (whose it is, how fast its user
+     * may walk) and as it ends (how long it ran, the ticks its blows took health from the watcher, what they took in
+     * all, how far the watcher moved through it, when it is ready again).
+     */
+    private void goldRush(MinecraftServer server){
+        ServerPlayerEntity caster=null,watcher=null;
+        for(var p:server.getPlayerManager().getPlayerList())if(caster(p))caster=p;else watcher=p;
+        if(caster==null)return;
+        long now=server.getOverworld().getTime();boolean on=dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(caster);
+        if(on&&!goldOn){
+            goldStart=dev.sangwoo.celestialfall.stand.StarPlatinumRush.startedAt(caster);goldBlows.clear();goldBefore=goldLast=watcher==null?0:watcher.getHealth();goldAt=watcher==null?null:watcher.getPos();
+            note(server,String.format(java.util.Locale.ROOT,"rush on at tick %d: %s, the caster's stand %s (out %s), its walking speed %.4f",now,
+                dev.sangwoo.celestialfall.stand.StarPlatinumRush.kind(caster)==dev.sangwoo.celestialfall.stand.StarPlatinumRush.GOLD?"Gold Experience's muda rush":"Star Platinum's",
+                dev.sangwoo.celestialfall.progression.ProgressManager.profile(caster).stand(),((dev.sangwoo.celestialfall.stand.StandHolder)caster).botand$isStandOut(),caster.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED)));
+        }
+        if(on&&watcher!=null){float h=watcher.getHealth();if(h<goldLast-1e-3f)goldBlows.add(now-goldStart);goldLast=h;}
+        if(!on&&goldOn){
+            long ready=dev.sangwoo.celestialfall.stand.StarPlatinumRush.ready(caster);
+            note(server,String.format(java.util.Locale.ROOT,"rush off at tick %d after %d ticks: %d blows took health from the watcher, at its ticks %s, %.1f in all (health %.1f), the watcher moved %.3f blocks, its guard %s; ready again in %d ticks; the caster's walking speed %.4f",
+                now,now-goldStart,goldBlows.size(),goldBlows,watcher==null?0:goldBefore-watcher.getHealth(),watcher==null?0:watcher.getHealth(),watcher==null||goldAt==null?0:watcher.getPos().distanceTo(goldAt),
+                watcher!=null&&dev.sangwoo.celestialfall.combat.CombatManager.guarding(watcher)?"up":"down",ready-now,caster.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED)));
+        }
+        goldOn=on;
+    }
     /**
      * Star Platinum's punches (2.54.0) on the watcher while the caster has it out: every hit (the damage, how fast it
      * leaves, how far from the caster) and, for one that throws it, where it comes down.

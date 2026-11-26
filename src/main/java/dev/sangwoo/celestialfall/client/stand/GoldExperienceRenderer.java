@@ -47,6 +47,15 @@ public final class GoldExperienceRenderer extends GeoEntityRenderer<GoldExperien
         super.render(e,yaw,delta,matrices,buffers,light);
         matrices.pop();
     }
+    /**
+     * An afterimage of the rush's arms (2.147.0) draws each arm, from its shoulder down, as strongly as its look shows it:
+     * the arm striking out, not the one drawn back (as Star Platinum's do).
+     */
+    @Override public void renderRecursively(MatrixStack matrices,GoldExperienceEntity e,software.bernie.geckolib.cache.object.GeoBone bone,RenderLayer layer,VertexConsumerProvider buffers,net.minecraft.client.render.VertexConsumer buffer,boolean reRender,float delta,int light,int overlay,float red,float green,float blue,float alpha){
+        String name=bone.getName();
+        if(name.equals("left_arm")||name.equals("right_arm")){var look=e.look(delta);if(look!=null&&look.armsOnly)alpha*=name.equals("left_arm")?look.showL:look.showR;}
+        super.renderRecursively(matrices,e,bone,layer,buffers,buffer,reRender,delta,light,overlay,red,green,blue,alpha);
+    }
     @Override public RenderLayer getRenderType(GoldExperienceEntity e,Identifier texture,VertexConsumerProvider buffers,float delta){
         var look=e.look(delta);
         return look!=null&&look.alpha<.999f?RenderLayer.getEntityTranslucent(texture):super.getRenderType(e,texture,buffers,delta);

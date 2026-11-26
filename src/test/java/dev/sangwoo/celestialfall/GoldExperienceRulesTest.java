@@ -1,0 +1,50 @@
+package dev.sangwoo.celestialfall;
+
+import dev.sangwoo.celestialfall.stand.StarPlatinumRules;
+import org.junit.jupiter.api.Test;
+import static dev.sangwoo.celestialfall.stand.GoldExperienceRules.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ * Gold Experience's muda rush (2.147.0, user request: "러시 속도는 스타플래티나보다 미세하게 느리게 데미지도 조금 더
+ * 약하게"): its blows a little slower than Star Platinum's rush's, what it deals a little less, and as long as the
+ * recording of its voice.
+ */
+class GoldExperienceRulesTest {
+    @Test void itsBlowsFallALittleSlowerThanStarPlatinums(){
+        assertEquals(StarPlatinumRules.RUSH_FIRST,RUSH_FIRST,"its first blow as soon as it has come round");
+        int blows=0;long last=-1;
+        for(long age=0;age<=RUSH_LENGTH+10;age++){
+            if(!rushBlow(age)){assertEquals(blows,rushBlows(age));continue;}
+            assertEquals(rushBlowAt(blows),age,"blow "+blows);
+            if(last>=0){long gap=age-last;assertTrue(gap==2||gap==3,"blows "+gap+" ticks apart");}
+            last=age;blows++;
+            assertEquals(blows,rushBlows(age));
+        }
+        assertEquals(RUSH_HITS,blows);assertEquals(RUSH_LAST,last);assertEquals(RUSH_LAST+3,RUSH_LENGTH);
+        // 2.2 ticks from one to the next on the whole (Star Platinum's: 2): about nine a second to its ten
+        double step=(RUSH_LAST-RUSH_FIRST)/(double)(RUSH_HITS-1);
+        assertEquals(2.2,step,.03);assertTrue(step>StarPlatinumRules.RUSH_EVERY&&step<StarPlatinumRules.RUSH_EVERY*1.2,"a little slower, not much");
+        // never ahead of Star Platinum's rush, and behind it before long
+        for(long age=0;age<=RUSH_LENGTH;age++)assertTrue(rushBlows(age)<=StarPlatinumRules.rushBlows(age),"at "+age);
+        assertTrue(rushBlows(40)<StarPlatinumRules.rushBlows(40));
+    }
+    @Test void itDealsALittleLess(){
+        assertTrue(RUSH_DAMAGE<=StarPlatinumRules.RUSH_DAMAGE,"no blow harder than Star Platinum's");
+        assertEquals(RUSH_HITS*RUSH_DAMAGE,RUSH_TOTAL,1e-6);
+        assertTrue(RUSH_TOTAL<StarPlatinumRules.RUSH_TOTAL&&RUSH_TOTAL>=StarPlatinumRules.RUSH_TOTAL*.7,"a little weaker: "+RUSH_TOTAL);
+        // a second of it deals a little less too
+        double each=RUSH_DAMAGE*20/2.2,theirs=StarPlatinumRules.RUSH_DAMAGE*20.0/StarPlatinumRules.RUSH_EVERY;
+        assertTrue(each<theirs&&each>theirs*.85,each+" a second to "+theirs);
+        assertEquals(500+RUSH_COOLDOWN,rushReady(500),"its cooldown from its end");
+        assertEquals(StarPlatinumRules.RUSH_COOLDOWN,RUSH_COOLDOWN);
+        // a blow holds whom it strikes past the next
+        assertTrue(RUSH_HOLD>3);
+    }
+    @Test void itIsAsLongAsTheRecordingOfItsVoice()throws Exception{
+        // the sound starts a tick in (StandRush.LEAD) and has died away as the rush ends
+        double sound=StarPlatinumRulesTest.seconds("gold_experience_muda");
+        assertEquals(RUSH_LENGTH/20.0,sound+dev.sangwoo.celestialfall.client.stand.StandRush.LEAD/20.0,.12,"the recording: "+sound+" s");
+        assertTrue(RUSH_LENGTH<StarPlatinumRules.RUSH_LENGTH,"shorter than Star Platinum's rush: the recording is");
+    }
+}

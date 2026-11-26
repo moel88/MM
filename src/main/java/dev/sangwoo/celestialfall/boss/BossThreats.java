@@ -123,9 +123,11 @@ public final class BossThreats {
         }
         long rush=StarPlatinumRush.startedAt(p);
         if(rush!=Long.MIN_VALUE){
+            // (2.147.0) Gold Experience's muda rush is read as Star Platinum's rush is: its own length and what it deals
+            int kind=StarPlatinumRush.kind(p);
             long next=Math.max(now,rush+StarPlatinumRules.RUSH_FIRST);
-            out.add(new Threat(p,"rush",rush,next,rush+StarPlatinumRules.RUSH_LENGTH,Zone.lane(p.getPos(),MathHelper.wrapDegrees(p.getYaw()),StarPlatinumRules.NEAR,StarPlatinumRules.RUSH_REACH,StarPlatinumRules.RUSH_HALF_WIDTH,StarPlatinumRules.LOW,StarPlatinumRules.HIGH),
-                true,false,false,StarPlatinumRules.RUSH_TOTAL,false,false));
+            out.add(new Threat(p,"rush",rush,next,rush+StarPlatinumRush.length(kind),Zone.lane(p.getPos(),MathHelper.wrapDegrees(p.getYaw()),StarPlatinumRules.NEAR,StarPlatinumRules.RUSH_REACH,StarPlatinumRules.RUSH_HALF_WIDTH,StarPlatinumRules.LOW,StarPlatinumRules.HIGH),
+                true,false,false,StarPlatinumRush.total(kind),false,false));
         }
         long inhale=StarPlatinumInhale.startedAt(p);
         if(inhale!=Long.MIN_VALUE){

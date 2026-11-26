@@ -52,16 +52,20 @@ public final class StandRushFx {
     /** Gathers this frame's rushes (within 96 blocks of the camera); returns whether any show. */
     public static boolean prepare(MinecraftClient mc,float tickDelta,Vec3d camera){
         FRAME.clear();delta=tickDelta;
+        // (2.147.0) Gold Experience's muda rush's light goes with this one's, pass by pass
+        boolean gold=GoldRushFx.prepare(mc,tickDelta,camera);
         if(mc.world==null)return false;
         for(var e:StandRush.all().entrySet()){
             var r=e.getValue();var user=mc.world.getPlayerByUuid(e.getKey());
+            // (2.147.0) Gold Experience's muda rush has its own light (GoldRushFx)
+            if(r.gold())continue;
             if(user==null||user.getPos().squaredDistanceTo(camera)>96*96)continue;
             float t=r.age(tickDelta);
             // while it is on, and a moment after (its last fists' bursts, its last blows' light and their dust)
             if(t>r.ends()+1f)continue;
             FRAME.add(new Shown(e.getKey(),r,t,StandPresence.body(e.getKey()),r.yaw(tickDelta)));
         }
-        return !FRAME.isEmpty();
+        return !FRAME.isEmpty()||gold;
     }
     public static boolean showing(){return !FRAME.isEmpty();}
 
@@ -87,6 +91,7 @@ public final class StandRushFx {
 
     /** Dark ink under the light: the body's fists' bursts and the bursts on whom it strikes get an ink edge. */
     public static void alpha(EffectMesh m){
+        GoldRushFx.alpha(m);
         for(var s:FRAME){
             if(s.body!=null)for(int j=0;j<3;j++){
                 // the fists that have landed in the last FIST seconds: their bursts
@@ -103,6 +108,7 @@ public final class StandRushFx {
         }
     }
     public static void additive(EffectMesh m){
+        GoldRushFx.additive(m);
         for(var s:FRAME){
             float on=s.on();
             if(s.body!=null&&on>0){
@@ -234,6 +240,7 @@ public final class StandRushFx {
     }
     /** A little dust kicked up round the feet of whom the rush strikes, now and then (the effect layer's anime dust). */
     public static void dust(Matrix4f matrix,Vec3d camera){
+        GoldRushFx.dust(matrix,camera);
         if(!FxLayer.available()||!KagenoFire.ready())return;
         var world=MinecraftClient.getInstance().world;if(world==null)return;
         List<Vec3d> dust=new ArrayList<>();List<float[]> puffs=new ArrayList<>();
@@ -253,6 +260,7 @@ public final class StandRushFx {
     }
     /** The effect layer: the barrage lights the world in front of it, flickering with its fists, and each blow lights whom it strikes. */
     public static void frame(FxFrame f,Vec3d camera){
+        GoldRushFx.frame(f,camera);
         for(var s:FRAME){
             float on=s.on();
             if(s.body!=null&&on>0){

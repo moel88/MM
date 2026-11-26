@@ -26,13 +26,19 @@ import net.minecraft.util.math.Vec3d;
  * when its user comes into sight is simply there. It follows its user once a tick and is drawn between ticks from the
  * tick before and the tick after, its look worked out for the frame's own moment. Coming out and going back, faint
  * golden afterimages trail it. While it is out it and its user are wrapped in a golden aura (StandAuraLayer's gold),
- * which comes and goes with its glow. It has no skills yet, and no sound (the user's answer when asked).
+ * which comes and goes with its glow. It has no sound of its own coming out or going back (the user's answer when asked).
+ * <p>
+ * (2.147.0) Its muda rush (E; the rush is heard by StandRush, what it does through it is GoldRush): it goes round to
+ * the front of its user on an arc past their shoulder (never through them), facing where they face, throws its fists,
+ * afterimages of its arms flying with it (each a body of its own: GeckoLib poses a body once a frame), and goes back.
  */
 public final class GoldPresence {
     private static final Map<UUID,Presence> ALL=new HashMap<>();
     private static Set<Integer> seen=new HashSet<>(),seenNow=new HashSet<>();
     private static long ticks;private static Object world;
     private static final GoldExperienceLook ghost=new GoldExperienceLook(),trail=new GoldExperienceLook();
+    /** Frames drawn (a body's place is this frame's only: {@link #body}). */
+    private static long frames;
     private GoldPresence(){}
     public static void initialize(){ClientTickEvents.END_CLIENT_TICK.register(GoldPresence::tick);}
 
@@ -42,6 +48,14 @@ public final class GoldPresence {
     public static GoldExperienceLook shown(UUID owner){var s=ALL.get(owner);return s==null||!s.drawn?null:s.puppet.look;}
     /** Seconds since this player's stand last came out or went back, and whether it is out (null when there is none). */
     public static float[] state(UUID owner){var s=ALL.get(owner);return s==null?null:new float[]{(ticks-1-s.since)/20f,s.out?1:0};}
+    /** Where this player's stand was drawn this frame (null if it was not): for its rush's light (GoldRushFx). */
+    static StandPresence.Body body(UUID owner){var s=ALL.get(owner);return s==null||s.bodyFrame!=frames?null:s.body;}
+    /** For the capture tools: where this player's stand was last drawn from them (blocks ahead of them and to their right, the way they face) and how many of its rush's arms' bodies it has. */
+    public static String describe(PlayerEntity p,float delta){
+        var s=ALL.get(p.getUuid());if(s==null||s.body==null)return "no stand drawn";
+        var d=s.body.at().subtract(p.getLerpedPos(delta));double r=Math.toRadians(p.getHeadYaw()),fx=-Math.sin(r),fz=Math.cos(r);int arms=0;for(var a:s.arms)if(a!=null)arms++;
+        return String.format(java.util.Locale.ROOT,"stand drawn %.2f ahead, %.2f to the right, %.2f up, %d arms' bodies",d.x*fx+d.z*fz,-d.x*fz+d.z*fx,d.y,arms);
+    }
     /** How many are out or going back in this client's sight (for the capture tools' logs). */
     public static int count(){return ALL.size();}
 
@@ -79,6 +93,7 @@ public final class GoldPresence {
      * {@code hidden}: none show (a strange space's or a flat frame's cutscene has the screen).
      */
     static void render(MinecraftClient mc,WorldRenderContext c,boolean hidden,List<StandPresence.Drawn> drawn){
+        frames++;
         for(var s:ALL.values())s.drawn=false;
         if(hidden||ALL.isEmpty())return;
         float delta=c.tickDelta();var cam=c.camera().getPos();var dispatcher=mc.getEntityRenderDispatcher();
@@ -94,7 +109,7 @@ public final class GoldPresence {
                 drawn.add(new StandPresence.Drawn(s.puppet,p,s.heldDelta));
                 continue;
             }
-            s.place(p,delta,look);
+            var rush=s.place(p,delta,look);
             s.held.set(look);s.heldAt=s.puppet.getPos();s.heldYaw=s.puppet.getYaw();s.heldDelta=delta;
             if(look.alpha<.003f)continue;
             if(c.frustum()!=null&&!c.frustum().isVisible(s.puppet.getBoundingBox().expand(1.2)))continue;
@@ -102,6 +117,20 @@ public final class GoldPresence {
             var at=s.puppet.getPos();float yaw=s.puppet.getYaw();
             dispatcher.render(s.puppet,at.x-cam.x,at.y-cam.y,at.z-cam.z,yaw,delta,c.matrixStack(),c.consumers(),dispatcher.getLight(s.puppet,delta));
             drawn.add(new StandPresence.Drawn(s.puppet,p,delta));
+            s.body=new StandPresence.Body(at,yaw,look.scale);s.bodyFrame=frames;
+            // the muda rush (2.147.0): the afterimages of its flying arms, golden, each a body of its own
+            if(rush!=null){
+                for(int i=0;i<GoldRush.PHANTOMS.length;i++){
+                    if(s.arms[i]==null)s.arms[i]=new GoldPuppet(mc.world);
+                    var arm=s.arms[i];
+                    float a=GoldRush.phantom(rush,i,delta,arm.look)*look.alpha;if(a<.02f)continue;
+                    arm.look.armsOnly=true;arm.look.alpha=a;arm.look.out=1;arm.look.scale=look.scale;arm.look.shadow=0;arm.look.glow=0;arm.look.lean=arm.look.roll=0;
+                    arm.look.red=GoldRush.RED;arm.look.green=GoldRush.GREEN;arm.look.blue=GoldRush.BLUE;
+                    arm.age=s.puppet.age;
+                    var b=GoldRush.phantomBody(s.body,i);arm.place(b.at(),b.yaw());
+                    dispatcher.render(arm,b.at().x-cam.x,b.at().y-cam.y,b.at().z-cam.z,b.yaw(),delta,c.matrixStack(),c.consumers(),dispatcher.getLight(arm,delta));
+                }
+            }
             // coming out or going back: faint golden afterimages where it was a moment ago (the same pose: GeckoLib
             // poses a body once a frame)
             float main=look.out;ghost.set(look);
@@ -110,11 +139,11 @@ public final class GoldPresence {
                 float a=ghost.alpha*Math.min(1,Math.abs(main-trail.out)*6)*(.42f-.11f*i);
                 if(a<.02f)continue;
                 look.set(ghost);look.out=trail.out;look.alpha=a;look.red=1;look.green=.86f;look.blue=.42f;look.shadow=0;look.glow=0;
-                s.put(p,delta,look);
+                s.put(p,delta,look,rush==null?null:s.shape);
                 var g=s.puppet.getPos();
                 dispatcher.render(s.puppet,g.x-cam.x,g.y-cam.y,g.z-cam.z,yaw,delta,c.matrixStack(),c.consumers(),dispatcher.getLight(s.puppet,delta));
             }
-            look.set(ghost);s.put(p,delta,look);
+            look.set(ghost);s.put(p,delta,look,rush==null?null:s.shape);
         }
     }
     /**
@@ -141,6 +170,9 @@ public final class GoldPresence {
         final GoldExperienceLook from=new GoldExperienceLook();
         /** Where it floats and faces (followed once a tick), and how fast it goes (blocks a second): now and a tick ago. */
         Vec3d pos,prevPos,vel=Vec3d.ZERO,prevVel=Vec3d.ZERO;float yaw,prevYaw;
+        /** Where it was last drawn and the frame it was drawn in; the bodies of its rush's flying arms; the rush's place for it this frame. */
+        StandPresence.Body body;long bodyFrame=-1;final GoldPuppet[] arms=new GoldPuppet[GoldRush.PHANTOMS.length];
+        final GoldRush.Shape shape=new GoldRush.Shape();final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceStance.NAMES.size()];
         /** Its look, place and facing on the last frame drawn and that frame's moment: how it stands while its user is stopped in a time stop. */
         final GoldExperienceLook held=new GoldExperienceLook();Vec3d heldAt;float heldYaw,heldDelta=1;
         Presence(PlayerEntity p,MinecraftClient mc){entity=p.getId();owner=p.getUuid();puppet=new GoldPuppet(mc.world);}
@@ -168,21 +200,49 @@ public final class GoldPresence {
             // Minecraft's yaw: 0 faces south (+z); the right hand is then west (-x)
             return p.getPos().add(-fz*StandPresence.RIGHT-fx*StandPresence.BACK,StandPresence.UP,fx*StandPresence.RIGHT-fz*StandPresence.BACK);
         }
-        /** This frame: the look for the frame's moment, how it leans as it follows, and the body put where it floats. */
-        void place(PlayerEntity p,float delta,GoldExperienceLook look){
+        /**
+         * This frame: the look for the frame's moment with its rush, how it leans as it follows, and the body put where it
+         * floats. Returns its user's rush if it shows (null if none does).
+         */
+        StandRush.Rush place(PlayerEntity p,float delta,GoldExperienceLook look){
             if(pos==null)follow(p);
             look(ticks-1d+delta,look);
+            look.armL=look.armR=1;look.showL=look.showR=1;look.armsOnly=false;
+            // (2.147.0) the muda rush: its stances over the pose it has, and where it stands
+            var rush=StandRush.of(owner);
+            if(rush!=null&&(!rush.gold()||!out||!GoldRush.pose(rush,delta,look,shape,scratch)))rush=null;
+            float calm=rush==null?1:1-shape.engage;
             var v=prevVel.lerp(vel,delta);float y=MathHelper.lerpAngleDegrees(delta,prevYaw,yaw);
             double r=Math.toRadians(y),fx=-Math.sin(r),fz=Math.cos(r);
             double forward=v.x*fx+v.z*fz,side=-v.x*fz+v.z*fx;
-            look.lean=MathHelper.clamp((float)forward*2.4f,-8,16)*look.out;
-            look.roll=MathHelper.clamp((float)side*-2f,-10,10)*look.out;
-            put(p,delta,look);
+            look.lean=MathHelper.clamp((float)forward*2.4f,-8,16)*look.out*calm;
+            look.roll=MathHelper.clamp((float)side*-2f,-10,10)*look.out*calm;
+            // its aura burns a little brighter through the barrage
+            if(rush!=null)look.glow=Math.max(look.glow,look.out*(1+.45f*GoldRush.on(rush,rush.age(delta))));
+            put(p,delta,look,rush==null?null:shape);
+            return rush;
         }
-        /** The body where the look puts it: {@code out} of the way from its user's feet to its place, facing as it follows. */
-        void put(PlayerEntity p,float delta,GoldExperienceLook look){
-            var home=p.getLerpedPos(delta);var at=prevPos.lerp(pos,delta);
-            puppet.place(home.lerp(at,look.out),MathHelper.lerpAngleDegrees(delta,prevYaw,yaw));
+        void put(PlayerEntity p,float delta,GoldExperienceLook look){put(p,delta,look,null);}
+        /**
+         * The body where the look puts it: {@code out} of the way from its user's feet to its place, facing as it
+         * follows; through its rush ({@code shape}), round to the front of its user on an arc past their shoulder (never
+         * through them), to stand right in front of them facing where they face (as Star Platinum does, StandPresence).
+         */
+        void put(PlayerEntity p,float delta,GoldExperienceLook look,GoldRush.Shape shape){
+            var home=p.getLerpedPos(delta);var at=prevPos.lerp(pos,delta);float y=MathHelper.lerpAngleDegrees(delta,prevYaw,yaw);
+            if(shape!=null&&shape.engage>0){
+                float e=shape.engage;
+                double r=Math.toRadians(shape.yaw),fx=-Math.sin(r),fz=Math.cos(r);
+                // where it is now and where it strikes from, as a turn round its user and a distance from them
+                double ax=at.x-home.x,az=at.z-home.z;
+                double fromAngle=Math.atan2(ax*-fz+az*fx,ax*fx+az*fz),fromDist=Math.hypot(ax,az);
+                double ang=fromAngle+wrapRad(-fromAngle)*e,dist=fromDist+(shape.ahead-fromDist)*e;
+                double ux=Math.cos(ang),us=Math.sin(ang);
+                at=new Vec3d(home.x+fx*ux*dist-fz*us*dist,at.y+(home.y+StandPresence.UP+shape.raise-at.y)*e,home.z+fz*ux*dist+fx*us*dist);
+                y=y+MathHelper.wrapDegrees(shape.yaw-y)*e;
+            }
+            puppet.place(home.lerp(at,look.out),y);
         }
+        static double wrapRad(double a){a%=Math.PI*2;if(a>Math.PI)a-=Math.PI*2;if(a<-Math.PI)a+=Math.PI*2;return a;}
     }
 }

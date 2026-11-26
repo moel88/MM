@@ -133,9 +133,11 @@ public final class CooldownHud {
         // forgotten here as the server forgets them (StandManager), so none comes back with the stand
         String stand=ProgressClient.profile.stand();boolean kageno=shows(G,stand),star=shows(PUNCHES,stand);
         if(!star){
-            dev.sangwoo.celestialfall.client.stand.StandAttack.forget(p.getUuid());dev.sangwoo.celestialfall.client.stand.StandRush.forget(p.getUuid());
+            dev.sangwoo.celestialfall.client.stand.StandAttack.forget(p.getUuid());
             dev.sangwoo.celestialfall.client.stand.StandInhale.forget(p.getUuid());
         }
+        // (2.147.0) the rush is Star Platinum's and Gold Experience's: each one's cooldown goes with its stand
+        dev.sangwoo.celestialfall.client.stand.StandRush.forget(p.getUuid(),stand);boolean gold="gold_experience".equals(stand);
         var status=StandClient.STATES.get(p.getUuid());
         if(status!=null){
             long[] ready=status.ready();
@@ -170,8 +172,8 @@ public final class CooldownHud {
         long punches=star?dev.sangwoo.celestialfall.client.stand.StandAttack.ready(p.getUuid()):0;
         if(punches!=punchesSeen){show(PUNCHES,punchesName(),punches-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.REST,now);punchesSeen=punches;}
         // its rush (2.57.0): from when it is over (the server's ready tick, told as it ends)
-        long barrage=star?dev.sangwoo.celestialfall.client.stand.StandRush.ready(p.getUuid()):0;
-        if(barrage!=barrageSeen){show(BARRAGE,barrageName(),barrage-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.RUSH_COOLDOWN,now);barrageSeen=barrage;}
+        long barrage=star||gold?dev.sangwoo.celestialfall.client.stand.StandRush.ready(p.getUuid()):0;
+        if(barrage!=barrageSeen){show(BARRAGE,gold?MUDA:barrageName(),barrage-time,gold?dev.sangwoo.celestialfall.stand.GoldExperienceRules.RUSH_COOLDOWN:dev.sangwoo.celestialfall.stand.StarPlatinumRules.RUSH_COOLDOWN,now);barrageSeen=barrage;}
         // its heavy punch (2.59.0): from when it is over, or stopped short (the server's ready tick, told with each of its punches' news)
         long heavy=star?dev.sangwoo.celestialfall.client.stand.StandAttack.heavyReady(p.getUuid()):0;
         if(heavy!=heavySeen){show(HEAVY,heavyName(),heavy-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.HEAVY_COOLDOWN,now);heavySeen=heavy;}
@@ -283,6 +285,8 @@ public final class CooldownHud {
         if(slot==SAMURAI_G)return "samurai".equals(stand);
         // (2.112.0) X Chara's to theirs
         if(slot==XCHARA_G||slot==XCHARA||slot==XCHARA_E||slot==XCHARA_JAB||slot==XCHARA_CLONE||slot==XCHARA_WEAKEN||slot==XCHARA_PULL||slot==XCHARA_SLAM||slot==XCHARA_CUTTER||slot==XCHARA_SHOT||slot==XCHARA_KNIVES||slot==XCHARA_ERASE||slot==XCHARA_X||slot==XCHARA_Z)return "x_chara".equals(stand);
+        // (2.147.0) the rush's box is Gold Experience's muda rush's too
+        if(slot==BARRAGE&&"gold_experience".equals(stand))return true;
         return (slot<DASH?"kageno":"star_platinum").equals(stand);
     }
     /**
@@ -299,6 +303,8 @@ public final class CooldownHud {
     private static String punchesName(){return "오라!";}
     /** Star Platinum's rush's name in the list (the user's word for it). */
     private static String barrageName(){return "러시";}
+    /** Gold Experience's rush in the list (2.147.0): the rush's box, named for its own. */
+    static final String MUDA="무다 러시";
     /** Its heavy punch's name in the list (the user's word for it). */
     private static String heavyName(){return "강펀치";}
     /** Its Star Finger's name in the list (the user's word for it). */

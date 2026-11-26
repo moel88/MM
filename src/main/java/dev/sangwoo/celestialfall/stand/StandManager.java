@@ -58,7 +58,9 @@ public final class StandManager {
      */
     private static void forgetOthers(net.minecraft.server.MinecraftServer server){
         for(var p:server.getPlayerManager().getPlayerList()){
-            if(!"star_platinum".equals(ProgressManager.profile(p).stand())){StarPlatinumAttack.forget(p);StarPlatinumRush.forget(p);StarPlatinumInhale.forget(p);}
+            if(!"star_platinum".equals(ProgressManager.profile(p).stand())){StarPlatinumAttack.forget(p);StarPlatinumInhale.forget(p);}
+            // (2.147.0) the rush is Star Platinum's and Gold Experience's: each one's cooldown goes with its stand
+            StarPlatinumRush.forget(p,ProgressManager.profile(p).stand());
             // (2.77.0) Lee So-sang's sword's rest after a combo, as Star Platinum's punches'
             if(!"isosang".equals(ProgressManager.profile(p).stand()))dev.sangwoo.celestialfall.isosang.IsosangAttack.forget(p);
             // (2.112.0) X Chara's G's cooldown

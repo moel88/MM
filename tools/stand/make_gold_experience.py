@@ -223,7 +223,10 @@ def right_arm():
     rounded(fore, (ARM_X - 1.18, WRIST_Y - .05, -1.3), (2.36, .5, 2.6), 'cuff', .47, part='wrist')
     hand = bone('right_hand', fore, (ARM_X, WRIST_Y, 0.0))
     box(hand, (ARM_X - .9, WRIST_Y - 2.3, -.8), (1.8, 2.35, 1.6), 'body', part='palm')
-    box(hand, (ARM_X - .85, WRIST_Y - 3.9, -.75), (1.7, 1.65, 1.4), 'body', part='fingers')
+    # (2.147.0) the fingers on a joint of their own along the palm's inner edge: folded up against the palm they make
+    # the fist the muda rush throws (POSES' FIST)
+    fingers = bone('right_fingers', hand, (ARM_X + .9, WRIST_Y - 2.3, 0.0))
+    box(fingers, (ARM_X - .85, WRIST_Y - 3.9, -.75), (1.7, 1.65, 1.4), 'body', part='fingers')
     box(hand, (ARM_X - .6, WRIST_Y - 2.65, -1.2), (1.1, 1.5, .42), 'body', part='thumb')
     badge(hand, (ARM_X - .9, WRIST_Y - 1.2, 0.0), 1.4, 1.65, 'x', -1, 'bug')
 
@@ -839,6 +842,73 @@ def reaching(spec):
     return {n: ({**e, 'reach': (tuple(wide(e['reach'][0])), e['reach'][1])} if 'reach' in e else e) for n, e in spec.items()}
 
 
+# ---------------------------------------------------------------- the muda rush (2.147.0)
+# Its E (user request: "E스킬 무다러시 부터 만들자"): floating in a fighting stance it drives its fists out straight one
+# after the other, the shoulder behind each, while the other comes back to the guard, as Star Platinum's rush does
+# (tools/stand/make_star_platinum.py's rush stances, which these follow at this figure's heights). Each stance has one
+# fist out -- at the middle, high or low -- and client/stand/GoldRush goes from one to the next, left and right in turn.
+# The guard is what it holds before the first fist and after the last.
+FIST = {'right_fingers': {'rot': (0, 0, -100)}, 'left_fingers': {'rot': (0, 0, 100)}}
+RUSH_OUT = {'mid': ((1.0, SHOULDER_Y - 2.4, -24.0), 0.0), 'hi': ((1.8, SHOULDER_Y + 2.8, -24.0), -5.0), 'lo': ((.4, SHOULDER_Y - 7.8, -23.0), 8.0)}
+RUSH_BACK = {'left': ((3.4, SHOULDER_Y + 1.2, -6.5), (.6, -1, .2)), 'right': ((-3.4, SHOULDER_Y + 1.2, -6.5), (-.6, -1, .2))}
+RUSH_RISE = {'mid': 0.0, 'hi': .4, 'lo': -.9}
+
+POSES['guard'] = {
+    'root': {'pos': (0, .6, -.9)},
+    'hips': {'rot': (14, 24, 0)}, 'torso': {'rot': (9, 4, 0)}, 'chest': {'rot': (7, 4, 0)},
+    'neck': {'rot': (-10, -12, 0)}, 'head': {'rot': (-12, -18, 0)},
+    'left_arm': {'reach': ((3.4, SHOULDER_Y + 1.4, -8.5), (.6, -1, .2))},
+    'right_arm': {'reach': ((-2.0, SHOULDER_Y + 1.0, -4.5), (-.4, -1, .1))},
+    'left_leg': {'rot': (-34, 0, -4)}, 'left_shin': {'rot': (42, 0, 0)}, 'left_foot': {'rot': (18, 0, 0)},
+    'right_leg': {'rot': (22, 0, 6)}, 'right_shin': {'rot': (44, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
+    'right_wing': {'rot': (0, -12, 0)}, 'left_wing': {'rot': (0, 12, 0)},
+    **FIST,
+}
+
+
+def rush_stance(side, where):
+    """The barrage with the {side} fist thrown out straight {where} (mid, hi or lo), the other one back in the guard."""
+    target, dip = RUSH_OUT[where]
+    s = 1 if side == 'left' else -1          # the left side is +x, and turning +y brings the left shoulder forward
+    other = 'right' if side == 'left' else 'left'
+    return {
+        'root': {'pos': (0, .6 + RUSH_RISE[where], -1.4)},
+        'hips': {'rot': (11, 6 * s, 0)}, 'torso': {'rot': (8 + .3 * dip, 10 * s, 0)}, 'chest': {'rot': (6 + .6 * dip, 16 * s, 0)},
+        'neck': {'rot': (-9 - .3 * dip, -12 * s, 0)}, 'head': {'rot': (-12 - .5 * dip, -16 * s, 0)},
+        side + '_arm': {'reach': ((target[0] * s, target[1], target[2]), (.5 * s, -1, 0))},
+        other + '_arm': {'reach': RUSH_BACK[other]},
+        'left_leg': {'rot': (-24, 0, -4)}, 'left_shin': {'rot': (34, 0, 0)}, 'left_foot': {'rot': (16, 0, 0)},
+        'right_leg': {'rot': (16, 0, 6)}, 'right_shin': {'rot': (40, 0, 0)}, 'right_foot': {'rot': (30, 0, 0)},
+        'right_wing': {'rot': (0, -16, 0)}, 'left_wing': {'rot': (0, 16, 0)},
+        'hide_0': {'rot': (14, 0, 0)}, 'hide_1': {'rot': (16, 0, 0)}, 'hide_2': {'rot': (14, 0, 0)},
+        **FIST,
+    }
+
+
+for _side in ('left', 'right'):
+    for _where in ('mid', 'hi', 'lo'):
+        POSES['rush_' + _side[0] + ('' if _where == 'mid' else '_' + _where)] = rush_stance(_side, _where)
+
+# a fist's knuckles as it is drawn (the end of the palm, the fingers folded): where the rush's light is (GoldRush)
+KNUCKLES = {'right': (ARM_X + .4, WRIST_Y - 2.4, 0.0), 'left': (-ARM_X - .4, WRIST_Y - 2.4, 0.0)}
+
+
+def stance_points(spec, grips):
+    """Where each fist's knuckles and each shoulder are in a stance of the model as it is written (model units, soles at
+    0): every bone moved as the game's model moves it, by its offset, then turned about its pivot, down from the root."""
+    table = rig.pose_table(spec, grips)
+    world = {}
+    for name, b in rig.BONES.items():
+        world[name] = (world[b.parent] if b.parent else np.eye(4)) @ rig.bone_matrix(b, table.get(name, {}))
+    out = {}
+    for side, p in KNUCKLES.items():
+        q = world[side + '_hand'] @ np.array([*wide(p), 1.0])
+        out[side] = [round(float(v), 3) for v in q[:3]]
+        q = world[side + '_arm'] @ np.array([*rig.BONES[side + '_arm'].pivot, 1.0])
+        out[side + '_shoulder'] = [round(float(v), 3) for v in q[:3]]
+    return out
+
+
 def main():
     for b in rig.check_coplanar():
         print('coplanar overlap (would flicker):', b)
@@ -849,6 +919,8 @@ def main():
     model = json.dumps(rig.geo(place, height, 'geometry.botand.gold_experience'), indent=1)
     grips = {k: tuple(wide(v)) for k, v in GRIPS.items()}
     poses = json.dumps({k: rig.pose_table(reaching(v), grips) for k, v in POSES.items()}, indent=1)
+    # where the fists are in the rush's stances, for its light (client/stand/GoldRush)
+    fists = json.dumps({k: stance_points(reaching(v), grips) for k, v in POSES.items() if k == 'guard' or k.startswith('rush_')}, indent=1)
     top = max(c.origin[1] + c.size[1] for c in rig.CUBES if rig.BONES[c.bone].rot == [0, 0, 0])
     across = max(max(abs(c.origin[0]), abs(c.origin[0] + c.size[0])) for c in rig.CUBES if c.bone.endswith('_arm'))
     drawn()
@@ -858,6 +930,7 @@ def main():
     (ROOT / 'geo/entity/gold_experience.geo.json').write_text(model)
     Image.fromarray(img, 'RGBA').save(ROOT / 'textures/entity/gold_experience.png', optimize=True)
     (ROOT / 'stands/gold_experience_poses.json').write_text(poses)
+    (ROOT / 'stands/gold_experience_fists.json').write_text(fists)
     print(f'{len(rig.BONES)} bones, {len(rig.CUBES)} cubes, texture {rig.ATLAS_W}x{height}, {top:.2f} units tall, {2 * across:.2f} across the shoulders')
 
 

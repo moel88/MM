@@ -690,6 +690,15 @@
       }
     ]
   },
+  "gold_experience_muda": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_experience_muda",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
   "star_platinum_heavy": {
     "sounds": [
       {

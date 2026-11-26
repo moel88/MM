@@ -389,6 +389,13 @@
 - 프레임 이름의 둘째 숫자는 장면 시계(틱)입니다(초가 아님). Q를 누른 다음 틱에 나옵니다(로그 'stand out at').
 - 볼 것: 웅크린 채 나와 그림의 자세로 펼치고 대기로 내려앉는지, 스탠드와 플레이어 둘 다 금색 아우라인지(흰색 없이), 걸을 때 기울며 따라오는지, 들어갈 때 웅크리며 빨려 드는지.
 
+### 골드 익스피리언스 무다 러시 (E, 2.147.0)
+- 목록(960x540 배율 16, 약 10분): `B="SUMMON;stand=gold_experience;face=180;dummy=1;dfw=3;time=6000"`로 예열 `$B;len=60;slows=0:2;save=0-1;then=KEY_Q@4/KEYDOWN_E@20/KEYUP_E@40`, 옆 카메라 `$B;len=150;fov=50;orbit=5.0/1.6/0/115/1.4/0/1.2;then=KEY_Q@6/KEYDOWN_E@50/KEYUP_E@128`(끝까지 30타), 게임 카메라 `$B;len=120;hud=1;cool=1;pitch=14;dist=4.2;then=KEY_Q@6/KEYDOWN_E@44/KEYDOWN_W@50/KEYUP_W@74/KEYUP_E@78`(걸으며 치다가 도중에 뗌, 쿨타임 목록 '무다 러시'). `SHOTS_LANG=ko_kr`.
+- 로그: 'rush on at', 'rush blow N struck', 'dummy health'. `stand.csv`의 러시 칸은 스타플래티나와 같습니다.
+- 소리: 같은 목록을 `slows`·`save`를 빼고 `SHOTS_RECORD=1` 320x180 배율 1로 한 번 더 돌리고 `MUX_RUSH_VOICE=gold_experience_muda python3 tools/stand/shots/mux_rush.py 소리폴더 영상폴더 항목 시작초 끝초 영상.mp4 결과.mp4`(scipy가 필요합니다: 없으면 `pip install scipy`).
+- 멀티플레이: `MP_ONLY=goldrush python3 tools/kageno/mp/run_mp.py 폴더`(`MpClient.GOLDRUSH_SCRIPT`, `MpServer.goldRush`). 도구가 관찰자를 제자리로 되돌리므로 '아무도 없는 곳'의 러시는 싱글 촬영에서 봅니다.
+- 소리 파일: `python3 -I tools/stand/cut_muda.py 녹음.mp3`(녹음은 저장소에 없습니다).
+
 ### 스타플래티나
 - **모델(전시용):** `python3 tools/kageno/shots/run_shots.py OUT "STAND;stance=idle;len=…;orbit=R/UP/DEGPS/START/3/0/CY;fov=50" 1280x730 8`
   - 배율 8이어야 반복 프레임이 0입니다.

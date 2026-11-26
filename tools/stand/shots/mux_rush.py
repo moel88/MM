@@ -66,10 +66,12 @@ def main():
         return at + (nanos - marker) * SR / 1e9
 
     # the rush's voice in the sound run, found by its own waveform near where the log puts it
-    voice = decode(os.path.join(SOUNDS, 'star_platinum_rush.ogg'))
+    # (2.147.0) MUX_RUSH_VOICE=gold_experience_muda lays Gold Experience's muda rush the same way
+    name = os.environ.get('MUX_RUSH_VOICE', 'star_platinum_rush')
+    voice = decode(os.path.join(SOUNDS, name + '.ogg'))
     onset = int(np.argmax(np.abs(voice) > .02))
     clip = voice[onset:onset + int(.35 * SR)]
-    played = [r for r in rows(os.path.join(folder, 'sounds.csv')) if r['sound'] == 'celestialfall:star_platinum_rush']
+    played = [r for r in rows(os.path.join(folder, 'sounds.csv')) if r['sound'] == 'celestialfall:' + name]
     if not played:
         sys.exit(f'{entry}: the sound run played no rush')
     near = sample(int(played[0]['nanos'])) + onset

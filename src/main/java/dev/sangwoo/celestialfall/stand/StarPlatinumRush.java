@@ -45,11 +45,17 @@ import static dev.sangwoo.celestialfall.stand.StarPlatinumRules.*;
  * none knocks back, and only the first a target takes cries out (the rush's own sound carries the rest). Its cooldown
  * runs from its end. Every viewer within 128 blocks is told when it starts, each blow (whom it struck, which of them on
  * their guard) and when it ends (stand_rush_event_v1); the clients draw the barrage and play its sound.
+ * <p>
+ * Since 2.147.0 it runs Gold Experience's muda rush as well (GoldExperienceRules: a little slower, a little weaker and
+ * shorter): the same E, the same word to the clients, with whose rush it is at its end (KIND; a client from before
+ * reads no further than it knows). Gold Experience has no punches of its own to give way to or to wait for.
  */
 public final class StarPlatinumRush {
     public static final Identifier INPUT=CelestialFall.id("stand_rush_v1"),EVENT=CelestialFall.id("stand_rush_event_v1");
     /** It starts; a blow lands (whom it struck); it ends (let go, run out or stopped short). */
     public static final int START=0,BLOW=1,END=2;
+    /** Whose rush: Star Platinum's, or Gold Experience's (2.147.0). */
+    public static final int STAR=0,GOLD=1;
     /** Its user's slow walk (StarPlatinumRules.RUSH_SLOW; the client keeps its lens still while it is on). */
     public static final UUID SLOW=UUID.fromString("9d3c2f61-6c47-4e0a-8a55-1f6b7d2e4c90");
     /** At most this many presses and releases a second are heard. */
@@ -61,6 +67,8 @@ public final class StarPlatinumRush {
          * it starts, when the last one ended and the tick it is ready again after it.
          */
         boolean on;long start=-1000,ended=-1000,ready;
+        /** Whose rush it is, or last was (STAR or GOLD). */
+        int kind;
         /** E is down while the heavy punch is in flight (2.59.0): the rush starts once it is over, if E is still down. */
         boolean waiting;
         /** Whom it has struck so far (their first blow cries out, the rest are quiet). */
@@ -91,28 +99,50 @@ public final class StarPlatinumRush {
         if(s==null||s.world!=p.getServerWorld()){s=new State(p);STATES.put(p.getUuid(),s);}
         return s;
     }
+    /** Whose rush this player's E is now: Star Platinum's or Gold Experience's with the stand out, alive, on the map; -1 if neither. */
+    public static int may(PlayerEntity p){
+        if(StarPlatinumAttack.punches(p))return STAR;
+        return p!=null&&MapGate.enabled(p.getWorld())&&StandManager.goldExperience(p)&&((StandHolder)p).botand$isStandOut()&&p.isAlive()&&!p.isSpectator()?GOLD:-1;
+    }
+    /** Whose rush this player's is, or last was (STAR or GOLD). */
+    public static int kind(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?STAR:s.kind;}
+    static boolean blowAt(int kind,long age){return kind==GOLD?GoldExperienceRules.rushBlow(age):rushBlow(age);}
+    /** How long this kind of rush lasts held to its end, and what it deals in all (for a boss reading it). */
+    public static int length(int kind){return kind==GOLD?GoldExperienceRules.RUSH_LENGTH:RUSH_LENGTH;}
+    public static float total(int kind){return kind==GOLD?GoldExperienceRules.RUSH_TOTAL:RUSH_TOTAL;}
     /** Whether this player's stand is rushing now. */
     public static boolean rushing(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s!=null&&s.on;}
     /** The tick this player's rush (on now) began its blows' clock, for a boss to read (2.69.0, BossThreats; MIN_VALUE if it is not on). */
     public static long startedAt(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null||!s.on?Long.MIN_VALUE:s.start;}
     /** The tick this player's rush is ready again (0 if they have not rushed). */
     public static long ready(PlayerEntity p){var s=STATES.get(p.getUuid());return s==null?0:s.ready;}
-    /** This player's stand is not Star Platinum (2.74.2, StandManager): the rush's cooldown is gone. */
-    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null)s.ready=0;}
+    /**
+     * This player's stand is {@code stand} (2.74.2, StandManager): the cooldown of a rush that is not that stand's is
+     * gone (2.147.0: Star Platinum's and Gold Experience's each go with their stand).
+     */
+    public static void forget(PlayerEntity p,String stand){
+        var s=STATES.get(p.getUuid());
+        if(s!=null&&!(s.kind==GOLD?"gold_experience":"star_platinum").equals(stand))s.ready=0;
+    }
     /** The tick this player's stand is back in its guard after their last rush, and may punch (StarPlatinumRules.RUSH_SETTLE). */
     public static long freeAt(PlayerEntity p){var s=STATES.get(p.getUuid());return s==null?0:s.ended+RUSH_SETTLE;}
 
     /** E goes down: the rush starts if it may. Returns whether it did. */
     public static boolean start(ServerPlayerEntity p){
-        if(!StarPlatinumAttack.punches(p)||p.isSleeping()||p.hasVehicle()||CombatManager.busy(p)||CombatManager.cinematic(p))return false;
+        int kind=may(p);
+        if(kind<0||p.isSleeping()||p.hasVehicle()||CombatManager.busy(p)||CombatManager.cinematic(p))return false;
         var s=state(p);long now=p.getWorld().getTime();
-        if(s.on||now<s.ready&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
-        // the heavy punch (R, 2.59.0) and the Star Finger (T, 2.60.0) are not cut off: the rush waits for them to be over
-        if(now<StarPlatinumAttack.skillOverAt(p)){s.waiting=true;return false;}
+        // (the other stand's rush's cooldown is not this one's)
+        if(s.on||now<s.ready&&s.kind==kind&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
         s.waiting=false;
-        // a punch in flight gives way to it: it starts once the stand has turned back to its guard (StarPlatinumRules.STOP_RETURN)
-        StarPlatinumAttack.yieldTo(p);
-        s.on=true;s.start=Math.max(now,StarPlatinumAttack.guardAt(p));s.struck.clear();
+        if(kind==STAR){
+            // the heavy punch (R, 2.59.0) and the Star Finger (T, 2.60.0) are not cut off: the rush waits for them to be over
+            if(now<StarPlatinumAttack.skillOverAt(p)){s.waiting=true;return false;}
+            // a punch in flight gives way to it: it starts once the stand has turned back to its guard (StarPlatinumRules.STOP_RETURN)
+            StarPlatinumAttack.yieldTo(p);
+        }
+        s.kind=kind;s.ready=0;
+        s.on=true;s.start=kind==STAR?Math.max(now,StarPlatinumAttack.guardAt(p)):now;s.struck.clear();
         p.setSprinting(false);p.clearActiveItem();slow(p,true);
         send(p,s,START,null,null);
         return true;
@@ -128,15 +158,15 @@ public final class StarPlatinumRush {
             if(s.waiting&&!s.on&&p.getWorld().getTime()>=StarPlatinumAttack.skillOverAt(p)){s.waiting=false;start(p);}
             if(!s.on)continue;
             long now=p.getWorld().getTime(),age=now-s.start;
-            if(!StarPlatinumAttack.punches(p)||HitStun.stunned(p)||p.isSleeping()||p.hasVehicle()||CombatManager.cinematic(p)){end(p,s,now);continue;}
+            if(may(p)!=s.kind||HitStun.stunned(p)||p.isSleeping()||p.hasVehicle()||CombatManager.cinematic(p)){end(p,s,now);continue;}
             p.setSprinting(false);
-            if(rushBlow(age))blow(p,s,now);
-            if(age>=RUSH_LENGTH)end(p,s,now);
+            if(blowAt(s.kind,age))blow(p,s,now);
+            if(age>=length(s.kind))end(p,s,now);
         }
     }
     private static void end(ServerPlayerEntity p,State s,long now){
         // its cooldown from now (none for a player the cooldowns are off for: /botand nocooldown)
-        s.on=false;s.ended=now;s.ready=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?now:rushReady(now);
+        s.on=false;s.ended=now;s.ready=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?now:s.kind==GOLD?GoldExperienceRules.rushReady(now):rushReady(now);
         slow(p,false);
         // whom it held go at once
         HitStun.releaseStand(p.getUuid());
@@ -150,6 +180,7 @@ public final class StarPlatinumRush {
         var world=p.getServerWorld();float yaw=MathHelper.wrapDegrees(p.getYaw());
         Vec3d at=p.getPos(),f=Vec3d.fromPolar(0,yaw),right=new Vec3d(-f.z,0,f.x);
         var source=world.getDamageSources().playerAttack(p);
+        float damage=s.kind==GOLD?GoldExperienceRules.RUSH_DAMAGE:RUSH_DAMAGE;int hold=s.kind==GOLD?GoldExperienceRules.RUSH_HOLD:RUSH_HOLD;
         List<LivingEntity> struck=new ArrayList<>();List<Boolean> guarded=new ArrayList<>();
         for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(at,at).expand(RUSH_REACH+2),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
             &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
@@ -158,13 +189,13 @@ public final class StarPlatinumRush {
             if(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other))continue;
             e.timeUntilRegen=0;
             boolean first=!s.struck.contains(e.getUuid());
-            boolean hurt=first?CombatManager.damageWithoutKnockback(e,source,RUSH_DAMAGE):CombatManager.damageQuietly(e,source,RUSH_DAMAGE);
+            boolean hurt=first?CombatManager.damageWithoutKnockback(e,source,damage):CombatManager.damageQuietly(e,source,damage);
             if(hurt)s.struck.add(e.getUuid());
             // a blow the guard took still lands on the guard (it is not held then: the guard holds)
             boolean onGuard=!hurt&&e instanceof ServerPlayerEntity sp&&CombatManager.guarding(sp);
             if(!hurt&&!onGuard)continue;
             struck.add(e);guarded.add(onGuard);
-            if(hurt)HitStun.standHold(p,e,1,now+RUSH_HOLD);
+            if(hurt)HitStun.standHold(p,e,1,now+hold);
         }
         if(!struck.isEmpty())p.onAttacking(struck.get(0));
         send(p,s,BLOW,struck,guarded);
@@ -186,6 +217,7 @@ public final class StarPlatinumRush {
             b.writeLong(s.start);b.writeLong(now);b.writeFloat(yaw);b.writeLong(s.ready);
             int n=struck==null?0:struck.size();b.writeVarInt(n);
             for(int i=0;i<n;i++){var e=struck.get(i);b.writeInt(e.getId());b.writeDouble(e.getX());b.writeDouble(e.getY());b.writeDouble(e.getZ());b.writeBoolean(guarded.get(i));}
+            b.writeByte(s.kind);
             ServerPlayNetworking.send(viewer,EVENT,b);
         }
     }
