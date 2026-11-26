@@ -69,8 +69,9 @@ class GoldExperienceModelTest {
             }
         assertEquals(0,low,1e-6);
         assertEquals(GoldExperienceRenderer.HEIGHT,high,.01,"the height the renderer takes it to be");
-        double blocks=high/16*GoldExperienceRenderer.SCALE;
-        assertTrue(blocks>1.7&&blocks<1.95,"it stands "+blocks+" blocks");
+        // (2.146.1) drawn as tall as Star Platinum to the top of its head: 44.35 units at its own size
+        double blocks=high/16*GoldExperienceRenderer.SCALE,platinum=44.35/16*StarPlatinumRenderer.SCALE;
+        assertEquals(platinum,blocks,.02,"it stands "+blocks+" blocks, Star Platinum "+platinum);
     }
     /** The rings at its belt are rings (their middles cut out of their plates), and the hide ends in ragged teeth. */
     @Test void theRingsAreCutThroughAndTheHideIsRagged()throws Exception{

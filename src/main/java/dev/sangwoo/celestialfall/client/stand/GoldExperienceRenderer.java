@@ -14,13 +14,14 @@ import software.bernie.geckolib.renderer.GeoEntityRenderer;
 /** Draws Gold Experience's figure with its GeckoLib model (2.145.0). */
 public final class GoldExperienceRenderer extends GeoEntityRenderer<GoldExperienceEntity> {
     /**
-     * The model stands 40 units (2.5 blocks) to the top of its helmet; at this size it stands 1.8 blocks, a player's
-     * height (Star Platinum is drawn at the same size, {@link StarPlatinumRenderer#SCALE}, and stands a little taller).
+     * The model stands 40 units (2.5 blocks) to the top of its helmet; at this size it stands 2.0 blocks, as tall as
+     * Star Platinum to the top of its head (44.35 units at {@link StarPlatinumRenderer#SCALE}, its hair above that).
+     * (2.146.1; .72 and a player's 1.8 blocks before, which read as too small beside Star Platinum.)
      */
-    public static final float SCALE=.72f;
+    public static final float SCALE=.8f;
     /** The model's height to the top of its helmet (units, tools/stand/make_gold_experience.py). */
     public static final float HEIGHT=40f;
-    public GoldExperienceRenderer(EntityRendererFactory.Context context){super(context,new GoldExperienceModel());withScale(SCALE);shadowRadius=.4f;}
+    public GoldExperienceRenderer(EntityRendererFactory.Context context){super(context,new GoldExperienceModel());withScale(SCALE);shadowRadius=.45f;}
     public static void initialize(){EntityRendererRegistry.register(GoldExperience.TYPE,GoldExperienceRenderer::new);}
     /** The height (blocks above its feet) it leans about as it follows its user: its waist. */
     static final float WAIST=23f/16*SCALE;

@@ -1826,16 +1826,24 @@ public final class SkillShots implements ClientModInitializer {
                 var w=p.getServerWorld();
                 var at=p.getPos().add(net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw()).multiply(opt("sfw",3)));float yaw=p.getYaw()+180+opt("syaw",0);
                 // 2.145.0: "figure=gold" stands Gold Experience's figure there instead (stance=idle|hero|stand)
-                if("gold".equals(opts.get("figure"))){
+                // 2.146.1: "figure=both" stands the two side by side ("gap" blocks apart, 2.4), Gold Experience on the camera's left
+                boolean both="both".equals(opts.get("figure"));
+                if(both){var side=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw()+90).multiply(opt("gap",2.4f)/2);
+                    var gold=dev.sangwoo.celestialfall.stand.GoldExperience.TYPE.create(w);var g=at.subtract(side);
+                    gold.refreshPositionAndAngles(g.x,g.y,g.z,yaw,0);gold.setHeadYaw(yaw);gold.setBodyYaw(yaw);
+                    gold.setStance(Math.max(0,dev.sangwoo.celestialfall.stand.GoldExperienceStance.NAMES.indexOf(opts.getOrDefault("stance","idle"))));
+                    log.append("  gold figure ").append(w.spawnEntity(gold)?"stands":"refused").append(String.format(Locale.ROOT," at (%.2f, %.2f, %.2f) facing %.0f%n",g.x,g.y,g.z,yaw));
+                    at=at.add(side);}
+                else if("gold".equals(opts.get("figure"))){
                     var gold=dev.sangwoo.celestialfall.stand.GoldExperience.TYPE.create(w);
                     gold.refreshPositionAndAngles(at.x,at.y,at.z,yaw,0);gold.setHeadYaw(yaw);gold.setBodyYaw(yaw);
                     gold.setStance(Math.max(0,dev.sangwoo.celestialfall.stand.GoldExperienceStance.NAMES.indexOf(opts.getOrDefault("stance","idle"))));
                     log.append("  gold figure ").append(w.spawnEntity(gold)?"stands":"refused").append(String.format(Locale.ROOT," at (%.2f, %.2f, %.2f) facing %.0f%n",at.x,at.y,at.z,yaw));return;
                 }
-                var figure=dev.sangwoo.celestialfall.stand.StarPlatinum.TYPE.create(w);
-                figure.refreshPositionAndAngles(at.x,at.y,at.z,yaw,0);figure.setHeadYaw(yaw);figure.setBodyYaw(yaw);
+                var figure=dev.sangwoo.celestialfall.stand.StarPlatinum.TYPE.create(w);var here=at;
+                figure.refreshPositionAndAngles(here.x,here.y,here.z,yaw,0);figure.setHeadYaw(yaw);figure.setBodyYaw(yaw);
                 figure.setStance(Math.max(0,dev.sangwoo.celestialfall.stand.StarPlatinumStance.NAMES.indexOf(opts.getOrDefault("stance","idle"))));
-                log.append("  figure ").append(w.spawnEntity(figure)?"stands":"refused").append(String.format(Locale.ROOT," at (%.2f, %.2f, %.2f) facing %.0f%n",at.x,at.y,at.z,yaw));});
+                log.append("  figure ").append(w.spawnEntity(figure)?"stands":"refused").append(String.format(Locale.ROOT," at (%.2f, %.2f, %.2f) facing %.0f%n",here.x,here.y,here.z,yaw));});
             case "GDUMMY"->server(p->{int n=p.getServer().getCommandManager().executeWithPrefix(p.getCommandSource(),"botand dummy atomic "+(int)opt("adist",60));if(n<=0)log.append("  rejected GDUMMY\n");});
             default->server(p->{long now=p.getWorld().getTime();var at=p.getPos();
                 if(!KagenoManager.input(p,skill(name)))log.append("  rejected ").append(name).append('\n');else{spot=at;serverStart=now;}});
