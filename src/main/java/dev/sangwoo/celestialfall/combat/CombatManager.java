@@ -393,6 +393,10 @@ public final class CombatManager {
             var intersection=e.getBoundingBox().expand(.14).raycast(eye,end);
             if(intersection.isPresent()&&eye.squaredDistanceTo(intersection.get())<=distance) {target=e;distance=eye.squaredDistanceTo(intersection.get());}
         }
+        // (2.151.0) Gold Experience's fly hovering in front of whom it belongs to meets their punch on the way, as far as
+        // whom it would strike (GoldExperienceRules.swatWay: a body's width at either hand, not this punch's own line)
+        Vec3d reached=target==null?end:eye.add(end.subtract(eye).normalize().multiply(Math.sqrt(distance)));
+        if(dev.sangwoo.celestialfall.stand.GoldExperienceLife.swatsAlong(p,end.subtract(eye),Math.hypot(reached.x-eye.x,reached.z-eye.z)))return;
         if(target==null)return;
         var source=new DamageSource(world.getRegistryManager().get(RegistryKeys.DAMAGE_TYPE).entryOf(UNARMED),p);
         boolean damaged=damageWithoutKnockback(target,source,CombatState.DAMAGE[strike]);

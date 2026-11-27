@@ -50,8 +50,8 @@ public class GoldFlyEntity extends LivingEntity {
 
     // the server's
     UUID owner,maker;LivingEntity ownerBody;float heading;boolean swatted,ended;
-    // a client's: the way it follows whom it belongs to, a tick ago and now, and its age as it was first seen here
-    public float clientHeading,prevClientHeading;private long seenAge=Long.MIN_VALUE;private int clientTicks;
+    // a client's: the way it follows whom it belongs to, a tick ago and now, and its age (ticks) a tick ago and now
+    public float clientHeading,prevClientHeading;private boolean seen;private double clientAgeNow,clientAgePrev;
 
     public GoldFlyEntity(EntityType<? extends GoldFlyEntity> type,World world){
         super(type,world);setNoGravity(true);noClip=true;setSilent(true);
@@ -110,25 +110,38 @@ public class GoldFlyEntity extends LivingEntity {
         if(age>=FLY_GONE){GoldExperienceLife.flyGone(this,false);return;}
         // whom it belongs to stopped in a time stop: it hangs where it is
         if(StarPlatinumTimeStop.stopped(o))return;
-        heading=GoldFlyPath.follow(heading,o.getHeadYaw());
+        heading=GoldFlyPath.follow(heading,facing(o));
         var p=GoldFlyPath.at(seed(),part(),age,o.getX(),o.getY(),o.getZ(),heading,o.getStandingEyeHeight(),o.getHeight(),from());
         setPosition(p[0],p[1]-getHeight()/2,p[2]);
         setYaw(heading+180);setHeadYaw(heading+180);setBodyYaw(heading+180);
     }
     private void clientTick(){
         var o=getWorld().getEntityById(ownerId());
-        if(seenAge==Long.MIN_VALUE){
-            seenAge=getWorld().getTime()-born();clientTicks=0;
-            clientHeading=prevClientHeading=o instanceof LivingEntity l?l.getHeadYaw():getYaw();
+        // Its age goes on a tick at each of this client's ticks, eased toward the server's (by the world's time, which the
+        // server sets again every second): a client that lost ticks (a stall, a heavy load) is not left behind for the rest
+        // of the fly's 20 s. Counted on from the first sight alone, the multiplayer check of 2.151.0 drew it 2 to 4 blocks
+        // from the server's on the client that saved its frames. Off by more than 2 s, it is put right at once.
+        double server=getWorld().getTime()-born();
+        if(!seen){
+            seen=true;clientAgeNow=clientAgePrev=server-1;
+            clientHeading=prevClientHeading=o instanceof LivingEntity l?facing(l):getYaw();
         }
-        clientTicks++;
+        clientAgePrev=clientAgeNow;
+        clientAgeNow=GoldFlyPath.age(clientAgeNow,server);
         prevClientHeading=clientHeading;
-        if(o instanceof LivingEntity l)clientHeading=GoldFlyPath.follow(clientHeading,l.getHeadYaw());
+        if(o instanceof LivingEntity l)clientHeading=GoldFlyPath.follow(clientHeading,facing(l));
     }
-    /** On a client: ticks since the blow that made it this frame (as first seen here, counted on by this client's ticks). */
-    public double clientAge(float delta){return seenAge==Long.MIN_VALUE?0:seenAge+clientTicks-1+delta;}
+    /**
+     * The way whom it belongs to faces, which it hovers before: a player's look (their yaw), anything else's head. Not a
+     * player's head: a client is told a player's head only as it turns, not as it first sees them (a player standing still
+     * since, as the watcher of the multiplayer check of 2.151.0, kept a head facing south there while the server's faced
+     * north: the fly drawn behind them). Their yaw comes with them, and on the map their head is their yaw.
+     */
+    public static float facing(LivingEntity o){return o instanceof PlayerEntity?o.getYaw():o.getHeadYaw();}
+    /** On a client: ticks since the blow that made it, this frame (smooth between its ticks). */
+    public double clientAge(float delta){return seen?clientAgePrev+(clientAgeNow-clientAgePrev)*delta:0;}
     /** On a client: whether it has been ticked here yet (its age and heading are known). */
-    public boolean clientReady(){return seenAge!=Long.MIN_VALUE;}
+    public boolean clientReady(){return seen;}
 
     /**
      * A blow on it: only one of its owner's, once it has become the fly, swats it (the rest come to nothing). Never a

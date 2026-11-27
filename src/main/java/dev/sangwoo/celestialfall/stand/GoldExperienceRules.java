@@ -196,4 +196,16 @@ public final class GoldExperienceRules {
     public static float reflected(float amount){return amount;}
     /** Whether a fly struck off {@code age} ticks ago can be swatted now: once it has become the fly, until its time is up. */
     public static boolean swattable(long age){return age>=FLY_FORMS&&age<FLY_FORMS+FLY_LASTS;}
+    /** How far to the side of a blow's way its owner's fly still meets it (blocks), and how far beyond whom it strikes. */
+    public static final double SWAT_SIDE=1.1,SWAT_PAST=.3;
+    /**
+     * Whether its owner's blow meets the fly ("앞으로 알짱거리면서 파리 자기자신을 때리게 유도"): the fly {@code ahead}
+     * blocks along the blow's way (level), {@code side} to its side and {@code up} over the striker's feet (the fly's
+     * underside), the blow reaching {@code reach} blocks or as far as whom it strikes. The way is as wide as a body
+     * at either hand: a training dummy's blow and, since the multiplayer check of 2.151.0, a player's bare-handed punch
+     * (whose own line, narrower than the fly, all but never met it), so that striking straight ahead mostly meets it.
+     */
+    public static boolean swatWay(double ahead,double side,double up,double reach){
+        return ahead>=.1&&ahead<=reach+SWAT_PAST&&Math.abs(side)<=SWAT_SIDE&&up>=-.6&&up<=2.6;
+    }
 }

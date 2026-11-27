@@ -1,5 +1,6 @@
 package dev.sangwoo.celestialfall;
 
+import dev.sangwoo.celestialfall.stand.GoldExperienceRules;
 import dev.sangwoo.celestialfall.stand.GoldFlyPath;
 import org.junit.jupiter.api.Test;
 import static dev.sangwoo.celestialfall.stand.GoldExperienceRules.*;
@@ -8,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Where Gold Experience's fly is (2.151.0, T: "앞으로 알짱거리면서 파리 자기자신을 때리게 유도"): smooth at 60 fps all its
  * life, the part flying off from where it was struck to the fly's place, the fly before its owner's face, in the way of
- * their blows straight ahead most of the time but not all of it, lagging their turns, and back into the part's place.
+ * their blows straight ahead more often than not (by the rule the server swats it by), lagging their turns, and back into the part's place.
  */
 class GoldFlyPathTest {
     static final double EYES=1.62,HEIGHT=1.8;
@@ -37,11 +38,14 @@ class GoldFlyPathTest {
             assertTrue(ahead>.6&&ahead<1.9,"ahead of them: "+ahead+" at "+age);
             assertTrue(Math.abs(right)<1.8,"to the side: "+right);
             assertTrue(up>EYES-.7&&up<EYES+.45,"about their face: "+up);
-            all++;if(Math.abs(right)<1.3)inTheWay++;
+            // in the way of a punch straight ahead (its owner's bare hand reaches 3.15 blocks; the fly's underside is a
+            // quarter block under its middle): the rule the server swats it by (2.151.0)
+            all++;if(GoldExperienceRules.swatWay(ahead,right,up-.25,3.15))inTheWay++;
         }
         double share=inTheWay/(double)all;
-        assertTrue(share>.55,"in the way of a blow straight ahead "+share+" of the time");
-        assertTrue(share<.92,"but not all the time: "+share);
+        // (2.151.0: about 56 %, the fly crossing the way and back as it flits from side to side)
+        assertTrue(share>.5,"in the way of a blow straight ahead more often than not: "+share+" of the time");
+        assertTrue(share<.8,"but far from all the time: "+share);
     }
     @Test void itLagsTheirTurns(){
         float h=0;for(int k=0;k<6;k++)h=GoldFlyPath.follow(h,90);
@@ -56,5 +60,15 @@ class GoldFlyPathTest {
         assertTrue(head[2]>ra[2]&&ra[2]>rl[2],"head over arms over legs");
         assertTrue(ra[1]>0&&la[1]<0,"the right arm on the right");
         assertEquals(head[2]/2,GoldFlyPath.socket(HEAD,HEIGHT/2)[2],1e-9,"by the body's height");
+    }
+    /** A client's clock for the fly (2.151.0, the multiplayer check): a tick a tick, and one that lost ticks catches up smoothly. */
+    @Test void aClientsClockForTheFlyKeepsUpWithTheServers(){
+        assertEquals(11,GoldFlyPath.age(10,11),1e-9,"in step: a tick a tick");
+        double age=100,server=100;
+        // a stall of 30 ticks: the world's time comes back 30 ahead; the client's clock catches up without a jump
+        server+=30;double last=age;int took=0;
+        for(int k=0;k<200&&Math.abs(server-age)>.5;k++){server++;age=GoldFlyPath.age(age,server);assertTrue(age-last>0&&age-last<1+.1*31+1e-9,"no jump: "+(age-last));last=age;took++;}
+        assertTrue(took<=40,"within half a tick of the server's in 2 s: "+took+" ticks");
+        assertEquals(500,GoldFlyPath.age(400,500),1e-9,"off by more than 2 s: put right at once");
     }
 }

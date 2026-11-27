@@ -440,8 +440,9 @@ public final class MpServer implements ModInitializer {
             String was=lifeFlies.put(fly.getUuid(),what);
             if(!what.equals(was)||fly.age()%20==0){
                 String where="";
-                if(o!=null){var f=net.minecraft.util.math.Vec3d.fromPolar(0,o.getHeadYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);var d=fly.getPos().add(0,fly.getHeight()/2,0).subtract(o.getPos());
-                    where=String.format(java.util.Locale.ROOT,", %.2f ahead %.2f right %.2f up of its owner",d.dotProduct(f),d.dotProduct(right),d.y);}
+                if(o!=null){var f=net.minecraft.util.math.Vec3d.fromPolar(0,dev.sangwoo.celestialfall.stand.GoldFlyEntity.facing(o));var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);var d=fly.getPos().add(0,fly.getHeight()/2,0).subtract(o.getPos());
+                    var c=fly.getPos().add(0,fly.getHeight()/2,0);
+                    where=String.format(java.util.Locale.ROOT,", %.2f ahead %.2f right %.2f up of its owner; at %.2f %.2f %.2f, its owner at %.2f %.2f %.2f head %.1f",d.dotProduct(f),d.dotProduct(right),d.y,c.x,c.y,c.z,o.getX(),o.getY(),o.getZ(),o.getHeadYaw());}
                 note(server,String.format(java.util.Locale.ROOT,"fly %s at tick %d, %d ticks old: %s%s",was==null?"born":"",now,fly.age(),what,where));
             }
         }

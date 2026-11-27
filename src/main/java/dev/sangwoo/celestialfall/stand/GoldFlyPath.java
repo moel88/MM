@@ -74,6 +74,17 @@ public final class GoldFlyPath {
         double e=smooth(u),lift=arc*Math.sin(Math.PI*Math.max(0,Math.min(1,u)));
         return new double[]{a[0]+(b[0]-a[0])*e,a[1]+(b[1]-a[1])*e+lift,a[2]+(b[2]-a[2])*e};
     }
+    /** How far a client's clock for the fly eases toward the server's at each tick, and past what it is put right at once (ticks). */
+    public static final double AGE_EASE=.1,AGE_SNAP=40;
+    /**
+     * A client's age of the fly after a tick: a tick on from {@code last}, eased toward {@code server} (the age by the
+     * world's time, which a client's server sets again every second). A client that lost ticks catches up smoothly
+     * (2.151.0); one off by more than 2 s is put right at once.
+     */
+    public static double age(double last,double server){
+        double next=last+1,off=server-next;
+        return Math.abs(off)>AGE_SNAP?server:next+off*AGE_EASE;
+    }
     /**
      * Where the fly is (the middle of it) {@code age} ticks after the blow, about whom it belongs to standing at
      * {@code x,y,z} with their eyes {@code eyes} up and {@code height} tall, followed at {@code heading}: the part flying

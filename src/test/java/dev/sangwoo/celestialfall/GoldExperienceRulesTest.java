@@ -140,4 +140,14 @@ class GoldExperienceRulesTest {
         // one cooldown of 50 seconds for both, from the end (of the frog, of the fly)
         assertEquals(1000,LIFE_COOLDOWN);assertEquals(5000+1000,lifeReady(5000));
     }
+    /** Its owner's blow meets the fly on its way (2.151.0, the multiplayer check: a bare-handed punch's own line all but never did). */
+    @Test void theOwnersBlowMeetsTheFlyInItsWay(){
+        assertTrue(swatWay(1.2,0,1.2,3.15),"right in front of them, at their face");
+        assertTrue(swatWay(1.2,1.05,1.2,3.15)&&swatWay(1.2,-1.05,1.2,3.15),"a body's width at either hand");
+        assertFalse(swatWay(1.2,1.2,1.2,3.15),"but not further to the side");
+        assertFalse(swatWay(1.6,0,1.2,1.0),"nor beyond whom the blow strikes first");
+        assertTrue(swatWay(1.25,0,1.2,1.0),"(a little beyond them: the fly is not a point)");
+        assertFalse(swatWay(-.3,0,1.2,3.15),"nor behind them");
+        assertFalse(swatWay(1.2,0,2.8,3.15),"nor high over their head");
+    }
 }

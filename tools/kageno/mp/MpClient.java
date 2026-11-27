@@ -1400,10 +1400,12 @@ public final class MpClient implements ClientModInitializer {
         for(var e:mc.world.getEntities()){
             if(e instanceof dev.sangwoo.celestialfall.stand.GoldFlyEntity fly&&age%20==0){
                 var at=dev.sangwoo.celestialfall.client.stand.GoldLife.flyAt(fly,0);var o=mc.world.getEntityById(fly.ownerId());
-                if(at!=null&&o!=null){var f=net.minecraft.util.math.Vec3d.fromPolar(0,o.getHeadYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);var d=at.subtract(o.getPos());
-                    note(String.format(Locale.ROOT,"a fly of %s here: part %d, drawn %.2f ahead %.2f right %.2f up of it, %.2f blocks from where the server put it, I can hit it %s, crosshair on it %s",
-                        o==mc.player?"mine":o.getName().getString(),fly.part(),d.dotProduct(f),d.dotProduct(right),d.y,at.distanceTo(fly.getPos().add(0,fly.getHeight()/2,0)),fly.canHit(),
-                        mc.crosshairTarget instanceof net.minecraft.util.hit.EntityHitResult hit&&hit.getEntity()==fly));}
+                if(at!=null&&o instanceof net.minecraft.entity.LivingEntity lo){var f=net.minecraft.util.math.Vec3d.fromPolar(0,dev.sangwoo.celestialfall.stand.GoldFlyEntity.facing(lo));var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);var d=at.subtract(o.getPos());
+                    var syncd=fly.getPos().add(0,fly.getHeight()/2,0);
+                    note(String.format(Locale.ROOT,"a fly of %s here: part %d, drawn %.2f ahead %.2f right %.2f up of it, %.2f blocks from where the server put it, I can hit it %s, crosshair on it %s; world %d, drawn at %.2f %.2f %.2f, the entity at %.2f %.2f %.2f, its owner at %.2f %.2f %.2f head %.1f, age %.1f (by the world's time %d), heading %.1f",
+                        o==mc.player?"mine":o.getName().getString(),fly.part(),d.dotProduct(f),d.dotProduct(right),d.y,at.distanceTo(syncd),fly.canHit(),
+                        mc.crosshairTarget instanceof net.minecraft.util.hit.EntityHitResult hit&&hit.getEntity()==fly,
+                        mc.world.getTime(),at.x,at.y,at.z,syncd.x,syncd.y,syncd.z,o.getX(),o.getY(),o.getZ(),lo.getHeadYaw(),fly.clientAge(0),mc.world.getTime()-fly.born(),fly.clientHeading));}
             }
         }
         int theirs=0;for(var p:mc.world.getPlayers())theirs|=dev.sangwoo.celestialfall.client.stand.GoldLife.missing(p)<<(p==mc.player?0:8);

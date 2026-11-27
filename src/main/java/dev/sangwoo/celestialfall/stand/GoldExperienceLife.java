@@ -242,7 +242,7 @@ public final class GoldExperienceLife {
         if(part<0||!e.isAlive()){s.ready=free?end:lifeReady(end);send(p,s,LANDED,now,e,0,guarded,-1,-1);return;}
         var fly=FLY.create(world);
         if(fly==null){s.ready=free?end:lifeReady(end);send(p,s,LANDED,now,e,0,guarded,-1,-1);return;}
-        float facing=e.getHeadYaw();
+        float facing=GoldFlyEntity.facing(e);
         double[] at=GoldFlyPath.world(e.getX(),e.getY(),e.getZ(),e.getBodyYaw(),GoldFlyPath.socket(part,e.getHeight()));
         int seed=(int)(now*31+e.getId()*7919L+p.getId());
         fly.setup(e,p.getUuid(),part,now,seed,new Vec3d(at[0],at[1],at[2]),facing);
@@ -350,12 +350,22 @@ public final class GoldExperienceLife {
      */
     public static boolean swatsInstead(LivingEntity attacker,LivingEntity target){
         if(attacker==null||attacker.getWorld().isClient||target==null)return false;
-        Vec3d at=attacker.getPos(),to=target.getPos().subtract(at).multiply(1,0,1);double far=to.length();
+        Vec3d to=target.getPos().subtract(attacker.getPos());
+        return swatsAlong(attacker,to,Math.min(Math.hypot(to.x,to.z),3.2));
+    }
+    /**
+     * Whether {@code attacker}'s blow along {@code way} (level), reaching {@code reach} blocks, meets its own fly first
+     * (GoldExperienceRules.swatWay): a player's bare-handed punch (CombatManager.hit) and a training dummy's
+     * (swatsInstead). If so it is swatted and the blow goes no further.
+     */
+    public static boolean swatsAlong(LivingEntity attacker,Vec3d way,double reach){
+        if(attacker==null||attacker.getWorld().isClient)return false;
+        double far=Math.hypot(way.x,way.z);
         if(far<1e-4)return false;
-        Vec3d f=to.multiply(1/far),right=new Vec3d(-f.z,0,f.x);
+        Vec3d at=attacker.getPos(),f=new Vec3d(way.x/far,0,way.z/far),right=new Vec3d(-f.z,0,f.x);
         for(var fly:attacker.getWorld().getEntitiesByClass(GoldFlyEntity.class,attacker.getBoundingBox().expand(4),x->x.ownedBy(attacker)&&x.swattable())){
-            Vec3d d=fly.getPos().subtract(at);double ahead=d.dotProduct(f),side=d.dotProduct(right);
-            if(ahead<.1||ahead>Math.min(far,3.2)+.3||Math.abs(side)>1.1||d.y<-.6||d.y>2.6)continue;
+            Vec3d d=fly.getPos().subtract(at);
+            if(!GoldExperienceRules.swatWay(d.dotProduct(f),d.dotProduct(right),d.y,reach))continue;
             fly.swatted=true;swatted(fly);
             return true;
         }

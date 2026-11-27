@@ -848,7 +848,8 @@ public final class SkillShots implements ClientModInitializer {
                 log.append(String.format(Locale.ROOT,"  fly of %s at %d: age %.1f, part %d, %.2f ahead %.2f right %.2f up, missing %d%n",o==dummy?"the dummy":o.getName().getString(),age,fly.clientAge(0),fly.part(),d.dotProduct(f),d.dotProduct(right),d.y,dev.sangwoo.celestialfall.client.stand.GoldLife.missing(o)));
             }
             if(mc.player!=null&&age%20==0&&dev.sangwoo.celestialfall.client.stand.GoldFrog.seen(mc.player.getUuid())!=null&&life!=null)log.append("  frog drawn at ").append(age).append(": ").append(dev.sangwoo.celestialfall.client.stand.GoldFrog.seen(mc.player.getUuid())).append('\n');
-            if(dummy!=null&&age==12&&mc.player!=null){var f=net.minecraft.util.math.Vec3d.fromPolar(0,mc.player.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);var d=dummy.getPos().subtract(mc.player.getPos());
+            if(dummy!=null&&opts.containsKey("dtrace")&&age>=26&&age<=90)log.append(String.format(Locale.ROOT,"  dtrace %d: client x %.2f z %.2f%n",age,dummy.getX(),dummy.getZ()));
+            if(dummy!=null&&(age==12||age==32&&opts.getOrDefault("then","").contains("DUMMYBACK"))&&mc.player!=null){var f=net.minecraft.util.math.Vec3d.fromPolar(0,mc.player.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);var d=dummy.getPos().subtract(mc.player.getPos());
                 log.append(String.format(Locale.ROOT,"  the dummy %.2f ahead %.2f right of the player (facing %.1f) at %d: the player at %.2f %.2f %.2f, the dummy at %.2f %.2f %.2f%n",d.dotProduct(f),d.dotProduct(right),mc.player.getYaw(),age,
                     mc.player.getX(),mc.player.getY(),mc.player.getZ(),dummy.getX(),dummy.getY(),dummy.getZ()));
                 server(sp->{var sd=sp.getServerWorld().getEntityById(dummyId);log.append(String.format(Locale.ROOT,"  (the server: the player at %.2f %.2f %.2f yaw %.1f, the dummy at %s)%n",sp.getX(),sp.getY(),sp.getZ(),sp.getYaw(),sd==null?"none":String.format(Locale.ROOT,"%.2f %.2f %.2f",sd.getX(),sd.getY(),sd.getZ())));});}
@@ -1119,8 +1120,16 @@ public final class SkillShots implements ClientModInitializer {
             // "dfresh=1" (2.134.0): the dummy starts the entry as new, with nothing left of the last (X Chara's great X slash
             // glitches it for 8 s, so a guard dummy struck in the warm-up entry would start the next with its guard down)
             if(opt("dfresh",0)>0&&l instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity fresh)fresh.resetTraining();
+            // "dhold=1" (2.151.0): an attacking dummy that stands where it is put but strikes no one until "DGO@n" (then 20
+            // ticks on): kept out of reach and brought in instead, it was drawn short of where it stood (the game's
+            // tracker sends its turn just after the move, and a client stops the move's 3-tick slide where it is at that)
+            if(opt("dhold",0)>0&&l instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity held)nextCombo(held,p.getServerWorld().getTime()+1_000_000);
             l.setHealth(l.getMaxHealth());l.refreshPositionAndAngles(show?at.x:at.x+70,y,at.z,yaw+180,0);l.setVelocity(0,0,0);
         }
+    }
+    /** Sets when a training dummy throws its next combo ("dhold"). */
+    private static void nextCombo(dev.sangwoo.celestialfall.training.TrainingDummyEntity d,long at){
+        try{var f=dev.sangwoo.celestialfall.training.TrainingDummyEntity.class.getDeclaredField("nextCombo");f.setAccessible(true);f.setLong(d,at);}catch(ReflectiveOperationException e){throw new IllegalStateException(e);}
     }
     /** Removes the last shot's actors and spawns this one's: still husks with no goals and plenty of health. */
     private void actors(net.minecraft.server.world.ServerWorld w,int y){
@@ -1842,11 +1851,17 @@ public final class SkillShots implements ClientModInitializer {
                         log.append(String.format(Locale.ROOT,"  health set to %.1f at %d%s%n",p.getHealth(),age,d instanceof net.minecraft.entity.LivingEntity le?String.format(Locale.ROOT,", the dummy's %.1f",le.getHealth()):""));});continue;}
                     if(what.equals("SOULOUT")){if(age==at){server(p->dev.sangwoo.celestialfall.stand.GoldExperienceOverdrive.out(p,p.getWorld().getTime()));log.append("  soul put out at ").append(age).append('\n');}continue;}
                     if(what.equals("GAUGE")){if(age==at){server(p->dev.sangwoo.celestialfall.isosang.IsosangAttack.setGauge(p,dev.sangwoo.celestialfall.isosang.IsosangRules.GAUGE_FULL));log.append("  gauge full at ").append(age).append('\n');}continue;}
+                    if(what.equals("DGO")){if(age==at)server(p->{if(p.getServerWorld().getEntityById(dummyId) instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity t){t.resetTraining();log.append("  dummy goes at ").append(age).append('\n');}});continue;}
                     if(what.equals("DUMMYBACK")){if(age==at)server(p->{var d=p.getServerWorld().getEntityById(dummyId);if(d instanceof net.minecraft.entity.LivingEntity l){
                             var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);// (2.151.0) "dfw2"/"drt2": where it is brought back to, if not where it stood (an attacking dummy kept out of reach
                             // through the shot's lead, which it would spend striking the player, and brought in when wanted)
                             var to=p.getPos().add(f.multiply(opt(opts.containsKey("dfw2")?"dfw2":"dfw",3))).add(right.multiply(opt(opts.containsKey("drt2")?"drt2":"drt",0)));
                             l.setHealth(l.getMaxHealth());l.setVelocity(0,0,0);l.refreshPositionAndAngles(to.x,p.getY(),to.z,p.getYaw()+180,0);
+                            // (2.151.0) A client draws the dummy short of here for up to 60 ticks: the game's tracker sends
+                            // its turn just after the move, and the client stops the move's 3-tick slide where it is at that
+                            // (from 70 blocks off, "dummy=0", it stayed off the screen). Telling the client the place as well
+                            // does not help (the tracker's next step goes on from its own last place: drawn beyond). For an
+                            // attacking dummy that must not strike before it is wanted, use "dhold=1" and "DGO@n" instead.
                             // (2.68.0: an attacking dummy starts its first combo 20 ticks after it is back, not before)
                             if(l instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity t&&t.kind()==dev.sangwoo.celestialfall.training.DummyKind.ATTACK)t.resetTraining();
                             log.append("  dummy back at ").append(age).append('\n');}});continue;}
