@@ -35,7 +35,8 @@ H again (2.101.0, MpClient.ISOSANGHH_SCRIPT: H with the watcher out of the forma
 the watcher 11/3 blocks off in its band: the formation over at once, its swords pulled from where they stood, the caster up her leap and down where she
 stood (as drawn and as the server holds her; 2.101.1: round her lap of the sky on her sword, drawn level against its
 plan on each client, and its 28 swords), five blows of 12, the recording each client plays, her H ready again only
-once its swords are gone), MP_ONLY=goldheal Gold Experience's healing (2.149.0, MpClient.GOLDHEAL_SCRIPT: Y tapped heals the watcher 60 six ticks on;
+once its swords are gone), MP_ONLY=goldbeat Gold Experience's beatdown (2.150.0, MpClient.GOLDBEAT_SCRIPT: nothing with the stand in; on a guard the guard breaks and no cutscene comes, its 3 minutes on; refused on its cooldown; cut short by a strike as it glows; on no one; on the watcher the cutscene to its end, both held, the watcher never under 1 health before it comes down),
+MP_ONLY=goldheal Gold Experience's healing (2.149.0, MpClient.GOLDHEAL_SCRIPT: Y tapped heals the watcher 60 six ticks on;
 refused on its 45 s; Y held heals the caster 1 every 2 ticks at a tenth of its speed until let go; the caster struck stops it; nothing out of reach, through the rush or with the stand in),
 MP_ONLY=goldover Gold Experience's overdrive punch (2.148.0, MpClient.GOLDOVER_SCRIPT: the punch lands on the watcher, whose soul its own
 client walks away while its body stands and takes twice the harm; refused on its cooldown; a guard takes it; its caster struck stops it),

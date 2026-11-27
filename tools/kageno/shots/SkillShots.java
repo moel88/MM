@@ -396,7 +396,7 @@ public final class SkillShots implements ClientModInitializer {
         {var server=mc.getServer();var sp=server==null?null:server.getPlayerManager().getPlayer(mc.player.getUuid());
             int skill=sp==null?-1:dev.sangwoo.celestialfall.combat.CutsceneGlow.skill(sp);
             String g=skill+"/"+dev.sangwoo.celestialfall.client.CutsceneFlash.localGlowing();
-            if(!g.equals(glowLogged)){glowLogged=g;log.append(String.format(Locale.ROOT,"  glow %s at %d (world %d): server %s, client %s, speed %.4f, flash %.2f%n",skill<0?"none":new String[]{"Kageno H","beatdown","Lee So-sang G"}[skill],age,mc.world.getTime(),
+            if(!g.equals(glowLogged)){glowLogged=g;log.append(String.format(Locale.ROOT,"  glow %s at %d (world %d): server %s, client %s, speed %.4f, flash %.2f%n",skill<0?"none":new String[]{"Kageno H","beatdown","Lee So-sang G","Gold Experience beatdown"}[skill],age,mc.world.getTime(),
                 skill>=0,dev.sangwoo.celestialfall.client.CutsceneFlash.localGlowing(),mc.player.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED),dev.sangwoo.celestialfall.client.CutsceneFlash.local(mc.getTickDelta())));}}
         var gr=mc.gameRenderer;var f=net.minecraft.client.render.GameRenderer.class.getDeclaredField("fovMultiplier");f.setAccessible(true);
         if("SUMMON".equals(current))logStand();
@@ -808,6 +808,12 @@ public final class SkillShots implements ClientModInitializer {
             if(!beatOn){log.append("  beatdown cutscene from ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[0]));beatOn=true;}
             if(ended&&!beatEnded){log.append("  beatdown ").append(v[2].equals("1")?"cut short":"over").append(" at ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[0]));beatEnded=true;}
         }else{beatOn=false;beatEnded=false;}
+        // (2.150.0) Gold Experience's beatdown: its punch and its cutscene as this client heard of them
+        {
+            var gold=dev.sangwoo.celestialfall.client.stand.GoldBeatdown.describe(mc.player,mc.getTickDelta());
+            String key=gold==null?"":gold.substring(gold.indexOf(',')+1,gold.lastIndexOf(','));
+            if(!key.equals(goldBeatLogged)){goldBeatLogged=key;if(gold!=null)log.append("  gold beatdown at ").append(age).append(" (age,scene,ended,cut,landed,met,broke,stopped,bars): ").append(gold).append(dev.sangwoo.celestialfall.client.stand.GoldBeatdown.cinematic()!=null?", its camera":"").append('\n');}
+        }
         // (2.148.0) Gold Experience's overdrive punch and the soul out of the local player's body
         {
             String over=mc.player==null?null:dev.sangwoo.celestialfall.client.stand.GoldPunch.describe(mc.player.getUuid(),0),soul=dev.sangwoo.celestialfall.client.stand.SoulClient.describe();
@@ -895,7 +901,8 @@ public final class SkillShots implements ClientModInitializer {
     /** 2.77.0: each of the player's sword hits (its number and the tick of the shot's clock it began on), for NAME/isosang.csv. */
     private final StringBuilder swingRows=new StringBuilder();
     private String punchLogged="";private boolean rushOn;private int rushBlows;private final StringBuilder cameraLog=new StringBuilder();private String worldPass=",,,,,,,";
-    private boolean beatOn,beatEnded;private float dummyHealth=-1;
+    private boolean beatOn,beatEnded;
+    private String goldBeatLogged="";private float dummyHealth=-1;
     /** 2.67.0: the fake Star Platinum user of the shot (server side), and what the log has said of the time stop and the player's health. */
     private volatile UUID fakeId;
     private net.minecraft.server.network.ServerPlayerEntity fakePlayer;private String stopLogged="";private boolean stillLogged;private int keptLogged;private float playerHealth=-1;private float fakeRunYaw;

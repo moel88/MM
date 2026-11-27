@@ -64,7 +64,9 @@ public final class GoldBeatdownCamera {
         if(t<C4){
             // from behind the one struck, over their shoulder: the stand throwing its fists at the lens
             float k=u(t,C3,C4);
-            return new Shot(vu.add(f.multiply(1.05-.2*k)).add(r.multiply(.55)).add(0,.4,0),face.add(0,-.1,0),62-6*k,-6,false,1.3f);
+            // (the first take sat right behind their head: it filled half the frame, the stand small under it)
+            // (and then behind their back, the stand hidden by it: now from over their right shoulder, further out)
+            return new Shot(vu.add(f.multiply(1.5-.2*k)).add(r.multiply(1.55)).add(0,.75,0),face.add(0,-.05,0).lerp(vu,.2),56-5*k,-6,false,1.3f);
         }
         if(t<C4B){
             // their chest, from over the stand's right shoulder
@@ -79,23 +81,28 @@ public final class GoldBeatdownCamera {
         if(t<C6){
             // the stand from their eyes (they are not drawn): its fists and their afterimages straight into the lens
             float k=u(t,C5,C6),rock=(float)Math.sin((t-C5)*Math.PI*2/1.1f);
-            return new Shot(vh.add(f.multiply(.14)).add(0,.02,0),face.add(0,-.12,0),72-8*k,-6+4*rock,true,2f);
+            return new Shot(vh.add(f.multiply(.14)).add(0,-.22,0),face.add(0,-.12,0),72-8*k,-6+4*rock,true,2f);
         }
         if(t<C7){
-            // WRYYY: low on the ground behind its user to their right, looking up as the stand drives the one struck up
+            // WRYYY: low on the ground beyond the one struck, looking back and up: the stand under them driving them up
+            // and up, its user below arched back, falling out of the frame as they rise (the first take looked on from
+            // behind its user: the two of them small in the sky past their back)
             float k=u(t,C6,C7);
-            Vec3d look=sc.lerp(vc,.55);
-            return new Shot(b.at(o,-1.15-.25*k,.3,1.3),look,78-8*k,-10+5*k,false,1.3f);
+            double d=v.feet().subtract(o).dotProduct(f);
+            Vec3d look=sc.lerp(vc,.5);
+            return new Shot(b.at(o,d+1.9+.4*k,.35,1.2),look,66-6*k,-10+5*k,false,1.3f);
         }
         if(t<C7B){
             // from over the one struck: down past their back at the top of the stand's head, its fists coming up
             float k=u(t,C7,C7B),rock=(float)Math.sin((t-C7)*Math.PI*2/1.6f);
-            return new Shot(vc.add(f.multiply(.9)).add(0,2.7-.3*k,0),crown,64-4*k,8*rock,false,1.5f);
+            // (from past their feet and off to one side, so the stand shows past them: straight over them, the first
+            // take showed their back and nothing of it)
+            return new Shot(vc.add(f.multiply(1.9-.2*k)).add(r.multiply(1.5)).add(0,1.9,0),crown.lerp(vc,.3),62-4*k,6*rock,false,1.5f);
         }
         if(t<C8){
             // closer, off to one side
             float k=u(t,C7B,C8);
-            return new Shot(vc.add(f.multiply(.55)).add(r.multiply(.5)).add(0,1.9-.2*k,0),crown,56-4*k,-10,false,1.6f);
+            return new Shot(vc.add(f.multiply(1.5)).add(r.multiply(-1.45+.1*k)).add(0,1.6-.2*k,0),crown.lerp(vc,.3),54-4*k,-10,false,1.6f);
         }
         if(t<C8B){
             // the last blow: the stand from its left side, small in the frame, its fist drawn far back, the frame tipped
@@ -122,7 +129,7 @@ public final class GoldBeatdownCamera {
         Vec3d body=flight(b,Math.min(t,END)).feet().add(0,.6,0),from=launch(b).feet().add(0,.6,0);
         body=new Vec3d(body.x,Math.max(body.y,b.land.y+.45),body.z);
         Vec3d behind=flight(b,Math.max(FINAL,Math.min(t,END)-.15f)).feet().add(0,.6,0);
-        Vec3d eye=from.lerp(behind,.5).add(r.multiply(-6)).subtract(f.multiply(.6));
+        Vec3d eye=from.lerp(behind,.75).add(r.multiply(-5)).subtract(f.multiply(.6));
         return new Shot(new Vec3d(eye.x,Math.max(b.land.y+1.6,Math.min(eye.y+1.2,b.land.y+5)),eye.z),body,60,0,false,1);
     }
 

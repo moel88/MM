@@ -128,6 +128,7 @@ public final class MpServer implements ModInitializer {
         if(GOLDRUSH_ONLY)goldRush(server);
         if(GOLDOVER_ONLY)goldOver(server);
         if(GOLDHEAL_ONLY)goldHeal(server);
+        if(GOLDBEAT_ONLY)goldBeat(server);
         called(server);
         if(COOLDOWNS_ONLY||SWAP_ONLY||FRESH_ONLY)cooldowns(server);
         if(STAGGER_ONLY||ISOSANG_ONLY)staggers(server);
@@ -156,7 +157,7 @@ public final class MpServer implements ModInitializer {
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}
             // (the beatdown's own check, 2.64.0: its damage is the point, so nobody is healed but by the script's HEAL)
-            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!VANILLA_ONLY&&!TIMESTOP_ONLY&&!RESIST_ONLY&&!ARROW_ONLY&&!ISOSANG_ONLY&&!XCHARA_ONLY&&!SAMURAI_ONLY&&!XCHARAX_ONLY&&!GOLDHEAL_ONLY&&(!BOSS_ONLY||caster(p)))p.setHealth(p.getMaxHealth());
+            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!VANILLA_ONLY&&!TIMESTOP_ONLY&&!RESIST_ONLY&&!ARROW_ONLY&&!ISOSANG_ONLY&&!XCHARA_ONLY&&!SAMURAI_ONLY&&!XCHARAX_ONLY&&!GOLDHEAL_ONLY&&!GOLDBEAT_ONLY&&(!BOSS_ONLY||caster(p)))p.setHealth(p.getMaxHealth());
         }
         idle=!busy;
     }
@@ -213,7 +214,7 @@ public final class MpServer implements ModInitializer {
             if(!caster(p)&&StarPlatinumTimeStop.stopped(p)&&now%20==0)note(server,name+" held by the time stop at tick "+now);
         }
     }
-    private static String glowName(int skill){return switch(skill){case 0->"Kageno's H";case 1->"the beatdown";case 2->"Lee So-sang's G";default->"?";};}
+    private static String glowName(int skill){return switch(skill){case 0->"Kageno's H";case 1->"the beatdown";case 2->"Lee So-sang's G";case 3->"Gold Experience's beatdown";default->"?";};}
     private net.minecraft.entity.Entity dummy;private long dummyGone;private final Map<UUID,Integer> hurtSeen=new HashMap<>();
     /**
      * Whether the player was hurt since the last server tick: a blow raises its hurt time back to 10, whichever way this
@@ -368,6 +369,42 @@ public final class MpServer implements ModInitializer {
     }
     private final Map<UUID,Long> thrown=new HashMap<>();private final Map<UUID,Long> flying=new HashMap<>();private int rushBlows;private float rushDamage;
     private boolean thrownLately(ServerPlayerEntity p,MinecraftServer server){Long at=thrown.get(p.getUuid());return at!=null&&server.getOverworld().getTime()-at<200;}
+    /** Only Gold Experience's beatdown's script (2.150.0, MP_ONLY=goldbeat). */
+    static final boolean GOLDBEAT_ONLY="goldbeat".equals(System.getProperty("botand.mp.only"));
+    private int beatMode;private long beatSince,beatReady;private float beatWatcher=-1,beatLost,beatLowest;private int beatBlows;private net.minecraft.util.math.Vec3d beatAt;
+    /**
+     * Gold Experience's beatdown as the server runs it (2.150.0, MP_ONLY=goldbeat): the caster's opening punch as it
+     * begins and ends, the cutscene as it begins and ends (how long, how many blows took how much of the watcher's
+     * health, its lowest before it came down, how far it was moved), when G is ready again, and the watcher's health
+     * outside the cutscene.
+     */
+    private void goldBeat(MinecraftServer server){
+        ServerPlayerEntity caster=null,watcher=null;
+        for(var p:server.getPlayerManager().getPlayerList())if(caster(p))caster=p;else watcher=p;
+        if(caster==null)return;
+        long now=server.getOverworld().getTime();
+        int mode=dev.sangwoo.celestialfall.stand.GoldExperienceBeatdown.casting(caster)?2:dev.sangwoo.celestialfall.stand.GoldExperienceBeatdown.opening(caster)?1:0;
+        long ready=dev.sangwoo.celestialfall.stand.GoldExperienceBeatdown.ready(caster);
+        if(mode!=beatMode){
+            if(mode==1&&beatMode==0){beatSince=now;note(server,String.format(java.util.Locale.ROOT,"beatdown's opening punch begun at tick %d (the caster's stand out %s)",now,((dev.sangwoo.celestialfall.stand.StandHolder)caster).botand$isStandOut()));}
+            else if(mode==2){beatLost=0;beatBlows=0;beatLowest=watcher==null?0:watcher.getHealth();beatAt=watcher==null?null:watcher.getPos();
+                note(server,String.format(java.util.Locale.ROOT,"beatdown's cutscene begun at tick %d, %d ticks after the punch began: the watcher's health %.1f, held %s, the caster held %s",now,now-beatSince,watcher==null?0:watcher.getHealth(),
+                    watcher!=null&&dev.sangwoo.celestialfall.stand.KagenoManager.frozen(watcher),dev.sangwoo.celestialfall.stand.KagenoManager.frozen(caster)));}
+            else if(beatMode==2)note(server,String.format(java.util.Locale.ROOT,"beatdown's cutscene over at tick %d, %d ticks after the punch began: %d blows took %.1f of the watcher's health, its lowest %.1f, now %.1f; moved %.2f blocks; ready again in %d ticks",now,now-beatSince,beatBlows,beatLost,beatLowest,
+                watcher==null?0:watcher.getHealth(),watcher==null||beatAt==null?0:watcher.getPos().distanceTo(beatAt),ready-now));
+            else note(server,String.format(java.util.Locale.ROOT,"beatdown's opening punch over at tick %d, %d ticks on, no cutscene; ready again in %d ticks",now,now-beatSince,ready-now));
+        }else if(ready!=beatReady)note(server,String.format(java.util.Locale.ROOT,"beatdown ready again in %d ticks (told at tick %d)",ready-now,now));
+        beatMode=mode;beatReady=ready;
+        if(watcher==null)return;
+        float w=watcher.getHealth();
+        if(beatWatcher>=0&&Math.abs(w-beatWatcher)>1e-3f){
+            if(mode==2){
+                if(w<beatWatcher){beatLost+=beatWatcher-w;beatBlows++;beatLowest=Math.min(beatLowest,w);
+                    if(beatBlows<=3||beatWatcher-w>2||beatBlows%50==0)note(server,String.format(java.util.Locale.ROOT,"the watcher's health %.2f -> %.2f at tick %d, %d ticks into the beatdown (blow %d)",beatWatcher,w,now,now-beatSince,beatBlows));}
+            }else note(server,String.format(java.util.Locale.ROOT,"the watcher's health %.1f -> %.1f at tick %d (%.2f blocks from the caster)",beatWatcher,w,now,watcher.distanceTo(caster)));
+        }
+        beatWatcher=w;
+    }
     /** Only Gold Experience's healing's script (2.149.0, MP_ONLY=goldheal). */
     static final boolean GOLDHEAL_ONLY="goldheal".equals(System.getProperty("botand.mp.only"));
     private int healMode;private long healReady,healSince;private float healCaster=-1,healWatcher=-1,healGained;private int healBlows;private final java.util.List<Long> healTicks=new java.util.ArrayList<>();

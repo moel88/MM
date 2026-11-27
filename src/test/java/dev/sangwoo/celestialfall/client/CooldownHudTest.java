@@ -52,6 +52,8 @@ class CooldownHudTest {
         assertTrue(CooldownHud.shows(CooldownHud.BEATDOWN,LongCooldowns.Skill.BEATDOWN.stand));
         for(var skill:LongCooldowns.Skill.values())for(String stand:StandStats.ids()){
             int slot=skill==LongCooldowns.Skill.ATOMIC?KagenoRules.G:skill==LongCooldowns.Skill.TIME_STOP?CooldownHud.TIME_STOP:CooldownHud.BEATDOWN;
+            // (2.150.0) the beatdown's box is Gold Experience's beatdown's too (its own cooldown, not one the server keeps)
+            if(slot==CooldownHud.BEATDOWN&&stand.equals("gold_experience")){assertTrue(CooldownHud.shows(slot,stand));continue;}
             assertEquals(stand.equals(skill.stand),CooldownHud.shows(slot,stand),skill+" for "+stand);
         }
     }

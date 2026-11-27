@@ -86,7 +86,7 @@ public final class GoldBeatdown {
     /** How far back the stand leans under them (degrees), driving its fists up. */
     static final float LEAN=44;
     /** How big its arms are through the rush (the muda rush's 1.15, Star Platinum's beatdown's 1.3). */
-    static final float ARMS=1.3f;
+    static final float ARMS=1.2f;
     /** How far in front of its user it stands for its punch with no one in its way, and no nearer or further than; how deep its fists go into whom they meet. */
     static final float AHEAD=1.05f,NEAR=.75f,FAR=2.1f,BITE=.15f;
     /** The height it leans about (GoldExperienceRenderer.WAIST). */
@@ -504,13 +504,24 @@ public final class GoldBeatdown {
     static float phantom(Beat b,int i,float delta,GoldExperienceLook into){
         if(!b.scene||i>=GoldRush.PHANTOMS.length)return 0;
         float t=b.age(delta),at=b.cut&&!Float.isNaN(b.ended)?Math.min(t,b.ended):t;
-        float show=barrage(at)*smooth((at-(CUT+.35f))/.12f)*(b.cut&&!Float.isNaN(b.ended)?1-smooth((t-b.ended)/.15f):1);if(show<=0)return 0;
+        float show=barrage(at)*phantoms(at)*(b.cut&&!Float.isNaN(b.ended)?1-smooth((t-b.ended)/.15f):1);if(show<=0)return 0;
         var w=into.weights;java.util.Arrays.fill(w,0);
         GoldRush.barrage(at-BARRAGE_FROM-GoldRush.PHANTOMS[i][0],b.seed+101*(i+1),w,1);
         float size=armSize(b,t),left=GoldRush.out(w,GoldRush.LEFT),right=GoldRush.out(w,GoldRush.RIGHT);
         into.armL=size*(1+GoldRush.STRETCH*left);into.armR=size*(1+GoldRush.STRETCH*right);
         into.showL=smooth(left);into.showR=smooth(right);
         return show*GoldRush.PHANTOMS[i][4]*.8f;
+    }
+    /**
+     * How strongly the afterimages of its arms show at {@code t} (0 to 1), by the cutscene's shots (the first take had
+     * them all through it: in the close shots they were slabs of gold across the whole frame, hiding the fists and the
+     * one struck): none through the first cuts back and forth, some from behind the one struck, none in the close shots
+     * of them, all of them in the shot from their eyes (the video's, the stand's many fists), fewer from then on.
+     */
+    static float phantoms(float t){
+        float behind=.5f*smooth((t-GoldBeatdownCamera.C3)/.15f)*(1-smooth((t-(GoldBeatdownCamera.C4-.12f))/.12f));
+        float eyes=smooth((t-GoldBeatdownCamera.C5)/.15f)*(1-.55f*smooth((t-(WRY-.1f))/.2f));
+        return Math.max(behind,eyes);
     }
     /** How much brighter its aura burns at {@code t}: through the rush, more through the "WRYYY", and as it loads its last blow. */
     static float glow(Beat b,float t){

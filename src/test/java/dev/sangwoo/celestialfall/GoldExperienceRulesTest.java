@@ -87,4 +87,33 @@ class GoldExperienceRulesTest {
         // the hand reaches whom the overdrive punch would
         assertTrue(mendLane(2,0,0,.3));assertFalse(mendLane(6,0,0,.3));assertFalse(mendLane(2,3,0,.3));
     }
+    @Test void theBeatdownIsTheVideosSevenPagesWeakerThanStarPlatinumsOnThreeMinutes()throws Exception{
+        // its punch is to be seen coming, as Star Platinum's beatdown's blow (0.8 s)
+        assertEquals(StarPlatinumRules.BEAT_CUT,BEAT_CUT);assertTrue(BEAT_OPENER_LENGTH>BEAT_CUT);
+        // the video's moments, its first shot (0.633 s) left out: the WRYYY at 15.28 s, the last blow at 29.58 s
+        assertEquals(BEAT_CUT+293,BEAT_WRY);assertEquals(BEAT_CUT+391,BEAT_WRY_END);assertEquals(BEAT_CUT+553,BEAT_WIND);assertEquals(BEAT_CUT+579,BEAT_FINAL);
+        assertEquals(15.28-.633,(BEAT_WRY-BEAT_CUT)/20.0,.03);assertEquals(29.58-.633,(BEAT_FINAL-BEAT_CUT)/20.0,.03);
+        // the rush all the way from the punch until it draws back for the last
+        assertEquals(BEAT_CUT+2,BEAT_RUSH_FIRST);assertTrue(BEAT_RUSH_LAST<BEAT_WIND&&BEAT_RUSH_LAST>=BEAT_WIND-2);
+        int blows=0;float dealt=0;
+        for(long age=0;age<=BEAT_END;age++){float s=beatShare(age);if(s>0){blows++;dealt+=s;}}
+        assertEquals(BEAT_RUSH_HITS+1,blows,"the rush's blows and the last");
+        assertEquals(1,dealt,1e-3,"between them all of its damage");
+        assertEquals(BEAT_FINAL_SHARE,beatShare(BEAT_FINAL),1e-6);assertEquals(0,beatShare(BEAT_FINAL+1),0);assertEquals(0,beatShare(BEAT_CUT),0);
+        // weaker than Star Platinum's (the user's answer): three quarters of it, more the lower their health
+        assertEquals(45,beatdownDamage(100,100),1e-4);assertEquals(90,beatdownDamage(0,100),1e-4);assertEquals(67.5f,beatdownDamage(50,100),1e-4);
+        for(float h:new float[]{0,20,50,100})assertTrue(beatdownDamage(h,100)<StarPlatinumRules.beatdownDamage(h,100),"weaker at "+h);
+        assertEquals(.75f,beatdownDamage(100,100)/StarPlatinumRules.beatdownDamage(100,100),1e-4);
+        // three minutes from its end
+        assertEquals(3600,BEAT_COOLDOWN);assertEquals(1000+3600,beatReady(1000));
+        // they come down after the last blow, and it is over a moment after; the sound outlasts the last blow
+        assertTrue(BEAT_LAND>BEAT_FINAL&&BEAT_END>BEAT_LAND);
+        // held where Star Platinum's holds them, driven higher by the WRYYY than through the rush
+        assertEquals(StarPlatinumRules.beatHold(1.2),beatHold(1.2),1e-9);assertEquals(StarPlatinumRules.beatHold(5),beatHold(5),1e-9);
+        assertTrue(BEAT_HIGH>BEAT_LIFT+2);
+        // the sound is the video's from its second shot to its end: it starts as the punch lands and its last blow is on the server's
+        var ogg=java.nio.file.Path.of("src/main/resources/assets/celestialfall/sounds/gold_experience_beatdown.ogg");
+        assertTrue(java.nio.file.Files.size(ogg)>100_000,"the cutscene's sound");
+        assertEquals(BEAT_CUT,BEAT_SOUND);
+    }
 }
