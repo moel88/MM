@@ -1337,7 +1337,7 @@ public final class MpClient implements ClientModInitializer {
             }
         }
         boolean camera=dev.sangwoo.celestialfall.client.stand.GoldBeatdown.cinematic()!=null;
-        if(camera!=beatCamera){beatCamera=camera;note("my camera is "+(camera?"the cutscene's":"my own again")+String.format(Locale.ROOT,", held %s, action locked %s",dev.sangwoo.celestialfall.client.stand.GoldBeatdown.holds(mc.player),dev.sangwoo.celestialfall.client.CombatClient.actionLocked(mc.player)));}
+        if(camera!=beatCamera){beatCamera=camera;note("my camera is "+(camera?"the cutscene's":"my own again")+String.format(Locale.ROOT,", held %s, action locked %s",dev.sangwoo.celestialfall.client.stand.GoldBeatdown.holds(mc.player),dev.sangwoo.celestialfall.client.CombatClient.actionLocked()));}
         var shown=dev.sangwoo.celestialfall.client.stand.GoldBeatdown.shown(mc.player,0);
         if((shown!=null)!=beatDrawn){beatDrawn=shown!=null;note(beatDrawn?"I am drawn where the cutscene shows me":String.format(Locale.ROOT,"I am drawn where I am again, at %.2f %.2f %.2f",mc.player.getX(),mc.player.getY(),mc.player.getZ()));}
         if(shown!=null&&age%100==0)note(String.format(Locale.ROOT,"drawn %.2f blocks up and %.2f along from where I am, leaning %.0f",shown.feet().y-mc.player.getY(),Math.hypot(shown.feet().x-mc.player.getX(),shown.feet().z-mc.player.getZ()),shown.lean()));

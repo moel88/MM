@@ -401,6 +401,16 @@
 - 2.149.0의 영상: 상대 힐 1.75~4.05초, 자힐 옆 1.8~9.0초, 자힐 게임 카메라 1.8~7.6초를 `FILM_WIDTH=960 FILM_FPS=30 FILM_SKILL=UI FILM_CAPTION=below FILM_CLOCK="Y 누른 뒤" FILM_CLOCK_ZERO=2.0 FILM_NOTES="a-b:글|…" film.py`로 만들어 이었다(반복 프레임 0, 소리 없음). `FILM_NOTES`의 a-b는 편집한 영상의 초가 아니라 촬영 장면의 초다.
 - 소리: 없다(녹음을 받으면 넣는다).
 
+### 골드 익스피리언스 비트다운 (G, 2.150.0)
+- `B="SUMMON;stand=gold_experience;face=180;dummy=1;dfw=3;time=6000"`, 960x540 배율 10(약 40분: 컷씬이 31.85초라 길다). `SHOTS_LANG=ko_kr`.
+- 예열 `$B;len=700;slows=0:2;save=0-1;then=KEY_Q@4/KEY_G@20`(컷씬 전체를 한 번 돌려 셰이더·소리를 올린다), 컷씬 `$B;len=730;hud=1;then=KEY_Q@6/KEY_G@40`, 가드를 올린 더미 `$B;dguard=1;len=140;hud=1;cool=1;pitch=14;dist=4.6;then=KEY_Q@6/KEY_G@40`(가드가 깨지고 컷씬 없음, 쿨타임 목록 '7페이지 무다'). `cool=1`은 마지막 장면에만(3분 쿨타임).
+- 컷씬은 컷씬 카메라가 찍는다(카메라 옵션을 주지 않는다). 프레임 이름의 둘째 숫자는 장면 시계(틱)다.
+- 로그: 'gold beatdown at N (age,scene,ended,cut,landed,met,broke,stopped,bars): …'(주먹이 시작한 틱은 N-age×20), 'dummy health 200.0 -> …'(러시 동안 조금씩, 착지에 나머지), 히트 수 278.
+- 소리 촬영: `SHOTS_RECORD=1 … run_shots.py 폴더 "$B;len=40;then=KEY_Q@4,$B;len=730;hud=1;then=KEY_Q@6/KEY_G@40" 320x180 1`(실시간). 영상에 넣기: `python3 tools/stand/shots/mux_gold_beatdown.py 소리폴더 촬영폴더 SUMMON.2 1.8 35.2 편집.mp4 결과.mp4`(scipy 필요. 셋째 인자는 로그에서 볼 장면: `이름.k`는 그 이름의 k번째 장면. 컷씬의 소리는 주먹이 시작하고 16틱 뒤에 시작한다. 2.150.0은 66틱, 어긋남 +5ms).
+- 2.150.0의 영상: 컷씬 1.8~35.2초(1003프레임), 가드 장면 1.8~6.2초(133프레임)를 `FILM_WIDTH=960 FILM_FPS=30 FILM_SKILL=UI FILM_CAPTION=below FILM_CLOCK="G 누른 뒤" FILM_CLOCK_ZERO=2.0 FILM_NOTES=… film.py`로 만들고(반복 프레임 0), 가드 장면에 무음 트랙을 넣어(`ffmpeg -i b.mp4 -f lavfi -i anullsrc=r=48000:cl=mono -shortest -c:v copy -c:a aac`) concat으로 이었다. `ffprobe`는 파일 하나씩만 받는다.
+- 볼 것: 샷이 영상의 때에 끊기는지(무다무다는 주먹마다), 가까운 샷이 잔상 팔에 덮이지 않는지, 'WRYYYY'에 스탠드가 대상 밑에서 젖혀 쳐올리는지, 마지막 한 방 뒤 대상이 날아가 떨어져 일어나는지, 레터박스가 닿는 순간 들어오고 끝나면 빠지는지.
+- 멀티플레이: `MP_ONLY=goldbeat python3 tools/kageno/mp/run_mp.py 폴더`(`MpClient.GOLDBEAT_SCRIPT`·`goldBeatWatch`, `MpServer.goldBeat`. 약 15분). 이 확인에서는 서버 도구가 체력을 채우지 않는다.
+
 ### 골드 익스피리언스 감각폭주 (R, 2.148.0)
 - 목록(960x540): 예열 `SUMMON;stand=gold_experience;face=180;dummy=1;dfw=3;time=6000;len=60;slows=0:2;save=0-1;then=KEY_Q@4/KEY_R@20`, 시전자(옆 카메라, 강펀치 → 걸어가 러시: 숫자가 2씩 오름) `...;len=170;fov=55;hud=1;orbit=7.0/1.8/0/118/3.0/0/1.2;then=KEY_Q@6/KEY_R@40/KEYDOWN_W@60/KEYUP_W@73/KEYDOWN_E@78/KEYUP_E@150`, 맞은 사람(게임 카메라) `SUMMON;stand=gold_experience;face=180;dummy=1;dattack=1;dfw=1.6;time=6000;len=160;hud=1;pitch=14;dist=4.2;then=SOULOUT@20/KEYDOWN_S@26/KEYUP_S@44/KEYDOWN_D@48/KEYUP_D@58/ATTACKDOWN@62/ATTACKUP@63/...`. `SHOTS_LANG=ko_kr`.
 - `SOULOUT@n`은 서버가 플레이어의 영혼을 내보냅니다(`GoldExperienceOverdrive.out`: 싱글에는 감각폭주를 걸어 줄 상대가 없습니다). 이동 키(`KEYDOWN_W` 등)와 `ATTACKDOWN`이 영혼을 움직입니다.
