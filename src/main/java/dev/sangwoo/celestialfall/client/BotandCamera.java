@@ -132,7 +132,7 @@ public final class BotandCamera {
     }
     public static void scroll(double vertical) {if(viewControls())STATE.scroll(vertical);}
     public static void faceCamera() {
-        if(!controls())return;var p=MinecraftClient.getInstance().player;
+        if(!controls()||dev.sangwoo.celestialfall.client.stand.SoulClient.out())return;var p=MinecraftClient.getInstance().player;
         p.setYaw(STATE.yaw);p.setPitch(STATE.pitch);p.setHeadYaw(STATE.yaw);
     }
     /**
@@ -154,6 +154,8 @@ public final class BotandCamera {
      */
     private static void lockBody() {
         if(!locked()||!controls())return;var p=MinecraftClient.getInstance().player;
+        // (2.148.0) their soul out of their body: the body does not turn with the camera
+        if(dev.sangwoo.celestialfall.client.stand.SoulClient.out())return;
         if(acting())aim();else face(sight(false));
         p.prevYaw=p.getYaw();p.prevPitch=p.getPitch();p.prevHeadYaw=p.headYaw;
         if(CombatClient.animate(p))p.prevBodyYaw=p.bodyYaw=p.getYaw();
@@ -166,7 +168,7 @@ public final class BotandCamera {
      * the server aims by the player's sight went .65 of a block to the left of the crosshair.)
      */
     public static void aim() {
-        if(!controls())return;
+        if(!controls()||dev.sangwoo.celestialfall.client.stand.SoulClient.out())return;
         if(HitStunClient.aimCapturedTarget())return;
         face(sight(true));
     }
@@ -218,6 +220,12 @@ public final class BotandCamera {
     public static void input(Input input) {
         if(!enabled())return;
         var mc=MinecraftClient.getInstance();var p=mc.player;
+        // (2.148.0) their soul out of their body (Gold Experience's overdrive): the keys walk the soul, the body has none
+        if(dev.sangwoo.celestialfall.client.stand.SoulClient.steer(input.movementForward,input.movementSideways,input.jumping,STATE.yaw,locked(),STATE.run,walking())){
+            input.movementForward=input.movementSideways=0;input.jumping=input.sneaking=false;
+            input.pressingForward=input.pressingBack=input.pressingLeft=input.pressingRight=false;
+            return;
+        }
         // (held by Star Platinum's inhale, 2.62.0: their keys still work, at a twentieth of their speed, "그냥 95% 슬로우";
         // the suction keeps them where it draws them, client/stand/StandInhale.drive)
         // (2.107.0) and dead, waiting to be brought back (DeathView): no key moves them
@@ -253,6 +261,9 @@ public final class BotandCamera {
         Vec3d eye=mc.player.getLerpedPos(delta).add(0,mc.player.getStandingEyeHeight(),0);
         // (2.128.0) X Chara's slam draws their body up in the air and down its dive while they stand where they began: their
         // camera goes with the body they see (in the first person too: they look from up there)
+        // (2.148.0) their soul out of their body (Gold Experience's overdrive): the camera goes with the soul
+        var soul=dev.sangwoo.celestialfall.client.stand.SoulClient.offset(delta);
+        if(soul!=null)eye=eye.add(soul);
         var slammed=dev.sangwoo.celestialfall.client.xchara.OverwriteSlam.offset(mc.player.getUuid(),delta);
         if(slammed!=null)eye=eye.add(slammed);
         // (2.129.0) and their three cuts' going forward

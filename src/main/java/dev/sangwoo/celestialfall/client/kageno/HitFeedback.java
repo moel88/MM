@@ -33,6 +33,8 @@ public final class HitFeedback {
         // (2.126.0) what X Chara's weakening makes of it (XCharaWeaken: dealt by one weakened x0.75, taken by one x1.25), as
         // this client knows who is weakened: the number its dealer sees is what went in
         amount*=dev.sangwoo.celestialfall.client.xchara.WeakenClient.factor(mc.player,e);
+        // (2.148.0) and twice for a body whose soul Gold Experience's overdrive has out of it
+        amount*=dev.sangwoo.celestialfall.client.stand.SoulClient.taken(e);
         n.total+=amount;n.last=now;n.pop++;
         if(!blood)return;
         if(BLOOD.size()>64)BLOOD.remove(0);

@@ -24,6 +24,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class BeatdownRenderMixin {
     @Inject(method="getPositionOffset",at=@At("RETURN"),cancellable=true)
     private void botand$beatdownPlace(Entity e,float delta,CallbackInfoReturnable<Vec3d> ci){
+        // (2.148.0) their own soul drawn where it walks: none of the body's offsets
+        if(dev.sangwoo.celestialfall.client.stand.SoulClient.drawing(e))return;
         var offset=StandBeatdown.offset(e,delta);if(offset!=null)ci.setReturnValue(ci.getReturnValue().add(offset));
         // (2.112.0) X Chara's G's strange space: the one marked hangs across from its user
         var space=dev.sangwoo.celestialfall.client.xchara.XCharaClient.offset(e,delta);if(space!=null)ci.setReturnValue(ci.getReturnValue().add(space));

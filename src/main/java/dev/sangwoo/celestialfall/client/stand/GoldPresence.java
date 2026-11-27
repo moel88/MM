@@ -139,11 +139,11 @@ public final class GoldPresence {
                 float a=ghost.alpha*Math.min(1,Math.abs(main-trail.out)*6)*(.42f-.11f*i);
                 if(a<.02f)continue;
                 look.set(ghost);look.out=trail.out;look.alpha=a;look.red=1;look.green=.86f;look.blue=.42f;look.shadow=0;look.glow=0;
-                s.put(p,delta,look,rush==null?null:s.shape);
+                s.put(p,delta,look,s.front?s.shape:null);
                 var g=s.puppet.getPos();
                 dispatcher.render(s.puppet,g.x-cam.x,g.y-cam.y,g.z-cam.z,yaw,delta,c.matrixStack(),c.consumers(),dispatcher.getLight(s.puppet,delta));
             }
-            look.set(ghost);s.put(p,delta,look,rush==null?null:s.shape);
+            look.set(ghost);s.put(p,delta,look,s.front?s.shape:null);
         }
     }
     /**
@@ -172,7 +172,10 @@ public final class GoldPresence {
         Vec3d pos,prevPos,vel=Vec3d.ZERO,prevVel=Vec3d.ZERO;float yaw,prevYaw;
         /** Where it was last drawn and the frame it was drawn in; the bodies of its rush's flying arms; the rush's place for it this frame. */
         StandPresence.Body body;long bodyFrame=-1;final GoldPuppet[] arms=new GoldPuppet[GoldRush.PHANTOMS.length];
-        final GoldRush.Shape shape=new GoldRush.Shape();final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceStance.NAMES.size()];
+        final GoldRush.Shape shape=new GoldRush.Shape(),shape2=new GoldRush.Shape();
+        /** Whether it stands in front of its user this frame (its rush's or its punch's place: {@code shape}). */
+        boolean front;
+final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceStance.NAMES.size()];
         /** Its look, place and facing on the last frame drawn and that frame's moment: how it stands while its user is stopped in a time stop. */
         final GoldExperienceLook held=new GoldExperienceLook();Vec3d heldAt;float heldYaw,heldDelta=1;
         Presence(PlayerEntity p,MinecraftClient mc){entity=p.getId();owner=p.getUuid();puppet=new GoldPuppet(mc.world);}
@@ -211,7 +214,17 @@ public final class GoldPresence {
             // (2.147.0) the muda rush: its stances over the pose it has, and where it stands
             var rush=StandRush.of(owner);
             if(rush!=null&&(!rush.gold()||!out||!GoldRush.pose(rush,delta,look,shape,scratch)))rush=null;
-            float calm=rush==null?1:1-shape.engage;
+            // (2.148.0) the overdrive punch: its stances over that, and where it stands (the two never run together; one
+            // just after the other, the punch takes over from where the rush had got to)
+            var punch=GoldPunch.of(owner);
+            boolean punching=punch!=null&&out&&GoldPunch.pose(punch,delta,look,rush==null?shape:shape2,scratch);
+            if(punching&&rush!=null){
+                float sum=shape.engage+shape2.engage,k=sum<1e-4f?1:shape2.engage/sum;
+                shape.yaw=MathHelper.lerpAngleDegrees(k,shape.yaw,shape2.yaw);shape.ahead+=(shape2.ahead-shape.ahead)*k;shape.raise+=(shape2.raise-shape.raise)*k;
+                shape.engage=Math.max(shape.engage,shape2.engage);
+            }
+            front=rush!=null||punching;
+            float calm=front?1-shape.engage:1;
             var v=prevVel.lerp(vel,delta);float y=MathHelper.lerpAngleDegrees(delta,prevYaw,yaw);
             double r=Math.toRadians(y),fx=-Math.sin(r),fz=Math.cos(r);
             double forward=v.x*fx+v.z*fz,side=-v.x*fz+v.z*fx;
@@ -219,7 +232,9 @@ public final class GoldPresence {
             look.roll=MathHelper.clamp((float)side*-2f,-10,10)*look.out*calm;
             // its aura burns a little brighter through the barrage
             if(rush!=null)look.glow=Math.max(look.glow,look.out*(1+.45f*GoldRush.on(rush,rush.age(delta))));
-            put(p,delta,look,rush==null?null:shape);
+            // and brighter still as its fist's light gathers for the overdrive punch
+            if(punching)look.glow=Math.max(look.glow,look.out*(1+.7f*GoldPunch.charge(punch,punch.age(delta))));
+            put(p,delta,look,front?shape:null);
             return rush;
         }
         void put(PlayerEntity p,float delta,GoldExperienceLook look){put(p,delta,look,null);}

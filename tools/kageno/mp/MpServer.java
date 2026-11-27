@@ -126,6 +126,7 @@ public final class MpServer implements ModInitializer {
         busy|=atomic;
         punched(server);
         if(GOLDRUSH_ONLY)goldRush(server);
+        if(GOLDOVER_ONLY)goldOver(server);
         called(server);
         if(COOLDOWNS_ONLY||SWAP_ONLY||FRESH_ONLY)cooldowns(server);
         if(STAGGER_ONLY||ISOSANG_ONLY)staggers(server);
@@ -366,6 +367,36 @@ public final class MpServer implements ModInitializer {
     }
     private final Map<UUID,Long> thrown=new HashMap<>();private final Map<UUID,Long> flying=new HashMap<>();private int rushBlows;private float rushDamage;
     private boolean thrownLately(ServerPlayerEntity p,MinecraftServer server){Long at=thrown.get(p.getUuid());return at!=null&&server.getOverworld().getTime()-at<200;}
+    /** Only Gold Experience's overdrive punch's script (2.148.0, MP_ONLY=goldover). */
+    static final boolean GOLDOVER_ONLY="goldover".equals(System.getProperty("botand.mp.only"));
+    private boolean overPunching,overOut,overHeld;private float overHealth=-1;private long overReady;private net.minecraft.util.math.Vec3d overAt;
+    /**
+     * Gold Experience's overdrive as the server runs it (2.148.0, MP_ONLY=goldover): the caster's punch as it begins and
+     * ends (when it is ready again), every loss of health of the watcher (how much, whether its soul was out), the
+     * watcher's soul going out and coming back (how far its body moved meanwhile: the knock back, nothing more), and
+     * whether the server has it incapacitated.
+     */
+    private void goldOver(MinecraftServer server){
+        ServerPlayerEntity caster=null,watcher=null;
+        for(var p:server.getPlayerManager().getPlayerList())if(caster(p))caster=p;else watcher=p;
+        if(caster==null)return;
+        long now=server.getOverworld().getTime();
+        boolean punching=dev.sangwoo.celestialfall.stand.GoldExperienceOverdrive.punching(caster);long ready=dev.sangwoo.celestialfall.stand.GoldExperienceOverdrive.ready(caster);
+        if(punching!=overPunching||ready!=overReady)note(server,String.format(java.util.Locale.ROOT,"overdrive punch %s at tick %d: the caster's stand %s (out %s), ready again in %d ticks",punching?"thrown":"not in flight",now,
+            dev.sangwoo.celestialfall.progression.ProgressManager.profile(caster).stand(),((dev.sangwoo.celestialfall.stand.StandHolder)caster).botand$isStandOut(),ready-now));
+        overPunching=punching;overReady=ready;
+        if(watcher==null)return;
+        boolean out=dev.sangwoo.celestialfall.stand.GoldExperienceOverdrive.out(watcher),held=dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(watcher);
+        float h=watcher.getHealth();
+        if(overHealth>=0&&h<overHealth-1e-3f)note(server,String.format(java.util.Locale.ROOT,"the watcher lost %.1f at tick %d (health %.1f), its soul %s, its guard %s",overHealth-h,now,h,out?"out":"in",dev.sangwoo.celestialfall.combat.CombatManager.guarding(watcher)?"up":"down"));
+        overHealth=h;
+        if(out&&!overOut){overAt=watcher.getPos();note(server,String.format(java.util.Locale.ROOT,"the watcher's soul is out at tick %d for %d ticks; incapacitated %s; its walking speed %.4f; %.2f blocks from the caster",now,
+            dev.sangwoo.celestialfall.stand.GoldExperienceOverdrive.left(watcher),held,watcher.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED),watcher.distanceTo(caster)));}
+        if(!out&&overOut)note(server,String.format(java.util.Locale.ROOT,"the watcher's soul is back at tick %d; its body moved %.2f blocks meanwhile (the server's place for it); incapacitated %s; its walking speed %.4f",now,
+            overAt==null?-1:watcher.getPos().distanceTo(overAt),held,watcher.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED)));
+        if(held!=overHeld&&!out)note(server,"the watcher incapacitated: "+held+" at tick "+now);
+        overOut=out;overHeld=held;
+    }
     /** Only Gold Experience's muda rush's script (2.147.0, MP_ONLY=goldrush). */
     static final boolean GOLDRUSH_ONLY="goldrush".equals(System.getProperty("botand.mp.only"));
     private boolean goldOn;private long goldStart;private float goldBefore,goldLast;private net.minecraft.util.math.Vec3d goldAt;private final java.util.List<Long> goldBlows=new java.util.ArrayList<>();

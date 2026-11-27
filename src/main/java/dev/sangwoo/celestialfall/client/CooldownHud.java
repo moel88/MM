@@ -175,8 +175,10 @@ public final class CooldownHud {
         long barrage=star||gold?dev.sangwoo.celestialfall.client.stand.StandRush.ready(p.getUuid()):0;
         if(barrage!=barrageSeen){show(BARRAGE,gold?MUDA:barrageName(),barrage-time,gold?dev.sangwoo.celestialfall.stand.GoldExperienceRules.RUSH_COOLDOWN:dev.sangwoo.celestialfall.stand.StarPlatinumRules.RUSH_COOLDOWN,now);barrageSeen=barrage;}
         // its heavy punch (2.59.0): from when it is over, or stopped short (the server's ready tick, told with each of its punches' news)
-        long heavy=star?dev.sangwoo.celestialfall.client.stand.StandAttack.heavyReady(p.getUuid()):0;
-        if(heavy!=heavySeen){show(HEAVY,heavyName(),heavy-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.HEAVY_COOLDOWN,now);heavySeen=heavy;}
+        // (2.148.0) the heavy punch's box is Gold Experience's overdrive's too (its own name and length)
+        if(!gold)dev.sangwoo.celestialfall.client.stand.GoldPunch.forget(p.getUuid());
+        long heavy=star?dev.sangwoo.celestialfall.client.stand.StandAttack.heavyReady(p.getUuid()):gold?dev.sangwoo.celestialfall.client.stand.GoldPunch.ready(p.getUuid()):0;
+        if(heavy!=heavySeen){show(HEAVY,gold?OVERDRIVE:heavyName(),heavy-time,gold?dev.sangwoo.celestialfall.stand.GoldExperienceRules.OVER_COOLDOWN:dev.sangwoo.celestialfall.stand.StarPlatinumRules.HEAVY_COOLDOWN,now);heavySeen=heavy;}
         // its Star Finger (2.60.0): the same, told with each of its punches' news
         long finger=star?dev.sangwoo.celestialfall.client.stand.StandAttack.fingerReady(p.getUuid()):0;
         if(finger!=fingerSeen){show(FINGER,fingerName(),finger-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.FINGER_COOLDOWN,now);fingerSeen=finger;}
@@ -286,7 +288,7 @@ public final class CooldownHud {
         // (2.112.0) X Chara's to theirs
         if(slot==XCHARA_G||slot==XCHARA||slot==XCHARA_E||slot==XCHARA_JAB||slot==XCHARA_CLONE||slot==XCHARA_WEAKEN||slot==XCHARA_PULL||slot==XCHARA_SLAM||slot==XCHARA_CUTTER||slot==XCHARA_SHOT||slot==XCHARA_KNIVES||slot==XCHARA_ERASE||slot==XCHARA_X||slot==XCHARA_Z)return "x_chara".equals(stand);
         // (2.147.0) the rush's box is Gold Experience's muda rush's too
-        if(slot==BARRAGE&&"gold_experience".equals(stand))return true;
+        if((slot==BARRAGE||slot==HEAVY)&&"gold_experience".equals(stand))return true;
         return (slot<DASH?"kageno":"star_platinum").equals(stand);
     }
     /**
@@ -305,6 +307,8 @@ public final class CooldownHud {
     private static String barrageName(){return "러시";}
     /** Gold Experience's rush in the list (2.147.0): the rush's box, named for its own. */
     static final String MUDA="무다 러시";
+    /** Gold Experience's overdrive in the list (2.148.0): the heavy punch's box, named for its own (the user's word for it). */
+    static final String OVERDRIVE="감각폭주";
     /** Its heavy punch's name in the list (the user's word for it). */
     private static String heavyName(){return "강펀치";}
     /** Its Star Finger's name in the list (the user's word for it). */

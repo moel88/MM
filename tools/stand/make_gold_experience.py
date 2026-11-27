@@ -889,6 +889,37 @@ for _side in ('left', 'right'):
     for _where in ('mid', 'hi', 'lo'):
         POSES['rush_' + _side[0] + ('' if _where == 'mid' else '_' + _where)] = rush_stance(_side, _where)
 
+# R, the sensory overdrive (2.148.0): one heavy punch (client/stand/GoldPunch goes guard -> over_wind -> over_punch ->
+# guard). Wound up: dropped low and back, the hips wound far round to the right, the right fist drawn far back at the
+# shoulder's height with the elbow out behind it, the left hand held out open at whoever it is for, the head turned back onto them. Thrown:
+# the hips and chest whipped round the other way and the whole body driven forward behind the right fist at full stretch,
+# the left fist torn back to the ribs with its elbow behind it, the rear leg straight out behind.
+POSES['over_wind'] = {
+    'root': {'pos': (0, -.9, 3.2)},
+    'hips': {'rot': (6, 60, 0)}, 'torso': {'rot': (4, 20, 0)}, 'chest': {'rot': (2, 16, 0)},
+    'neck': {'rot': (-6, -36, 0)}, 'head': {'rot': (-8, -52, 0)},
+    # (behind the hip the arm was half a turn from the guard's, and the blend of the two had no short way: it flipped)
+    'right_arm': {'reach': ((-7.0, SHOULDER_Y - 1.5, 12.0), (-1, 0, 1))},
+    'left_arm': {'reach': ((5.6, SHOULDER_Y + .4, -19.0), (.7, -1, 0))},
+    'left_leg': {'rot': (-48, 0, -8)}, 'left_shin': {'rot': (66, 0, 0)}, 'left_foot': {'rot': (14, 0, 0)},
+    'right_leg': {'rot': (12, 0, 10)}, 'right_shin': {'rot': (72, 0, 0)}, 'right_foot': {'rot': (32, 0, 0)},
+    'right_wing': {'rot': (0, -22, 0)}, 'left_wing': {'rot': (0, 8, 0)},
+    'hide_0': {'rot': (-10, 0, 0)},
+    'right_fingers': FIST['right_fingers'],
+}
+POSES['over_punch'] = {
+    'root': {'pos': (0, -.2, -8.6)},
+    'hips': {'rot': (30, -40, 0)}, 'torso': {'rot': (14, -20, 0)}, 'chest': {'rot': (9, -18, 0)},
+    'neck': {'rot': (-15, 32, 0)}, 'head': {'rot': (-20, 38, 0)},
+    'right_arm': {'reach': ((.2, SHOULDER_Y - 5.2, -40.0), (-.5, -1, 0))},
+    'left_arm': {'reach': ((8.0, SHOULDER_Y - 7.0, -2.0), (.3, .3, 1))},
+    'left_leg': {'rot': (-58, 0, -4)}, 'left_shin': {'rot': (46, 0, 0)}, 'left_foot': {'rot': (0, 0, 0)},
+    'right_leg': {'rot': (60, 0, 6)}, 'right_shin': {'rot': (0, 0, 0)}, 'right_foot': {'rot': (50, 0, 0)},
+    'right_wing': {'rot': (0, -30, 0)}, 'left_wing': {'rot': (0, 30, 0)},
+    'hide_0': {'rot': (30, 0, 0)}, 'hide_1': {'rot': (24, 0, 0)}, 'hide_2': {'rot': (18, 0, 0)},
+    **FIST,
+}
+
 # a fist's knuckles as it is drawn (the end of the palm, the fingers folded): where the rush's light is (GoldRush)
 KNUCKLES = {'right': (ARM_X + .4, WRIST_Y - 2.4, 0.0), 'left': (-ARM_X - .4, WRIST_Y - 2.4, 0.0)}
 
@@ -920,7 +951,7 @@ def main():
     grips = {k: tuple(wide(v)) for k, v in GRIPS.items()}
     poses = json.dumps({k: rig.pose_table(reaching(v), grips) for k, v in POSES.items()}, indent=1)
     # where the fists are in the rush's stances, for its light (client/stand/GoldRush)
-    fists = json.dumps({k: stance_points(reaching(v), grips) for k, v in POSES.items() if k == 'guard' or k.startswith('rush_')}, indent=1)
+    fists = json.dumps({k: stance_points(reaching(v), grips) for k, v in POSES.items() if k == 'guard' or k.startswith('rush_') or k.startswith('over_')}, indent=1)
     top = max(c.origin[1] + c.size[1] for c in rig.CUBES if rig.BONES[c.bone].rot == [0, 0, 0])
     across = max(max(abs(c.origin[0]), abs(c.origin[0] + c.size[0])) for c in rig.CUBES if c.bone.endswith('_arm'))
     drawn()

@@ -709,7 +709,7 @@ public final class StandPunchFx {
     // ───────────────────────────── incapacitated (2.60.0) ─────────────────────────────
 
     /** Whoever is incapacitated this frame (near the camera): where their head is, how strongly the stars show, whether it is a broken guard, and a seed. */
-    record Dazed(Vec3d head,float alpha,boolean guard,int seed,double clock){}
+    record Dazed(Vec3d head,float alpha,boolean guard,int seed,double clock,boolean gold){}
     private static final List<Dazed> DAZED=new ArrayList<>();
     /** When this client first saw each one incapacitated (world ticks, for the stars to come in), and until when. */
     private static final Map<Integer,long[]> DAZED_SINCE=new LinkedHashMap<>();
@@ -737,7 +737,7 @@ public final class StandPunchFx {
             if(since==null||since[1]!=until&&clock>since[1]){since=new long[]{now,until};DAZED_SINCE.put(e.getId(),since);while(DAZED_SINCE.size()>64)DAZED_SINCE.remove(DAZED_SINCE.keySet().iterator().next());}
             since[1]=until;
             float in=Ease.smooth((float)(clock-since[0]),0,4),out=Ease.smooth((float)(until-clock),0,6);
-            DAZED.add(new Dazed(e.getLerpedPos(delta).add(0,e.getHeight()+DAZED_UP,0),in*out,guard,e.getId()*7919,clock));
+            DAZED.add(new Dazed(e.getLerpedPos(delta).add(0,e.getHeight()+DAZED_UP,0),in*out,guard,e.getId()*7919,clock,!guard&&SoulClient.soulless(e)));
         }
     }
     /**
@@ -762,7 +762,8 @@ public final class StandPunchFx {
     static void dazed(EffectMesh m){
         for(var d:DAZED){
             if(d.alpha<.01f)continue;
-            int rim=d.guard?GUARD:VIOLET,light=d.guard?GUARD_LIGHT:LILAC;
+            // (2.148.0) golden over a body whose soul Gold Experience's overdrive has out of it
+            int rim=d.guard?GUARD:d.gold?GoldRushFx.GOLD:VIOLET,light=d.guard?GUARD_LIGHT:d.gold?GoldRushFx.PALE:LILAC;
             FxLib.ring(m,d.head,DAZED_R,.04,rim,.5f*d.alpha);
             for(int k=0;k<3;k++){
                 Vec3d q=dazedStar(d,k);float a=d.alpha*dazedTwinkle(d,k);

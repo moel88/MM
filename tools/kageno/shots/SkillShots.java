@@ -355,6 +355,7 @@ public final class SkillShots implements ClientModInitializer {
     }
     private int skill(String name){return switch(name){case "M1"->M1;case "E"->E;case "R"->R;case "T"->T;case "RUSH"->RUSH;case "Y"->Y;case "Q"->Q;case "H"->H;case "G"->G;case "PULSE"->PULSE;default->-1;};}
     private boolean mapShot(){return "METEOR".equals(current)||"SHOP".equals(current);}
+    private String overSeen,soulSeen;private boolean dummySoulless;
     private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "METEOR"->300;case "SHOP"->400;case "BASE"->150;case "HUD"->400;case "UI"->300;case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;case "GDUMMY"->560;case "STAND"->240;case "SUMMON"->300;default->DURATION[skill(name)]+20;};}
     private final Set<UUID> castsLogged=new HashSet<>();private long dashLogged=-1000;private List<String> listLogged=List.of();private int hitsLogged;private String glowLogged="";
     /** One row of motion.csv for this client tick, and for M1 the hits whose sound has just started (sound.csv). */
@@ -806,6 +807,15 @@ public final class SkillShots implements ClientModInitializer {
             if(!beatOn){log.append("  beatdown cutscene from ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[0]));beatOn=true;}
             if(ended&&!beatEnded){log.append("  beatdown ").append(v[2].equals("1")?"cut short":"over").append(" at ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[0]));beatEnded=true;}
         }else{beatOn=false;beatEnded=false;}
+        // (2.148.0) Gold Experience's overdrive punch and the soul out of the local player's body
+        {
+            String over=mc.player==null?null:dev.sangwoo.celestialfall.client.stand.GoldPunch.describe(mc.player.getUuid(),0),soul=dev.sangwoo.celestialfall.client.stand.SoulClient.describe();
+            if(over!=null&&!over.substring(over.indexOf(',')).equals(overSeen)){overSeen=over.substring(over.indexOf(','));log.append("  overdrive punch at ").append(age).append(": age,landed,struck,guarded,hit,stopped ").append(over).append('\n');}
+            if(soul!=null&&(soulSeen==null||age%10==0))log.append("  soul at ").append(age).append(": x,y,z,yaw,speed,combo,back ").append(soul).append(String.format(Locale.ROOT,", body at %.2f %.2f %.2f health %.1f%n",mc.player.getX(),mc.player.getY(),mc.player.getZ(),mc.player.getHealth()));
+            if(soul==null&&soulSeen!=null)log.append("  soul back in the body at ").append(age).append('\n');
+            soulSeen=soul;
+            if(dummy!=null){boolean gone=dev.sangwoo.celestialfall.client.stand.SoulClient.soulless(dummy);if(gone!=dummySoulless)log.append(gone?"  the dummy's soul is out at ":"  the dummy's soul is back at ").append(age).append('\n');dummySoulless=gone;}
+        }
         if(dummy instanceof net.minecraft.entity.LivingEntity le&&Math.abs(le.getHealth()-dummyHealth)>.05f){
             if(dummyHealth>=0)log.append(String.format(Locale.ROOT,"  dummy health %.1f -> %.1f at %d%n",dummyHealth,le.getHealth(),age));
             dummyHealth=le.getHealth();
@@ -1783,6 +1793,8 @@ public final class SkillShots implements ClientModInitializer {
                             log.append(String.format(Locale.ROOT,"  dummy to %.2f blocks in front at %d (world %d)%n",opt("dto",1.8f),age,p.getWorld().getTime()));}});continue;}
                     // the training dummy back in front of the player (after the finisher threw it), whole again
                     // (2.113.0) "GAUGE@n": Lee So-sang's H gauge full (as /botand gauge), so H may be used at once
+                    // "SOULOUT@n" (2.148.0): the server puts the player's soul out of their body, as Gold Experience's overdrive punch does
+                    if(what.equals("SOULOUT")){if(age==at){server(p->dev.sangwoo.celestialfall.stand.GoldExperienceOverdrive.out(p,p.getWorld().getTime()));log.append("  soul put out at ").append(age).append('\n');}continue;}
                     if(what.equals("GAUGE")){if(age==at){server(p->dev.sangwoo.celestialfall.isosang.IsosangAttack.setGauge(p,dev.sangwoo.celestialfall.isosang.IsosangRules.GAUGE_FULL));log.append("  gauge full at ").append(age).append('\n');}continue;}
                     if(what.equals("DUMMYBACK")){if(age==at)server(p->{var d=p.getServerWorld().getEntityById(dummyId);if(d instanceof net.minecraft.entity.LivingEntity l){
                             var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);var to=p.getPos().add(f.multiply(opt("dfw",3))).add(right.multiply(opt("drt",0)));

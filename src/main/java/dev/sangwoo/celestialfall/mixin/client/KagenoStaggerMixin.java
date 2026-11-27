@@ -21,6 +21,8 @@ public abstract class KagenoStaggerMixin {
     @Inject(method="render(Lnet/minecraft/entity/LivingEntity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",
         at=@At(value="INVOKE",target="Lnet/minecraft/client/render/entity/LivingEntityRenderer;setupTransforms(Lnet/minecraft/entity/LivingEntity;Lnet/minecraft/client/util/math/MatrixStack;FFF)V",shift=At.Shift.AFTER))
     private void botand$stagger(LivingEntity entity,float yaw,float delta,MatrixStack matrices,VertexConsumerProvider vertices,int light,CallbackInfo ci){
+        // (2.148.0) their own soul drawn where it walks: none of the body's turns
+        if(dev.sangwoo.celestialfall.client.stand.SoulClient.drawing(entity))return;
         // The stand arrow (2.70.0): one it rejected already lies on their face as they die; the game's roll onto the side is undone
         if(dev.sangwoo.celestialfall.client.stand.StandArrowClient.lying(entity)){
             float f=net.minecraft.util.math.MathHelper.sqrt(((float)entity.deathTime+delta-1)/20*1.6f);

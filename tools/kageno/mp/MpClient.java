@@ -880,7 +880,26 @@ public final class MpClient implements ClientModInitializer {
         "415 Q","430 E+","436 E-",
         "450 STAND","470 Q","480 HOME","485 HEAL","500 E+","600 E-",
         "620 NOCDOFF","630 END"};
-    private static final String[] STEPS=ONLY.equals("goldrush")?GOLDRUSH_SCRIPT:ONLY.equals("samurai")?SAMURAI_SCRIPT:ONLY.equals("xcharax")?XCHARAX_SCRIPT:ONLY.equals("xcharaerase")?XCHARAERASE_SCRIPT:ONLY.equals("xcharaknives")?XCHARAKNIVES_SCRIPT:ONLY.equals("xcharashot")?XCHARASHOT_SCRIPT:ONLY.equals("xcharacut")?XCHARACUT_SCRIPT:ONLY.equals("xcharaslam")?XCHARASLAM_SCRIPT:ONLY.equals("xcharay")?XCHARAY_SCRIPT:ONLY.equals("xcharaz")?XCHARAZ_SCRIPT:ONLY.equals("xcharat")?XCHARAT_SCRIPT:ONLY.equals("xcharae")?XCHARAE_SCRIPT:ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("xcharaboss")?XCHARABOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    /**
+     * Gold Experience's overdrive punch (2.148.0, MP_ONLY=goldover): the caster takes Gold Experience, its cooldowns
+     * on, the watcher 2.5 blocks in front. R with the stand in: nothing. Q, then R: the punch lands 12 ticks on: 10 on
+     * the watcher, knocked back a little, its soul out for 100 ticks: its body can do nothing and stands where it came
+     * to rest while its own client walks its soul away from it and strikes with it ("SOUL+": the watcher holds W and
+     * presses the attack while the file OUT/soul is there), which nobody else sees and the server knows nothing of. A
+     * blow of 4 on the body meanwhile ("WHIT"): 8. R again: refused (its 40 s). The soul back, a blow of 4: 4. The
+     * cooldowns off: R on the watcher's guard ("GUARD+"): taken on it, no soul out. R, the caster struck as it winds up
+     * ("HITME"): stopped short. Q (the stand back): R: nothing.
+     */
+    private static final String[] GOLDOVER_SCRIPT={
+        "5 GOLD","8 NOCDOFF","30 HOME","35 HEAL",
+        "45 R",
+        "60 Q","85 R","100 SOUL+","125 WHIT","150 R","185 SOUL-","215 WHIT",
+        "230 NOCDON","235 HOME","240 HEAL",
+        "250 GUARD+","270 R","300 GUARD-",
+        "320 HOME","325 HEAL","340 R","346 HITME",
+        "390 Q","410 R",
+        "430 NOCDOFF","440 END"};
+    private static final String[] STEPS=ONLY.equals("goldover")?GOLDOVER_SCRIPT:ONLY.equals("goldrush")?GOLDRUSH_SCRIPT:ONLY.equals("samurai")?SAMURAI_SCRIPT:ONLY.equals("xcharax")?XCHARAX_SCRIPT:ONLY.equals("xcharaerase")?XCHARAERASE_SCRIPT:ONLY.equals("xcharaknives")?XCHARAKNIVES_SCRIPT:ONLY.equals("xcharashot")?XCHARASHOT_SCRIPT:ONLY.equals("xcharacut")?XCHARACUT_SCRIPT:ONLY.equals("xcharaslam")?XCHARASLAM_SCRIPT:ONLY.equals("xcharay")?XCHARAY_SCRIPT:ONLY.equals("xcharaz")?XCHARAZ_SCRIPT:ONLY.equals("xcharat")?XCHARAT_SCRIPT:ONLY.equals("xcharae")?XCHARAE_SCRIPT:ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("xcharaboss")?XCHARABOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -1026,6 +1045,7 @@ public final class MpClient implements ClientModInitializer {
                     measure();
                     if(ONLY.equals("glow"))glowWatch();
                     if(ONLY.equals("vanilla"))vanillaWatch();
+                    if(ONLY.equals("goldover"))soulWatch(false);
                     for(String step:STEPS){String[] s=step.split(" ");int at=Integer.parseInt(s[0]);if(age==at)act(s[1],true);if(age==at+1&&!s[1].endsWith("+")&&!s[1].endsWith("-"))act(s[1],false);}
                 }else{
                     if((age%20==0||!AtomicClient.CASTS.isEmpty()&&age%5==0)&&StandClient.cinematic()==null)face();
@@ -1033,6 +1053,7 @@ public final class MpClient implements ClientModInitializer {
                     if(age%20==0&&Files.exists(OUT.resolve("done"))){note("caster done");phase=3;age=0;}
                     if(guardUntil>0&&age>=guardUntil){key(GLFW_KEY_F,false);note("release F (guard)");guardUntil=0;}
                     // 2.64.0: the guard the caster's script asks for (the file OUT/guard), and a respawn once dead
+                    if(ONLY.equals("goldover"))soulWatch(true);
                     boolean guard=Files.exists(OUT.resolve("guard"));
                     if(guard!=guardAsked){guardAsked=guard;key(GLFW_KEY_F,guard);note((guard?"press":"release")+" F (guard, asked by the caster)");}
                     if(!mc.player.isAlive()){if(++deadFor==40){note("dead: respawn requested");mc.player.requestRespawn();}}else deadFor=0;
@@ -1041,7 +1062,7 @@ public final class MpClient implements ClientModInitializer {
                     if(ONLY.equals("glow"))glowWatch();
                     if(ONLY.equals("vanilla"))vanillaWatch();
                     if(ONLY.equals("isosanggauge")||ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh"))watcherStill();
-                    if(age>(ONLY.equals("goldrush")?900:ONLY.equals("xcharax")?900:ONLY.equals("xcharaerase")?1700:ONLY.equals("xcharacut")?760:ONLY.equals("xcharaslam")?1000:ONLY.equals("xcharay")?700:ONLY.equals("xcharaz")?900:ONLY.equals("xcharat")?1500:ONLY.equals("xcharae")?2400:ONLY.equals("xcharaplain")?1000:ONLY.equals("xcharaq")?900:ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("goldover")?700:ONLY.equals("goldrush")?900:ONLY.equals("xcharax")?900:ONLY.equals("xcharaerase")?1700:ONLY.equals("xcharacut")?760:ONLY.equals("xcharaslam")?1000:ONLY.equals("xcharay")?700:ONLY.equals("xcharaz")?900:ONLY.equals("xcharat")?1500:ONLY.equals("xcharae")?2400:ONLY.equals("xcharaplain")?1000:ONLY.equals("xcharaq")?900:ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -1206,6 +1227,9 @@ public final class MpClient implements ClientModInitializer {
         // (2.94.0) the caster struck by the watcher (a blow from someone: Lee So-sang's H's dodge keeps the first from it)
         if(step.equals("CHURT")){if(down)command("damage Caster 120 minecraft:generic");return;}
         if(step.equals("HITME")){if(down)command("damage Caster 4 minecraft:player_attack by Watcher");return;}
+        // (2.148.0) a blow of 4 on the watcher by the caster, and the watcher asked to walk its soul (the file OUT/soul)
+        if(step.equals("WHIT")){if(down)command("damage Watcher 4 minecraft:player_attack by Caster");return;}
+        if(step.equals("SOUL+")||step.equals("SOUL-")){if(down){try{if(step.equals("SOUL+"))Files.writeString(OUT.resolve("soul"),"soul");else Files.deleteIfExists(OUT.resolve("soul"));}catch(Exception e){note("ERROR "+e);}note(step.equals("SOUL+")?"the watcher asked to walk its soul":"the watcher asked to walk no more");}return;}
         if(step.equals("HEAL")||step.equals("HURT")){if(down){String c=step.equals("HEAL")?"effect give Watcher minecraft:instant_health 1 20 true":"damage Watcher 150 minecraft:generic";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
         // 2.70.0: the stand arrow's steps (ARROW_SCRIPT)
         if(step.equals("NOSTAND")){if(down)command("botand progress stand @s none");return;}
@@ -1253,6 +1277,37 @@ public final class MpClient implements ClientModInitializer {
             case "TAB"->key(GLFW_KEY_TAB,press);case "ESC"->key(GLFW_KEY_ESCAPE,press);case "ENTER"->key(GLFW_KEY_ENTER,press);
             case "2"->key(GLFW_KEY_2,press);
             default->note("ERROR unknown step "+step);
+        }
+    }
+    private String soulPunch,soulMine;private boolean soulKeys;private final java.util.Map<Integer,Boolean> soulOut=new java.util.HashMap<>();
+    /**
+     * Gold Experience's overdrive as this client has it (2.148.0, MP_ONLY=goldover): each player's punch as it changes,
+     * whose soul is out of their body by this client's word, where each other body is drawn, and this client's own soul
+     * (where it walks, how fast, its blows) and body; the watcher walks its soul while the caster asks (OUT/soul).
+     */
+    private void soulWatch(boolean watcher){
+        for(var p:mc.world.getPlayers()){
+            String punch=dev.sangwoo.celestialfall.client.stand.GoldPunch.describe(p.getUuid(),0);
+            if(p!=mc.player&&!watcher)continue;
+            String shape=punch==null?null:punch.substring(punch.indexOf(','));
+            if(shape!=null&&!shape.equals(soulPunch)){soulPunch=shape;note(name(p.getUuid())+"'s overdrive punch (age,landed,struck,guarded,hit,stopped): "+punch+", ready in "+(dev.sangwoo.celestialfall.client.stand.GoldPunch.ready(p.getUuid())-mc.world.getTime()));}
+        }
+        if(!watcher){String punch=dev.sangwoo.celestialfall.client.stand.GoldPunch.describe(mc.player.getUuid(),0);String shape=punch==null?null:punch.substring(punch.indexOf(','));
+            if(shape!=null&&!shape.equals(soulPunch)){soulPunch=shape;note("my overdrive punch (age,landed,struck,guarded,hit,stopped): "+punch+", ready in "+(dev.sangwoo.celestialfall.client.stand.GoldPunch.ready(mc.player.getUuid())-mc.world.getTime()));}}
+        for(var p:mc.world.getPlayers()){
+            boolean out=dev.sangwoo.celestialfall.client.stand.SoulClient.soulless(p);Boolean was=soulOut.put(p.getId(),out);
+            if(was==null?out:was!=out)note(String.format(Locale.ROOT,"%s's soul is %s its body by this client's word; the body at %.2f %.2f %.2f",p==mc.player?"my own":name(p.getUuid()),out?"out of":"back in",p.getX(),p.getY(),p.getZ()));
+            if(out&&p!=mc.player&&age%20==0)note(String.format(Locale.ROOT,"%s's body (soulless) is drawn at %.2f %.2f %.2f, %.2f blocks from me",name(p.getUuid()),p.getX(),p.getY(),p.getZ(),p.distanceTo(mc.player)));
+        }
+        String soul=dev.sangwoo.celestialfall.client.stand.SoulClient.describe();
+        if(soul!=null&&(soulMine==null||age%10==0))note(String.format(Locale.ROOT,"my soul (x,y,z,yaw,speed,combo,back): %s; my body at %.2f %.2f %.2f, health %.1f, the camera %.2f blocks from my body",soul,mc.player.getX(),mc.player.getY(),mc.player.getZ(),mc.player.getHealth(),
+            mc.gameRenderer.getCamera().getPos().distanceTo(mc.player.getEyePos())));
+        if(soul==null&&soulMine!=null)note(String.format(Locale.ROOT,"my soul is back in my body at %.2f %.2f %.2f; the camera %.2f blocks from it",mc.player.getX(),mc.player.getY(),mc.player.getZ(),mc.gameRenderer.getCamera().getPos().distanceTo(mc.player.getEyePos())));
+        soulMine=soul;
+        if(watcher){
+            boolean keys=Files.exists(OUT.resolve("soul"));
+            if(keys!=soulKeys){soulKeys=keys;key(GLFW_KEY_W,keys);note((keys?"press":"release")+" W (asked by the caster)");}
+            if(keys&&age%14==0){attack(true);release=age+1;note("the attack pressed");}
         }
     }
     private void observe(){

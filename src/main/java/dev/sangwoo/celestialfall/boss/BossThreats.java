@@ -129,6 +129,10 @@ public final class BossThreats {
             out.add(new Threat(p,"rush",rush,next,rush+StarPlatinumRush.length(kind),Zone.lane(p.getPos(),MathHelper.wrapDegrees(p.getYaw()),StarPlatinumRules.NEAR,StarPlatinumRules.RUSH_REACH,StarPlatinumRules.RUSH_HALF_WIDTH,StarPlatinumRules.LOW,StarPlatinumRules.HIGH),
                 true,false,false,StarPlatinumRush.total(kind),false,false));
         }
+        // (2.148.0) Gold Experience's overdrive punch: one blow down a lane, which a guard takes
+        long[] over=dev.sangwoo.celestialfall.stand.GoldExperienceOverdrive.coming(p);
+        if(over!=null)out.add(new Threat(p,"overdrive",over[0],over[1],over[1],Zone.lane(p.getPos(),Float.intBitsToFloat((int)over[2]),StarPlatinumRules.NEAR,StarPlatinumRules.REACH_BIG,StarPlatinumRules.HALF_WIDTH,StarPlatinumRules.LOW,StarPlatinumRules.HIGH),
+            true,false,false,dev.sangwoo.celestialfall.stand.GoldExperienceRules.OVER_DAMAGE,false,false));
         long inhale=StarPlatinumInhale.startedAt(p);
         if(inhale!=Long.MIN_VALUE){
             long next=Math.max(now,inhale+StarPlatinumRules.INHALE_CATCH);

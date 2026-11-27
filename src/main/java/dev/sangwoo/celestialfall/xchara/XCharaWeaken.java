@@ -112,7 +112,7 @@ public final class XCharaWeaken {
         return harm(amount,dealer,weakened(victim));
     }
     /** What a blow dealt by {@code dealer} to {@code victim} is multiplied by now (for what must know before it deals it: the beatdown keeps its one alive). */
-    public static float factor(LivingEntity dealer,LivingEntity victim){return WeakenRules.scale(dealer!=victim&&weakened(dealer),weakened(victim));}
+    public static float factor(LivingEntity dealer,LivingEntity victim){return WeakenRules.scale(dealer!=victim&&weakened(dealer),weakened(victim))*dev.sangwoo.celestialfall.stand.GoldExperienceOverdrive.factor(victim);}
 
     /** A blow landed on {@code target}: its user struck through its "!!!" has it called off (only a blow: as G's, XCharaUltimate.struck). */
     public static void struck(LivingEntity target,DamageSource source){

@@ -134,6 +134,8 @@ public final class StarPlatinumRush {
         var s=state(p);long now=p.getWorld().getTime();
         // (the other stand's rush's cooldown is not this one's)
         if(s.on||now<s.ready&&s.kind==kind&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
+        // (2.148.0) Gold Experience's overdrive punch is not cut off by its rush: no rush while it is thrown
+        if(kind==GOLD&&GoldExperienceOverdrive.punching(p))return false;
         s.waiting=false;
         if(kind==STAR){
             // the heavy punch (R, 2.59.0) and the Star Finger (T, 2.60.0) are not cut off: the rush waits for them to be over

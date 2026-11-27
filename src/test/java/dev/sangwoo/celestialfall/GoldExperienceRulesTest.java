@@ -47,4 +47,23 @@ class GoldExperienceRulesTest {
         assertEquals(RUSH_LENGTH/20.0,sound+dev.sangwoo.celestialfall.client.stand.StandRush.LEAD/20.0,.12,"the recording: "+sound+" s");
         assertTrue(RUSH_LENGTH<StarPlatinumRules.RUSH_LENGTH,"shorter than Star Platinum's rush: the recording is");
     }
+    @Test void theOverdrivePunchIsOneGuardableBlowThatLeavesABodySoullessForFiveSeconds(){
+        // the user's numbers: damage 10, cooldown 40 s, out of the body 5 s ("10초말고 5초로"), harm to it doubled, the soul twice as fast
+        assertEquals(10,OVER_DAMAGE,1e-6);
+        assertEquals(40*20,OVER_COOLDOWN);
+        assertEquals(5*20,OVER_LASTS);
+        assertEquals(2,OVER_TAKEN,1e-6);
+        assertEquals(2,SOUL_SPEED,1e-6);
+        assertEquals(20,overHarm(10,true),1e-6);assertEquals(10,overHarm(10,false),1e-6);
+        // a wind-up one can see and guard: Star Platinum's heavy punch's
+        assertEquals(StarPlatinumRules.CONTACT[StarPlatinumRules.HEAVY],OVER_CONTACT);
+        assertEquals(StarPlatinumRules.LENGTH[StarPlatinumRules.HEAVY],OVER_LENGTH);
+        // its cooldown runs once it is over
+        assertEquals(1000+800,overReady(1000));
+        // the finisher's lane
+        assertTrue(overLane(2,0,0,.3));assertTrue(overLane(4.4,0,0,.3));
+        assertFalse(overLane(4.6,0,0,.3));assertFalse(overLane(2,1.6,0,.3));assertFalse(overLane(-.4,0,0,.3));
+        // it shoves them back a little: well under Star Platinum's finisher's throw
+        assertTrue(OVER_SHOVE>0&&OVER_SHOVE<StarPlatinumRules.FLY/2&&OVER_SHOVE_UP<StarPlatinumRules.FLY_UP);
+    }
 }

@@ -347,9 +347,13 @@ public final class CloneClient {
     private record Drawing(LivingEntity entity,R6.Frame frame){}
     private static Drawing drawing;
     /** Whether {@code e} is being drawn as the double now (its renderer's own hooks for the one it copies stand aside). */
-    public static boolean doubling(Entity e){return drawing!=null&&drawing.entity==e;}
+    public static boolean doubling(Entity e){return drawing!=null&&drawing.entity==e||dev.sangwoo.celestialfall.client.stand.SoulClient.drawing(e);}
     /** The double's limbs while {@code e} is drawn as it, or null. */
-    public static MotionPose doublePose(LivingEntity e){return doubling(e)?drawing.frame.joints():null;}
+    public static MotionPose doublePose(LivingEntity e){
+        // (2.148.0) their own soul out of their body (Gold Experience's overdrive): drawn again where it walks, in its own pose
+        if(dev.sangwoo.celestialfall.client.stand.SoulClient.drawing(e))return dev.sangwoo.celestialfall.client.stand.SoulClient.pose(MinecraftClient.getInstance().getTickDelta());
+        return drawing!=null&&drawing.entity==e?drawing.frame.joints():null;
+    }
     /** Where the double's feet are this frame (its clip steps it about where it stands). */
     static Vec3d cloneFeet(Throw d,R6.Frame fr){return d.cloneAt().add(d.f.multiply(fr.fw())).add(0,fr.up(),0).add(d.r.multiply(fr.rt()));}
     /** Draws the doubles: each the one marked again, through their own renderer, beside its user. */

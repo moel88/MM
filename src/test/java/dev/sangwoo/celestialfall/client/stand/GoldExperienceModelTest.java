@@ -125,7 +125,8 @@ class GoldExperienceModelTest {
     }
     @Test void aChangeOfStanceTurnsEveryBoneTheShortWayWithoutAJump()throws Exception{
         var poses=new GoldExperiencePoses();
-        for(int from=0;from<GoldExperienceStance.NAMES.size();from++)for(int to=0;to<GoldExperienceStance.NAMES.size();to++){
+        // (the overdrive punch's two stances are gone into and out of by GoldPunch alone, from the guard and back: GoldPunchTest)
+        for(int from=0;from<GoldExperienceStance.OVER_WIND;from++)for(int to=0;to<GoldExperienceStance.OVER_WIND;to++){
             if(from==to)continue;
             for(var name:bones().keySet()){
                 float[] start=new float[6],end=new float[6],last=null;

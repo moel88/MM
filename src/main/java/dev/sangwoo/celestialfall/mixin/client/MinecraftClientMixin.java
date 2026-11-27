@@ -16,6 +16,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class MinecraftClientMixin {
     @Inject(method="doAttack",at=@At("HEAD"),cancellable=true)
     private void botand$punch(org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<Boolean> cir) {
+        // (2.148.0) their soul out of their body (Gold Experience's overdrive): its blows, which pass through everything
+        if(dev.sangwoo.celestialfall.client.stand.SoulClient.attack()){cir.setReturnValue(false);return;}
         if(CombatClient.actionLocked()){cir.setReturnValue(false);return;}
         if(dev.sangwoo.celestialfall.client.commerce.CommerceClient.clickFruit()){cir.setReturnValue(false);return;}
         // the meteor pickaxe strikes meteors (2.49.0) and does nothing else, the stand's attack included
