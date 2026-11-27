@@ -394,6 +394,7 @@
 - `SOULOUT@n`은 서버가 플레이어의 영혼을 내보냅니다(`GoldExperienceOverdrive.out`: 싱글에는 감각폭주를 걸어 줄 상대가 없습니다). 이동 키(`KEYDOWN_W` 등)와 `ATTACKDOWN`이 영혼을 움직입니다.
 - 로그: 'overdrive punch at'(age,landed,struck,guarded,hit,stopped), "the dummy's soul is out/back at", 'soul at'(영혼의 자리·속도·평타 번호와 몸의 자리·체력), 'soul back in the body at'. 러시의 'dummy health'가 2씩 줄면 2배입니다.
 - 볼 것: 준비(주먹에 빛이 모임) → 타격 → 더미가 조금 밀리고 금색 별, 피해 숫자 10 뒤로 2씩. 영혼은 옅은 하늘빛 반투명, 몸은 금색 별을 단 채 제자리, 둘 사이에 빛의 실, 5초 뒤 영혼이 몸으로 날아 돌아옴.
+- 2.148.0의 영상: 960x540 배율 16(약 15분), 시전자 장면 1.6~8.2초와 맞은 사람 장면 0.7~7.0초를 `FILM_WIDTH=960 FILM_FPS=30 FILM_SKILL=UI FILM_CAPTION=below FILM_CLOCK="시간" FILM_CLOCK_ZERO=시작초 FILM_NOTES="a-b:글|…" film.py`로 만들어 이었다(반복 프레임 0, 소리 없음: 스킬 소리는 사용자가 나중에 보낸다).
 - 멀티플레이: `MP_ONLY=goldover python3 tools/kageno/mp/run_mp.py 폴더`(`MpClient.GOLDOVER_SCRIPT`·`soulWatch`, `MpServer.goldOver`). 관찰자는 파일 `OUT/soul`이 있는 동안 W를 누르고 공격 키를 눌러 제 영혼을 움직입니다.
 
 ### 골드 익스피리언스 무다 러시 (E, 2.147.0)
