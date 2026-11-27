@@ -127,6 +127,7 @@ public final class MpServer implements ModInitializer {
         punched(server);
         if(GOLDRUSH_ONLY)goldRush(server);
         if(GOLDOVER_ONLY)goldOver(server);
+        if(GOLDHEAL_ONLY)goldHeal(server);
         called(server);
         if(COOLDOWNS_ONLY||SWAP_ONLY||FRESH_ONLY)cooldowns(server);
         if(STAGGER_ONLY||ISOSANG_ONLY)staggers(server);
@@ -367,6 +368,38 @@ public final class MpServer implements ModInitializer {
     }
     private final Map<UUID,Long> thrown=new HashMap<>();private final Map<UUID,Long> flying=new HashMap<>();private int rushBlows;private float rushDamage;
     private boolean thrownLately(ServerPlayerEntity p,MinecraftServer server){Long at=thrown.get(p.getUuid());return at!=null&&server.getOverworld().getTime()-at<200;}
+    /** Only Gold Experience's healing's script (2.149.0, MP_ONLY=goldheal). */
+    static final boolean GOLDHEAL_ONLY="goldheal".equals(System.getProperty("botand.mp.only"));
+    private int healMode;private long healReady,healSince;private float healCaster=-1,healWatcher=-1,healGained;private int healBlows;private final java.util.List<Long> healTicks=new java.util.ArrayList<>();
+    /**
+     * Gold Experience's healing as the server runs it (2.149.0, MP_ONLY=goldheal): as either begins (the caster's walking
+     * speed) and ends (how long, what the caster gained and on which ticks), when it is ready again, and every gain and
+     * loss of health of the watcher and of the caster outside their own healing.
+     */
+    private void goldHeal(MinecraftServer server){
+        ServerPlayerEntity caster=null,watcher=null;
+        for(var p:server.getPlayerManager().getPlayerList())if(caster(p))caster=p;else watcher=p;
+        if(caster==null)return;
+        long now=server.getOverworld().getTime();
+        int mode=dev.sangwoo.celestialfall.stand.GoldExperienceHeal.selfing(caster)?2:dev.sangwoo.celestialfall.stand.GoldExperienceHeal.mending(caster)?1:0;
+        long ready=dev.sangwoo.celestialfall.stand.GoldExperienceHeal.ready(caster);float h=caster.getHealth();
+        if(mode!=healMode){
+            if(mode!=0){healSince=now;healGained=0;healTicks.clear();
+                note(server,String.format(java.util.Locale.ROOT,"healing %s at tick %d: the caster's stand %s (out %s), its health %.1f, its walking speed %.4f",mode==2?"of the caster begun (Y held)":"of another begun (Y tapped)",now,
+                    dev.sangwoo.celestialfall.progression.ProgressManager.profile(caster).stand(),((dev.sangwoo.celestialfall.stand.StandHolder)caster).botand$isStandOut(),h,caster.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED)));}
+            else note(server,String.format(java.util.Locale.ROOT,"healing over at tick %d, %d ticks on: the caster gained %.1f on ticks %s; its health %.1f, its walking speed %.4f; ready again in %d ticks",now,now-healSince,healGained,healTicks,h,
+                caster.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED),ready-now));
+        }else if(ready!=healReady)note(server,String.format(java.util.Locale.ROOT,"healing ready again in %d ticks (told at tick %d)",ready-now,now));
+        if(healCaster>=0&&Math.abs(h-healCaster)>1e-3f){
+            if(mode==2||healMode==2){if(h>healCaster){healGained+=h-healCaster;healTicks.add(now-healSince);}else note(server,String.format(java.util.Locale.ROOT,"the caster lost %.1f at tick %d through its healing",healCaster-h,now));}
+            else note(server,String.format(java.util.Locale.ROOT,"the caster's health %.1f -> %.1f at tick %d",healCaster,h,now));
+        }
+        healMode=mode;healReady=ready;healCaster=h;
+        if(watcher==null)return;
+        float w=watcher.getHealth();
+        if(healWatcher>=0&&Math.abs(w-healWatcher)>1e-3f)note(server,String.format(java.util.Locale.ROOT,"the watcher's health %.1f -> %.1f at tick %d (%.2f blocks from the caster)%s",healWatcher,w,now,watcher.distanceTo(caster),mode==1?String.format(java.util.Locale.ROOT,", %d ticks into the tap",now-healSince):""));
+        healWatcher=w;
+    }
     /** Only Gold Experience's overdrive punch's script (2.148.0, MP_ONLY=goldover). */
     static final boolean GOLDOVER_ONLY="goldover".equals(System.getProperty("botand.mp.only"));
     private boolean overPunching,overOut,overHeld;private float overHealth=-1;private long overReady;private net.minecraft.util.math.Vec3d overAt;

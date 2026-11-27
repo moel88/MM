@@ -129,7 +129,7 @@ public final class GoldHeal {
         // Y still down HEAL_HOLD ticks on: it is the hold
         if(heldY&&!asked&&StandRush.ticks-downAt>=GoldExperienceRules.HEAL_HOLD){
             asked=true;
-            if(mc.player!=null&&mc.currentScreen==null&&usable(mc))send(GoldExperienceHeal.SELF);
+            if(mc.player!=null&&mc.currentScreen==null&&usable(mc))send(GoldExperienceHeal.HOLD);
         }
         if(heldY&&(mc.player==null||mc.currentScreen!=null)){
             // a screen came up over the key: it is let go (its release would never be heard)
@@ -268,7 +268,7 @@ public final class GoldHeal {
             if(!heldY)return false;
             // let go before the hold was asked for: the tap; after: the hold stops
             if(asked)send(GoldExperienceHeal.RELEASE);
-            else if(usable(mc))send(GoldExperienceHeal.MEND);
+            else if(usable(mc))send(GoldExperienceHeal.TAP);
             heldY=asked=false;return true;
         }
         if(heldY)return true;

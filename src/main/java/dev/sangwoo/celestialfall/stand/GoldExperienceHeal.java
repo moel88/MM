@@ -29,7 +29,7 @@ import static dev.sangwoo.celestialfall.stand.GoldExperienceRules.*;
 
 /**
  * Gold Experience's Y, its healing (2.149.0; GoldExperienceRules has the user's words and the numbers). The user's
- * client says which it is (gold_heal_v1, one byte: MEND, Y tapped; SELF, Y held past the threshold; RELEASE, Y let go)
+ * client says which it is (gold_heal_v1, one byte: TAP, Y tapped; HOLD, Y held past the threshold; RELEASE, Y let go)
  * and the server decides.
  * <ul>
  * <li>Tapped: the stand comes round to the front and lays its hand on the first one in its way, the way its user faced
@@ -48,7 +48,7 @@ import static dev.sangwoo.celestialfall.stand.GoldExperienceRules.*;
 public final class GoldExperienceHeal {
     public static final Identifier INPUT=CelestialFall.id("gold_heal_v1"),EVENT=CelestialFall.id("gold_heal_event_v1");
     /** What the client says: Y let go; Y tapped (the other's healing); Y held (their own). */
-    public static final int RELEASE=0,MEND=1,SELF=2;
+    public static final int RELEASE=0,TAP=1,HOLD=2;
     /** The event's kinds: the hand goes out; it touched (whom, what it healed); the user's own healing begins; a blow healed them (how much); either ended (whether stopped short). */
     public static final int MENDING=0,MENDED=1,SELFING=2,BLOW=3,END=4;
     /** Its user's slow walk while it heals them (the client keeps its lens still while it is on, StandClient.skillSlowed). */
@@ -56,7 +56,7 @@ public final class GoldExperienceHeal {
     private static final int RATE=20;
     private static final class State {
         final ServerWorld world;State(ServerPlayerEntity p){world=p.getServerWorld();}
-        /** What is on (0 nothing, MEND, SELF), since when, the way the hand goes, whether it has touched, and the tick Y is ready again. */
+        /** What is on (0 nothing, TAP, HOLD), since when, the way the hand goes, whether it has touched, and the tick Y is ready again. */
         int on;long start=Long.MIN_VALUE/4,ready;float yaw;boolean touched;
         int window,presses;
     }
@@ -72,7 +72,7 @@ public final class GoldExperienceHeal {
                 if(s.window!=second){s.window=second;s.presses=0;}
                 // a release is always heard (their healing must never run on for want of one)
                 if(what!=RELEASE&&++s.presses>RATE)return;
-                if(what==MEND)mend(player);else if(what==SELF)self(player);else if(what==RELEASE)release(player);
+                if(what==TAP)mend(player);else if(what==HOLD)self(player);else if(what==RELEASE)release(player);
             });
         });
         ServerTickEvents.END_SERVER_TICK.register(GoldExperienceHeal::tick);
@@ -87,9 +87,9 @@ public final class GoldExperienceHeal {
         return s;
     }
     /** Whether this player's stand is healing them now (Y held): they may only walk. */
-    public static boolean selfing(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s!=null&&s.on==SELF&&s.world==p.getWorld();}
+    public static boolean selfing(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s!=null&&s.on==HOLD&&s.world==p.getWorld();}
     /** Whether this player's stand's hand is out to heal another now (Y tapped). */
-    public static boolean mending(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s!=null&&s.on==MEND&&s.world==p.getWorld();}
+    public static boolean mending(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s!=null&&s.on==TAP&&s.world==p.getWorld();}
     /** Whether either is on. */
     public static boolean active(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s!=null&&s.on!=0&&s.world==p.getWorld();}
     /** The tick this player's Y is ready again (0 if they have not used it). */
@@ -108,7 +108,7 @@ public final class GoldExperienceHeal {
         if(!may(p,s,now))return false;
         float yaw=MathHelper.wrapDegrees(p.getYaw());
         var e=first(p,yaw);if(e==null)return false;
-        s.on=MEND;s.start=now;s.yaw=yaw;s.touched=false;
+        s.on=TAP;s.start=now;s.yaw=yaw;s.touched=false;
         s.ready=NoCooldownState.enabled(p)?now+MEND_LENGTH:healReady(now+MEND_LENGTH);
         send(p,s,MENDING,e,0);
         return true;
@@ -117,17 +117,17 @@ public final class GoldExperienceHeal {
     public static boolean self(ServerPlayerEntity p){
         var s=state(p);long now=p.getWorld().getTime();
         if(!may(p,s,now))return false;
-        s.on=SELF;s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.ready=0;
+        s.on=HOLD;s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.ready=0;
         p.setSprinting(false);p.clearActiveItem();slow(p,true);
         send(p,s,SELFING,null,0);
         return true;
     }
     /** Y let go: their own healing stops at once (the hand's, once out, goes on). */
-    public static void release(ServerPlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null&&s.on==SELF)end(p,s,p.getWorld().getTime(),false);}
+    public static void release(ServerPlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null&&s.on==HOLD)end(p,s,p.getWorld().getTime(),false);}
     /** A blow landed on this player (HitStun.attackerDamaged), or something took hold of them: their own healing stops, and the hand not yet laid on is stopped short. */
     public static void struck(ServerPlayerEntity p){
         var s=STATES.get(p.getUuid());if(s==null||s.world!=p.getServerWorld())return;
-        if(s.on==SELF||s.on==MEND&&!s.touched)end(p,s,p.getWorld().getTime(),true);
+        if(s.on==HOLD||s.on==TAP&&!s.touched)end(p,s,p.getWorld().getTime(),true);
     }
     private static void tick(MinecraftServer server){
         for(var e:new ArrayList<>(STATES.entrySet())){
@@ -135,7 +135,7 @@ public final class GoldExperienceHeal {
             if(p==null||p.getServerWorld()!=s.world){STATES.remove(e.getKey());continue;}
             if(s.on==0)continue;
             long now=p.getWorld().getTime(),age=now-s.start;
-            if(s.on==MEND){
+            if(s.on==TAP){
                 if(!s.touched&&(!heals(p)||HitStun.stunned(p)||CombatManager.actionLocked(p)||StarPlatinumRush.rushing(p))){end(p,s,now,true);continue;}
                 if(!s.touched&&age>=MEND_CONTACT)touch(p,s);
                 if(age>=MEND_LENGTH){s.on=0;send(p,s,END,null,0);}
@@ -152,7 +152,7 @@ public final class GoldExperienceHeal {
     }
     /** Either ends now: Y's cooldown runs from here (none for a player the cooldowns are off for). */
     private static void end(ServerPlayerEntity p,State s,long now,boolean stopped){
-        boolean self=s.on==SELF;
+        boolean self=s.on==HOLD;
         s.on=0;s.ready=NoCooldownState.enabled(p)?now:healReady(now);
         if(self)slow(p,false);
         send(p,s,END,stopped?p:null,0);
@@ -176,7 +176,7 @@ public final class GoldExperienceHeal {
         s.touched=true;
         var e=first(p,s.yaw);
         if(e==null){send(p,s,MENDED,null,0);return;}
-        float before=e.getHealth();e.heal(MEND);
+        float before=e.getHealth();e.heal(GoldExperienceRules.MEND);
         send(p,s,MENDED,e,e.getHealth()-before);
     }
     /** Its user's slow walk while it heals them. */

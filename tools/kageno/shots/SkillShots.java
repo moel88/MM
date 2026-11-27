@@ -356,6 +356,7 @@ public final class SkillShots implements ClientModInitializer {
     private int skill(String name){return switch(name){case "M1"->M1;case "E"->E;case "R"->R;case "T"->T;case "RUSH"->RUSH;case "Y"->Y;case "Q"->Q;case "H"->H;case "G"->G;case "PULSE"->PULSE;default->-1;};}
     private boolean mapShot(){return "METEOR".equals(current)||"SHOP".equals(current);}
     private String overSeen,soulSeen;private boolean dummySoulless;
+    private String healSeen;private float healthSeen=-1;
     private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "METEOR"->300;case "SHOP"->400;case "BASE"->150;case "HUD"->400;case "UI"->300;case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;case "GDUMMY"->560;case "STAND"->240;case "SUMMON"->300;default->DURATION[skill(name)]+20;};}
     private final Set<UUID> castsLogged=new HashSet<>();private long dashLogged=-1000;private List<String> listLogged=List.of();private int hitsLogged;private String glowLogged="";
     /** One row of motion.csv for this client tick, and for M1 the hits whose sound has just started (sound.csv). */
@@ -815,6 +816,13 @@ public final class SkillShots implements ClientModInitializer {
             if(soul==null&&soulSeen!=null)log.append("  soul back in the body at ").append(age).append('\n');
             soulSeen=soul;
             if(dummy!=null){boolean gone=dev.sangwoo.celestialfall.client.stand.SoulClient.soulless(dummy);if(gone!=dummySoulless)log.append(gone?"  the dummy's soul is out at ":"  the dummy's soul is back at ").append(age).append('\n');dummySoulless=gone;}
+        }
+        // (2.149.0) Gold Experience's healing (Y): its state as it changes, and the player's health as it goes up or down
+        {
+            String mending=mc.player==null?null:dev.sangwoo.celestialfall.client.stand.GoldHeal.describe(mc.player.getUuid(),0);
+            String healState=null;if(mending!=null){String[] hv=mending.split(",");healState=hv[0]+","+hv[2]+","+hv[3]+","+hv[6]+","+hv[7]+","+(Integer.parseInt(hv[5])/10);}
+            if(healState!=null&&!healState.equals(healSeen)){healSeen=healState;log.append("  healing at ").append(age).append(": self,age,touched,whom,healed,blows,ended,stopped ").append(mending).append(String.format(Locale.ROOT,", health %.1f, speed %.3f, ready in %d%n",mc.player.getHealth(),mc.player.getMovementSpeed(),dev.sangwoo.celestialfall.client.stand.GoldHeal.ready(mc.player.getUuid())-mc.world.getTime()));}
+            if(mc.player!=null&&mc.player.getHealth()!=healthSeen){if(healthSeen>=0&&opt("healthlog",0)>0)log.append(String.format(Locale.ROOT,"  health %.1f -> %.1f at %d%n",healthSeen,mc.player.getHealth(),age));healthSeen=mc.player.getHealth();}
         }
         if(dummy instanceof net.minecraft.entity.LivingEntity le&&Math.abs(le.getHealth()-dummyHealth)>.05f){
             if(dummyHealth>=0)log.append(String.format(Locale.ROOT,"  dummy health %.1f -> %.1f at %d%n",dummyHealth,le.getHealth(),age));
@@ -1794,6 +1802,10 @@ public final class SkillShots implements ClientModInitializer {
                     // the training dummy back in front of the player (after the finisher threw it), whole again
                     // (2.113.0) "GAUGE@n": Lee So-sang's H gauge full (as /botand gauge), so H may be used at once
                     // "SOULOUT@n" (2.148.0): the server puts the player's soul out of their body, as Gold Experience's overdrive punch does
+                    // "SETHP@n" (2.149.0): the player's health is set to "hp" (100) and the dummy's to "dhp" (if given), for a healing to show
+                    if(what.equals("SETHP")){if(age==at)server(p->{p.setHealth((float)opt("hp",100));var d=p.getServerWorld().getEntityById(dummyId);double dhp=opt("dhp",-1);
+                        if(dhp>0&&d instanceof net.minecraft.entity.LivingEntity le)le.setHealth((float)dhp);
+                        log.append(String.format(Locale.ROOT,"  health set to %.1f at %d%s%n",p.getHealth(),age,d instanceof net.minecraft.entity.LivingEntity le?String.format(Locale.ROOT,", the dummy's %.1f",le.getHealth()):""));});continue;}
                     if(what.equals("SOULOUT")){if(age==at){server(p->dev.sangwoo.celestialfall.stand.GoldExperienceOverdrive.out(p,p.getWorld().getTime()));log.append("  soul put out at ").append(age).append('\n');}continue;}
                     if(what.equals("GAUGE")){if(age==at){server(p->dev.sangwoo.celestialfall.isosang.IsosangAttack.setGauge(p,dev.sangwoo.celestialfall.isosang.IsosangRules.GAUGE_FULL));log.append("  gauge full at ").append(age).append('\n');}continue;}
                     if(what.equals("DUMMYBACK")){if(age==at)server(p->{var d=p.getServerWorld().getEntityById(dummyId);if(d instanceof net.minecraft.entity.LivingEntity l){
