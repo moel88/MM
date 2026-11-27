@@ -50,7 +50,7 @@ public final class SoulClient {
      * laid over all of it, how strong (the first take had only the skin, at .62: a dark skin read as a second body, not
      * as a soul).
      */
-    static final float ALPHA=.5f,RED=.78f,GREEN=.9f,BLUE=1f,VEIL=.3f;
+    static final float ALPHA=.55f,RED=.78f,GREEN=.9f,BLUE=1f,VEIL=.24f;
     static final int PALE=0xbcdcff;
     /** The pale veil is drawn this much bigger than the body about its middle (so it lies over the skin, not in it). */
     static final float SWELL=1.03f;
