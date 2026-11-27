@@ -389,6 +389,18 @@
 - 프레임 이름의 둘째 숫자는 장면 시계(틱)입니다(초가 아님). Q를 누른 다음 틱에 나옵니다(로그 'stand out at').
 - 볼 것: 웅크린 채 나와 그림의 자세로 펼치고 대기로 내려앉는지, 스탠드와 플레이어 둘 다 금색 아우라인지(흰색 없이), 걸을 때 기울며 따라오는지, 들어갈 때 웅크리며 빨려 드는지.
 
+### 골드 익스피리언스 치유 (Y, 2.149.0)
+- `B="SUMMON;stand=gold_experience;face=180;dummy=1;time=6000"`, 960x540 배율 16. `SHOTS_LANG=ko_kr`.
+- 상대 힐(톡, 옆 카메라): 예열 `$B;dfw=3;len=60;slows=0:2;save=0-1;then=KEY_Q@4/KEY_Y@20`, 본 장면 `$B;dfw=3;dhp=90;len=110;fov=55;hud=1;cool=1;orbit=6.0/1.8/0/118/2.0/0/1.2;then=KEY_Q@6/SETHP@20/KEY_Y@40`.
+- 자힐(꾹): 옆 카메라 `$B;dfw=7;hp=150;len=200;fov=55;hud=1;healthlog=1;orbit=4.4/1.7/0/240/0.4/0.3/1.2;then=KEY_Q@6/SETHP@20/KEYDOWN_Y@40/KEYUP_Y@170`(끝까지 50), 게임 카메라 `$B;dfw=7;hp=150;len=160;hud=1;cool=1;pitch=14;dist=4.2;then=KEY_Q@6/SETHP@20/KEYDOWN_Y@40/KEYDOWN_W@70/KEYUP_W@100/KEYUP_Y@110`(느리게 걷다가 뗌, 쿨타임 목록 '치유').
+- `KEY_Y@n`은 같은 틱에 누르고 떼므로 톡이고, `KEYDOWN_Y`/`KEYUP_Y`가 꾹이다(누르고 8틱 뒤 자힐이 시작된다). `SETHP@n`은 플레이어 체력을 `hp`(100)로, 더미 체력을 `dhp`(주면)로 맞춘다. `healthlog=1`은 플레이어 체력이 바뀔 때마다 로그에 남긴다.
+- **쿨타임에 주의:** `cool=1`로 Y를 쓴 장면 뒤의 장면은 45초 쿨타임에 걸려 Y가 나가지 않는다(2.149.0 첫 본 촬영에서 자힐 두 장면이 그랬다). `cool=1`은 목록의 마지막 장면에만 쓰거나, 상대 힐과 자힐을 따로 돌린다. 옆 카메라 각도 60은 서 있는 스탠드가 플레이어를 가린다(240이 플레이어의 앞 왼쪽이다).
+- 로그: 'healing at N: self,age,touched,whom,healed,blows,ended,stopped …, health, speed, ready in'. 상대 힐은 'dummy health 90.0 -> 150.0', 자힐은 체력이 2틱마다 1씩 오르고 speed 0.010.
+- 볼 것: 스탠드가 주먹을 한 번 꽂아 박아 둔다(연타하지 않는다). 상대 힐은 초록 숫자 60과 올라가는 고리·잎, 자힐은 박힌 주먹에서 열리는 고리와 팔을 타고 흐르는 빛, 쌓여 올라가는 초록 숫자.
+- 멀티플레이: `MP_ONLY=goldheal python3 tools/kageno/mp/run_mp.py 폴더`(`MpClient.GOLDHEAL_SCRIPT`·`goldHealWatch`, `MpServer.goldHeal`). 이 확인에서는 서버 도구가 플레이어 체력을 매 틱 채우지 않는다(채우면 회복량이 0으로 찍힌다).
+- 2.149.0의 영상: 상대 힐 1.75~4.05초, 자힐 옆 1.8~9.0초, 자힐 게임 카메라 1.8~7.6초를 `FILM_WIDTH=960 FILM_FPS=30 FILM_SKILL=UI FILM_CAPTION=below FILM_CLOCK="Y 누른 뒤" FILM_CLOCK_ZERO=2.0 FILM_NOTES="a-b:글|…" film.py`로 만들어 이었다(반복 프레임 0, 소리 없음). `FILM_NOTES`의 a-b는 편집한 영상의 초가 아니라 촬영 장면의 초다.
+- 소리: 없다(녹음을 받으면 넣는다).
+
 ### 골드 익스피리언스 감각폭주 (R, 2.148.0)
 - 목록(960x540): 예열 `SUMMON;stand=gold_experience;face=180;dummy=1;dfw=3;time=6000;len=60;slows=0:2;save=0-1;then=KEY_Q@4/KEY_R@20`, 시전자(옆 카메라, 강펀치 → 걸어가 러시: 숫자가 2씩 오름) `...;len=170;fov=55;hud=1;orbit=7.0/1.8/0/118/3.0/0/1.2;then=KEY_Q@6/KEY_R@40/KEYDOWN_W@60/KEYUP_W@73/KEYDOWN_E@78/KEYUP_E@150`, 맞은 사람(게임 카메라) `SUMMON;stand=gold_experience;face=180;dummy=1;dattack=1;dfw=1.6;time=6000;len=160;hud=1;pitch=14;dist=4.2;then=SOULOUT@20/KEYDOWN_S@26/KEYUP_S@44/KEYDOWN_D@48/KEYUP_D@58/ATTACKDOWN@62/ATTACKUP@63/...`. `SHOTS_LANG=ko_kr`.
 - `SOULOUT@n`은 서버가 플레이어의 영혼을 내보냅니다(`GoldExperienceOverdrive.out`: 싱글에는 감각폭주를 걸어 줄 상대가 없습니다). 이동 키(`KEYDOWN_W` 등)와 `ATTACKDOWN`이 영혼을 움직입니다.
