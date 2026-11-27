@@ -19,14 +19,16 @@ import static dev.sangwoo.celestialfall.client.stand.StandPunchFx.way;
 
 /**
  * The light of Gold Experience's healing (2.149.0), drawn with its rush's on the effect layer (StandRushFx calls it pass
- * by pass): gold, and the green of new leaves (it gives life). Nothing in it is a blow's light: no spiked bursts, no
- * ink-edged stars; soft light, rings, and small crisp leaves with dark edges that rise turning about whoever is healed.
+ * by pass): gold, and the green of new leaves (it gives life). It is one punch with the fist left in, and what it gives
+ * goes in through the fist. Nothing in it is a blow's light: no spiked bursts, no ink-edged stars; soft light, rings,
+ * and small crisp leaves with dark edges that rise turning about whoever is healed.
  * <ul>
- * <li>Tapped: the hand glows as it goes out; as it is laid on, light blooms where it rests, two rings rise round the
- * healed body from its feet to over its head, a ring runs out along the ground under it, and leaves and motes of light
- * wind up about it.</li>
- * <li>Held: every fist that lands on its user leaves a small soft spark of gold and green where it stops; while it
- * lasts leaves rise turning about them, a ring opens at their feet twice a second and a soft light sits on them.</li>
+ * <li>The fist glows as it is drawn and driven; as it goes in, light blooms round it with two rings opening along the
+ * arm's line. While it is in, beads of light run down the arm into it and the place it is in glows.</li>
+ * <li>Tapped: two rings rise round the healed body from its feet to over its head, a ring runs out along the ground
+ * under it, and leaves and motes of light wind up about it.</li>
+ * <li>Held: with each healing a small ring opens off the fist; while it lasts leaves rise turning about its user, a
+ * ring opens at their feet twice a second and a soft light sits on them.</li>
  * </ul>
  * None of it over the whole screen. Every effect is a function of the healing's clock.
  */
@@ -37,8 +39,8 @@ final class GoldHealFx {
     static final float BLOOM=.45f,RISE=.7f,LEAVES=1.1f;
     /** How many leaves and motes wind up about a body the hand healed; how many rise at a time about one being healed blow by blow. */
     static final int LEAVES_N=14,MOTES_N=9,SELF_LEAVES=10;
-    /** Seconds a fist's spark on its user lasts. */
-    static final float SPARK=.14f;
+    /** Seconds a healing's ring off the fist lasts (held), and how many beads run down the arm. */
+    static final float PULSE=.24f;static final int BEADS=4;
     record Shown(GoldHeal.Heal heal,float t,StandPresence.Body body,Vec3d user,float userHeight){}
     private static final List<Shown> FRAME=new ArrayList<>();
     private GoldHealFx(){}
@@ -51,7 +53,7 @@ final class GoldHealFx {
             var h=e.getValue();var user=mc.world.getPlayerByUuid(e.getKey());
             if(user==null||user.getPos().squaredDistanceTo(camera)>96*96)continue;
             float t=h.age(tickDelta);
-            if(t<0||t>(h.self?h.ends():GoldHeal.LENGTH)+LEAVES+.4f)continue;
+            if(t<0||t>GoldHeal.guarded(h)+LEAVES+.4f)continue;
             // (the tap's healed body is where it stood as the hand touched it, moved with it if it is still there)
             if(!h.self&&h.touched()&&mc.world.getEntityById(h.whom) instanceof LivingEntity w&&w.isAlive())h.whomAt=w.getLerpedPos(tickDelta).add(0,w.getHeight()*.6,0);
             FRAME.add(new Shown(h,t,GoldPresence.body(e.getKey()),user.getLerpedPos(tickDelta),user.getHeight()));
@@ -130,45 +132,51 @@ final class GoldHealFx {
         }
     }
     static Vec3d feet(GoldHeal.Heal h){return h.whomAt.subtract(0,h.whomHeight*.6,0);}
-    /** How much the light about one being healed blow by blow is on: with the barrage, and a moment after its last blow. */
+    /** How much the light about one being healed through the fist is on: from the fist going in, and a moment after it is drawn out. */
     static float selfOn(Shown s){
         var h=s.heal;float end=h.ends();
-        return Ease.smooth(s.t,GoldRush.RISE*.6f,GoldRush.RISE+.1f)*(1-Ease.smooth(s.t,end,end+.5f));
+        return Ease.smooth(s.t,GoldHeal.TOUCH-.02f,GoldHeal.TOUCH+.1f)*(1-Ease.smooth(s.t,end,end+.5f));
     }
-
-    /** Tapped: the hand's glow, and what blooms on whom it is laid. */
+    /** The fist: its glow as it is drawn and driven, the bloom as it goes in, and while it is in the beads of light running down the arm into it. */
+    static void fist(EffectMesh m,Shown s){
+        var h=s.heal;float t=s.t;if(s.body==null)return;
+        Vec3d fist=on(GoldHeal.fist(h,t),s.body),shoulder=on(GoldHeal.shoulder(h,t),s.body);
+        float g=GoldHeal.glow(h,t),near=clear(m,fist);
+        if(g>0){
+            float pulse=.5f+.5f*(float)Math.sin(t*Math.PI*2*5);
+            m.softDisc(fist,.3+.06*pulse,LEAF_DEEP,.3f*g*near);m.softDisc(fist,.17+.03*pulse,GOLD,.5f*g*near);m.softDisc(fist,.08,WHITE,.5f*g*near);
+        }
+        // driven: a short smear of light behind the fist
+        if(t>GoldHeal.OUT_FROM&&t<GoldHeal.TOUCH+.08f){
+            float a=Ease.smooth(t,GoldHeal.OUT_FROM+.02f,GoldHeal.OUT_FROM+.07f)*(1-Ease.smooth(t,GoldHeal.TOUCH,GoldHeal.TOUCH+.08f));
+            Vec3d from=on(GoldHeal.fist(h,GoldHeal.OUT_FROM),s.body),along=fist.subtract(from);
+            if(a>0&&along.lengthSquared()>1e-4){m.softTaper(from.add(along.multiply(.2)),fist,.02,.3,LEAF_DEEP,.4f*a*near);m.softTaper(from.add(along.multiply(.2)),fist,.01,.16,GOLD,.55f*a*near);}
+        }
+        // in: light blooms round it, two rings opening along the arm's line
+        float u=(t-GoldHeal.TOUCH)/BLOOM;
+        if(u>=0&&u<1&&(h.self||!h.touched()||h.whom>=0)){
+            Vec3d w=fist.subtract(shoulder);if(w.lengthSquared()<1e-6)w=way(s.body.yaw());w=w.normalize();
+            Vec3d r=w.crossProduct(new Vec3d(0,1,0));if(r.lengthSquared()<1e-4)r=new Vec3d(1,0,0);r=r.normalize();Vec3d up=r.crossProduct(w).normalize();
+            float a=Ease.smooth(t,GoldHeal.TOUCH-.005f,GoldHeal.TOUCH+.02f)*(float)Math.pow(1-u,.8)*near;double grow=Ease.out(u,0,1);
+            m.softDisc(fist,.5+.8*grow,LEAF_DEEP,.3f*a);m.softDisc(fist,.3+.45*grow,GOLD,.42f*a);m.softDisc(fist,.15+.1*grow,WHITE,.55f*a*(1-u));
+            FxLib.ringPlane(m,fist.subtract(w.multiply(.15)),r,up,.18+1.0*grow,.06,PALE,.7f*a*(1-u));
+            FxLib.ringPlane(m,fist.subtract(w.multiply(.3)),r,up,.12+.65*grow,.04,LEAF,.6f*a*(1-u));
+        }
+        // while it is in: beads of light run down the arm into the fist
+        float on=GoldHeal.on(h,t);
+        if(on>0)for(int k=0;k<BEADS;k++){
+            double v=(t*2.6+k/(double)BEADS)%1;
+            Vec3d q=shoulder.lerp(fist,.15+.85*v);float a=(float)Math.sin(v*Math.PI)*on*clear(m,q);
+            m.softDisc(q,.1,k%2==0?LEAF_DEEP:AMBER,.4f*a);m.star(q,.06,k%2==0?LEAF_PALE:PALE,.9f*a);
+        }
+    }
+    /** Tapped: what blooms on whom the fist went into. */
     static void mend(EffectMesh m,Shown s){
         var h=s.heal;float t=s.t;
-        if(s.body!=null){
-            float g=GoldHeal.glow(h,t);
-            if(g>0){
-                Vec3d hand=on(GoldHeal.hand(h,t),s.body);float pulse=.5f+.5f*(float)Math.sin(t*Math.PI*2*4);
-                m.softDisc(hand,.3+.06*pulse,LEAF_DEEP,.3f*g);m.softDisc(hand,.17+.03*pulse,GOLD,.5f*g);m.softDisc(hand,.08,WHITE,.5f*g);
-                for(int k=0;k<6;k++){
-                    double a=t*(5+2*Ease.hash(k*7+h.seed))+k*Math.PI/3,b=(Ease.hash(k*11)-.5)*1.4;
-                    Vec3d q=hand.add(Math.cos(a)*Math.cos(b)*.22,Math.sin(b)*.22,Math.sin(a)*Math.cos(b)*.22);
-                    m.star(q,.045,k%2==0?LEAF_PALE:PALE,.8f*g);
-                }
-            }
-        }
-        if(!h.touched())return;
+        fist(m,s);
+        if(!h.touched()||h.whom<0||h.whomAt==null)return;
         float since=t-h.touchedAt;if(since<0)return;
-        if(h.whom<0||h.whomAt==null){
-            // laid on no one (they had gone): the hand's light goes out in a small puff
-            if(s.body!=null&&since<.25f){float a=1-since/.25f;Vec3d hand=on(GoldHeal.hand(h,h.touchedAt),s.body);m.softDisc(hand,.2+.5*since,LEAF_DEEP,.3f*a);}
-            return;
-        }
-        Vec3d at=h.whomAt,feet=feet(h);double radius=h.whomWidth*.5+.32;
-        Vec3d w=way(h.yaw()),r=right(w),up=new Vec3d(0,1,0);
-        // light blooms where the hand rests
-        float u=since/BLOOM;
-        if(u<1){
-            float a=Ease.smooth(since,0,.03f)*(float)Math.pow(1-u,.8),near=clear(m,at);
-            double grow=Ease.out(u,0,1);
-            m.softDisc(at,.55+.9*grow,LEAF_DEEP,.3f*a*near);m.softDisc(at,.35+.5*grow,GOLD,.42f*a*near);m.softDisc(at,.16+.1*grow,WHITE,.55f*a*(1-u)*near);
-            FxLib.ringPlane(m,at.subtract(w.multiply(.2)),r,up,.2+1.1*grow,.06,PALE,.7f*a*(1-u)*near);
-            FxLib.ringPlane(m,at.subtract(w.multiply(.2)),r,up,.12+.7*grow,.04,LEAF,.6f*a*(1-u)*near);
-        }
+        Vec3d feet=feet(h);double radius=h.whomWidth*.5+.32;
         // two rings rise round the body from its feet to over its head
         for(int k=0;k<2;k++){
             float v=(since-k*.14f)/RISE;if(v<0||v>=1)continue;
@@ -190,24 +198,23 @@ final class GoldHealFx {
             m.softDisc(q,.09,k%3==0?LEAF_DEEP:AMBER,.35f*a);m.star(q,.05+.03*Ease.hash(k*3),k%3==0?LEAF_PALE:PALE,.9f*a);
         }
     }
-    /** Held: each fist's soft spark where it stops on its user, a ring opening at their feet twice a second, a soft light on them. */
+    /** Held: a small ring off the fist with each healing, a ring opening at their feet twice a second, a soft light on them. */
     static void self(EffectMesh m,Shown s){
-        var h=s.heal;float t=s.t,on=selfOn(s);if(on<=0)return;
+        var h=s.heal;float t=s.t;
+        fist(m,s);
+        float on=selfOn(s);if(on<=0)return;
         Vec3d chest=s.user.add(0,s.userHeight*.6,0);float near=clear(m,chest);
         float beat=.5f+.5f*(float)Math.sin(t*Math.PI*2*2.5f);
         m.softDisc(chest,1.05+.08*beat,LEAF_DEEP,.13f*on*near);m.softDisc(chest,.7,GOLD,.1f*on*near);
-        // the fists that have landed in the last SPARK seconds: where each stopped on them
+        // each healing: a small ring opens off the fist where it is in them
         if(s.body!=null){
-            float arms=GoldHeal.armSize(h,t);var f=GoldHeal.fist(Math.min(t,h.ends()));
-            if(f!=null)for(int j=0;j<3;j++){
-                int k=(int)f[0]-1-j;if(k<0)continue;
-                float landed=GoldHeal.LEAD+(k+1)*GoldHeal.HALF,u=(t-landed)/SPARK;if(u<0||u>=1)continue;
-                Vec3d p=on(GoldRush.grown(GoldRush.fist(k,h.seed),k&1,arms*(1+GoldHeal.STRETCH)),s.body);
-                float a=(float)Math.pow(1-u,.7)*on*clear(m,p);double grow=Ease.out(u,0,1);
-                m.softDisc(p,.2+.2*grow,k%2==0?LEAF_DEEP:AMBER,.4f*a);m.softDisc(p,.1+.06*grow,PALE,.55f*a);
-                m.star(p,.1+.08*grow,k%2==0?LEAF_PALE:WHITE,.75f*a*(1-u));
-                Vec3d w=way(s.body.yaw()),r=right(w);
-                FxLib.ringPlane(m,p,r,new Vec3d(0,1,0),.08+.3*grow,.03,k%2==0?LEAF:GOLD,.6f*a*(1-u));
+            float every=dev.sangwoo.celestialfall.stand.GoldExperienceRules.SELF_EVERY/20f,since=Math.min(t,h.ends())-GoldHeal.TOUCH;
+            Vec3d fist=on(GoldHeal.fist(h,t),s.body),w=way(s.body.yaw()),r=right(w);
+            if(since>=0)for(int j=0;j<3;j++){
+                int k=(int)Math.floor(since/every)-j;if(k<0)continue;
+                float u=(t-GoldHeal.TOUCH-k*every)/PULSE;if(u<0||u>=1)continue;
+                float a=(float)Math.pow(1-u,.8)*on*clear(m,fist);double grow=Ease.out(u,0,1);
+                FxLib.ringPlane(m,fist.subtract(w.multiply(.12)),r,new Vec3d(0,1,0),.1+.42*grow,.035,k%2==0?LEAF:GOLD,.6f*a);
             }
         }
         // a ring opens at their feet twice a second
@@ -224,12 +231,12 @@ final class GoldHealFx {
             m.star(q,.045,k%2==0?LEAF_PALE:PALE,.8f*a);
         }
     }
-    /** The effect layer: the hand's glow and the healed body's bloom light the world about them, green-gold. */
+    /** The effect layer: the fist's glow and the healed body's bloom light the world about them, green-gold. */
     static void frame(FxFrame f,Vec3d camera){
         for(var s:FRAME){
             var h=s.heal;
+            if(s.body!=null){float g=GoldHeal.glow(h,s.t);if(g>0)f.light(on(GoldHeal.fist(h,s.t),s.body),0xdcffb4,4,.9f*g);}
             if(h.self){float on=selfOn(s);if(on>0)f.light(s.user.add(0,s.userHeight*.6,0),0xd4ffb0,5,.9f*on);continue;}
-            if(s.body!=null){float g=GoldHeal.glow(h,s.t);if(g>0)f.light(on(GoldHeal.hand(h,s.t),s.body),0xdcffb4,4,.9f*g);}
             if(h.touched()&&h.whom>=0&&h.whomAt!=null){
                 float u=(s.t-h.touchedAt)/(BLOOM+.3f);
                 if(u>=0&&u<1)f.light(h.whomAt,0xdcffb4,7,1.8f*(1-u));

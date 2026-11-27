@@ -131,19 +131,6 @@ public final class GoldPresence {
                     dispatcher.render(arm,b.at().x-cam.x,b.at().y-cam.y,b.at().z-cam.z,b.yaw(),delta,c.matrixStack(),c.consumers(),dispatcher.getLight(arm,delta));
                 }
             }
-            // (2.149.0) the healing of its user: the afterimages of its arms the same way, fainter
-            if(rush==null&&s.heal!=null&&s.heal.self){
-                for(int i=0;i<GoldRush.PHANTOMS.length;i++){
-                    if(s.arms[i]==null)s.arms[i]=new GoldPuppet(mc.world);
-                    var arm=s.arms[i];
-                    float a=GoldHeal.phantom(s.heal,i,delta,arm.look)*look.alpha;if(a<.02f)continue;
-                    arm.look.armsOnly=true;arm.look.alpha=a;arm.look.out=1;arm.look.scale=look.scale;arm.look.shadow=0;arm.look.glow=0;arm.look.lean=arm.look.roll=0;
-                    arm.look.red=GoldRush.RED;arm.look.green=GoldRush.GREEN;arm.look.blue=GoldRush.BLUE;
-                    arm.age=s.puppet.age;
-                    var b=GoldRush.phantomBody(s.body,i);arm.place(b.at(),b.yaw());
-                    dispatcher.render(arm,b.at().x-cam.x,b.at().y-cam.y,b.at().z-cam.z,b.yaw(),delta,c.matrixStack(),c.consumers(),dispatcher.getLight(arm,delta));
-                }
-            }
             // coming out or going back: faint golden afterimages where it was a moment ago (the same pose: GeckoLib
             // poses a body once a frame)
             float main=look.out;ghost.set(look);
@@ -235,8 +222,8 @@ final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceSt
             boolean punching=punch!=null&&out&&GoldPunch.pose(punch,delta,look,rush==null?shape:shape2,scratch);
             if(punching&&rush!=null)shape.over(shape2);
             front=rush!=null||punching;
-            // (2.149.0) the healing: its stances over those, and where it stands (the tap in front of its user; the hold
-            // at their front right, turned on them, by the way they face as it follows it)
+            // (2.149.0) the healing: its one punch's stances over those, and where it stands (the tap in front of its
+            // user; the hold at their front right, turned on them, by the way they face as it follows it)
             heal=GoldHeal.of(owner);
             if(heal!=null&&out&&GoldHeal.pose(heal,delta,look,front?shape2:shape,scratch,MathHelper.lerpAngleDegrees(delta,prevYaw,yaw))){
                 if(front)shape.over(shape2);
@@ -253,7 +240,7 @@ final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceSt
             // and brighter still as its fist's light gathers for the overdrive punch
             if(punching)look.glow=Math.max(look.glow,look.out*(1+.7f*GoldPunch.charge(punch,punch.age(delta))));
             // and a little brighter as it heals
-            if(heal!=null)look.glow=Math.max(look.glow,look.out*(1+.4f*(heal.self?GoldHeal.on(heal,heal.age(delta)):GoldHeal.glow(heal,heal.age(delta)))));
+            if(heal!=null)look.glow=Math.max(look.glow,look.out*(1+.4f*GoldHeal.glow(heal,heal.age(delta))));
             put(p,delta,look,front?shape:null);
             return rush;
         }

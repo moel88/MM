@@ -1065,7 +1065,7 @@ public final class MpClient implements ClientModInitializer {
                     if(ONLY.equals("glow"))glowWatch();
                     if(ONLY.equals("vanilla"))vanillaWatch();
                     if(ONLY.equals("goldover"))soulWatch(false);
-                    if(ONLY.equals("goldheal"))healWatch();
+                    if(ONLY.equals("goldheal"))goldHealWatch();
                     for(String step:STEPS){String[] s=step.split(" ");int at=Integer.parseInt(s[0]);if(age==at)act(s[1],true);if(age==at+1&&!s[1].endsWith("+")&&!s[1].endsWith("-"))act(s[1],false);}
                 }else{
                     if((age%20==0||!AtomicClient.CASTS.isEmpty()&&age%5==0)&&StandClient.cinematic()==null)face();
@@ -1074,7 +1074,7 @@ public final class MpClient implements ClientModInitializer {
                     if(guardUntil>0&&age>=guardUntil){key(GLFW_KEY_F,false);note("release F (guard)");guardUntil=0;}
                     // 2.64.0: the guard the caster's script asks for (the file OUT/guard), and a respawn once dead
                     if(ONLY.equals("goldover"))soulWatch(true);
-                    if(ONLY.equals("goldheal"))healWatch();
+                    if(ONLY.equals("goldheal"))goldHealWatch();
                     boolean guard=Files.exists(OUT.resolve("guard"));
                     if(guard!=guardAsked){guardAsked=guard;key(GLFW_KEY_F,guard);note((guard?"press":"release")+" F (guard, asked by the caster)");}
                     if(!mc.player.isAlive()){if(++deadFor==40){note("dead: respawn requested");mc.player.requestRespawn();}}else deadFor=0;
@@ -1300,13 +1300,13 @@ public final class MpClient implements ClientModInitializer {
             default->note("ERROR unknown step "+step);
         }
     }
-    private final java.util.Map<java.util.UUID,String> healsSeen=new java.util.HashMap<>();private float healHealth=-1;
+    private final java.util.Map<java.util.UUID,String> healsSeen=new java.util.HashMap<>();private float goldHealth=-1;
     /**
      * Gold Experience's healing as this client has it (2.149.0, MP_ONLY=goldheal): each player's healing as it changes
      * (which, what its hand touched and healed, how many blows, whether let go or stopped), when it is ready again, and
      * this client's own health as it goes up.
      */
-    private void healWatch(){
+    private void goldHealWatch(){
         for(var p:mc.world.getPlayers()){
             String heal=dev.sangwoo.celestialfall.client.stand.GoldHeal.describe(p.getUuid(),0);if(heal==null)continue;
             String[] v=heal.split(",");String shape=v[0]+","+v[2]+","+v[3]+","+v[4]+","+v[6]+","+v[7]+(v[0].equals("1")?","+(Integer.parseInt(v[5])/5):"");
@@ -1314,8 +1314,8 @@ public final class MpClient implements ClientModInitializer {
                 +String.format(Locale.ROOT,", my speed %.4f",mc.player.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED)));
         }
         float h=mc.player.getHealth();
-        if(healHealth>=0&&h>healHealth+1e-3f&&(h-healHealth>1.5f||age%10==0))note(String.format(Locale.ROOT,"my health up to %.1f",h));
-        healHealth=h;
+        if(goldHealth>=0&&h>goldHealth+1e-3f&&(h-goldHealth>1.5f||age%10==0))note(String.format(Locale.ROOT,"my health up to %.1f",h));
+        goldHealth=h;
     }
     private String soulPunch,soulMine;private boolean soulKeys;private final java.util.Map<Integer,Boolean> soulOut=new java.util.HashMap<>();
     /**

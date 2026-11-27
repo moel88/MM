@@ -25,33 +25,35 @@ import static dev.sangwoo.celestialfall.stand.GoldExperienceStance.*;
 
 /**
  * Gold Experience's healing as it is drawn, and its key (2.149.0, Y: GoldExperienceRules has the user's words). The
- * server runs it (GoldExperienceHeal); here is what the stand does through it, on the healing's own clock.
+ * server runs it (GoldExperienceHeal); here is what the stand does through it, on the healing's own clock. It is one
+ * punch, the fist driven in and left in (user: "러시를 꽂으며 힐 해주는거 같은데 그렇게 말고 주먹을 한 번 꽂아서
+ * 주먹을 박아넣고 힐 되게"), never a barrage:
  * <ul>
- * <li>Y tapped, another's healing: it comes round to the front of its user and from its guard leans in and lays its
- * open right hand on whoever it is for (the generator's {@code mend}), softly, there as the server heals them; it holds
- * the hand there a moment and goes back to its guard and to its user's shoulder.</li>
- * <li>Y held, its user's own: it comes round to their front right, turns on them, and drives its fists into them left
- * and right in turn (the muda rush's stances, a fist every tenth of a second: each lands as the server heals them), the
- * afterimages of its arms flying with it, until Y is let go; then its fists go back to the guard and it goes back.</li>
+ * <li>Y tapped, another's healing: it comes round to the front of its user and from its guard drives its right fist
+ * into whoever it is for (the generator's {@code mend}), faster and faster, in as the server heals them; it leaves the
+ * fist in a moment, draws it out to its guard and goes back to its user's shoulder.</li>
+ * <li>Y held, its user's own: it comes round to their front right, turns on them, and drives the same fist into them,
+ * in as the server's first healing comes; the fist stays in them, pressing a little with each healing, until Y is let
+ * go; then it draws it out and goes back.</li>
  * </ul>
  * The key: Y down starts a count; let go within GoldExperienceRules.HEAL_HOLD ticks it is the tap, still down then it
  * is the hold, which lasts until Y comes up. Everything drawn is a function of the healing's clock.
  */
 public final class GoldHeal {
-    /** The tap, seconds on its clock: the hand starts out, is on them (the server's MEND_CONTACT), stays until, is back in the guard, over. */
-    static final float OUT_FROM=.06f,TOUCH=.3f,STAYS=.5f,GUARDED=.74f,LENGTH=.8f;
-    /** Seconds: stopped short it is back in its guard; it stays a moment in front once in its guard and then goes back (the punch's). */
+    /** Seconds on either's clock: the fist starts out, is in (the server's MEND_CONTACT, and SELF_FIRST: the same). */
+    static final float OUT_FROM=.14f,TOUCH=.3f;
+    /** The tap, seconds on its clock: the fist stays in until, is back in the guard, over. */
+    static final float STAYS=.56f,GUARDED=.82f,LENGTH=.9f;
+    /** Seconds: stopped short or let go the fist is back in its guard; it stays a moment in front once in its guard and then goes back (the punch's). */
     static final float CUT=.15f,LINGER=.12f,RETURN=.4f,TAKE=.1f;
-    /** How far in front of its user it stands for the tap with no one known, and no nearer or further than (blocks); how deep its hand goes into whom it touches. */
-    static final float AHEAD=1.05f,NEAR=.75f,FAR=3.0f,PRESS=.06f;
-    /** Held: a fist every HALF seconds, the first on its way LEAD seconds in, so that fist k is at full stretch as the server's blow k heals. */
-    static final float HALF=GoldExperienceRules.SELF_EVERY/20f,LEAD=GoldExperienceRules.SELF_FIRST/20f-HALF;
-    /** Held: where round its user it stands (degrees to the right of the way they face) and how far from them, so that its fists stop on their body. */
-    static final float SIDE=52,BITE=.12f,BODY=.24f;
-    /** Held: how big its arms are, and how much bigger still as each stretches out (gentler than the rush's). */
-    static final float ARMS=1.08f,STRETCH=.1f;
-    /** Held: how strongly the afterimages of its arms show (a share of the rush's). */
-    static final float PHANTOMS=.7f;
+    /** How far in front of its user it stands for the tap with no one known, and no nearer or further than (blocks); how deep its fist goes into whom it is for. */
+    static final float AHEAD=1.05f,NEAR=.75f,FAR=3.0f,PRESS=.2f;
+    /** Held: where round its user it stands (degrees to the right of the way they face), and how far from their middle its knuckles stop: well inside their body. */
+    static final float SIDE=52,DEPTH=.1f;
+    /** How big its arm is through either. */
+    static final float ARMS=1.08f;
+    /** Held: how far further in the fist presses with each healing (blocks), and how long a press takes to ease off (seconds). */
+    static final float PUSH=.035f,PUSH_OFF=.09f;
     /** A healing as heard. */
     public static final class Heal {
         public final boolean self;public final long start;final long serverAge,received;final float yaw,aim;final int seed;
@@ -67,8 +69,6 @@ public final class GoldHeal {
         public float age(float delta){return (serverAge+StandRush.ticks-received+Math.max(0,Math.min(1,delta)))/20f;}
         /** Held: when its blows stop (seconds): when it was let go, or their end. */
         public float ends(){return Float.isNaN(ended)?GoldExperienceRules.SELF_LENGTH/20f:ended;}
-        /** Tapped: when it is back in its guard. */
-        float end(){return Float.isNaN(stopped)?GUARDED:Math.min(GUARDED,stopped+CUT);}
         public boolean touched(){return !Float.isNaN(touchedAt);}
         public int whom(){return whom;}
         public float healed(){return healed;}
@@ -149,59 +149,60 @@ public final class GoldHeal {
         var b=PacketByteBufs.create();b.writeByte(what);ClientPlayNetworking.send(GoldExperienceHeal.INPUT,b);
     }
 
-    // ───────────────────────────── the tap's pose ─────────────────────────────
+    // ───────────────────────────── the pose ─────────────────────────────
 
     static float smooth(float v){v=v<0?0:v>1?1:v;return v*v*(3-2*v);}
-    /** How far out the hand is {@code t} seconds in (0 in the guard, 1 on them): quick away and slowing onto them, there as the server heals. */
-    static float reach(float t){float u=MathHelper.clamp((t-OUT_FROM)/(TOUCH-OUT_FROM),0,1);return 1-(1-u)*(1-u)*(1-u*.4f);}
-    /** How far back in its guard it is after the touch, or after it was stopped short at {@code stopped} (NaN: it was not). */
-    static float back(float t,float stopped){
-        float k=smooth((t-STAYS)/(GUARDED-STAYS));
-        return Float.isNaN(stopped)?k:Math.max(k,smooth((t-stopped)/CUT));
+    /** How far in the fist is {@code t} seconds in (0 in the guard, 1 driven in): faster and faster, fastest as it goes in, as the server heals. */
+    static float reach(float t){float u=MathHelper.clamp((t-OUT_FROM)/(TOUCH-OUT_FROM),0,1);return (float)Math.pow(u,1.6);}
+    /** When healing {@code h} starts drawing its fist out (seconds on its clock): the tap after its moment in, or stopped short; the hold as Y is let go or it runs out. */
+    static float leaves(Heal h){return h.self?h.ends():Float.isNaN(h.stopped)?STAYS:Math.min(STAYS,h.stopped);}
+    /** How long it takes drawing it out to its guard. */
+    static float drawing(Heal h){return h.self||!Float.isNaN(h.stopped)?CUT:GUARDED-STAYS;}
+    /** When it is back in its guard. */
+    static float guarded(Heal h){return leaves(h)+drawing(h);}
+    /** How far back in its guard it is {@code t} seconds in (0 still in, 1 in its guard). */
+    static float back(Heal h,float t){return smooth((t-leaves(h))/drawing(h));}
+    /** Adds the healing's stances {@code t} seconds into it into {@code w}: the guard, the fist driven in, the guard again. */
+    public static void stances(Heal h,float t,float[] w){
+        float in=reach(Math.min(t,leaves(h)))*(1-back(h,t));
+        w[GUARD]+=1-in;w[MEND]+=in;
     }
-    /** Adds the tap's stances {@code t} seconds into it into {@code w}: the guard, the hand laid on, the guard again. */
-    public static void stances(float t,float stopped,float[] w){
-        float at=Float.isNaN(stopped)?t:Math.min(t,stopped);
-        float out=reach(at)*(1-back(t,stopped));
-        w[GUARD]+=1-out;w[MEND]+=out;
-    }
-    /** How far in front of its user it stands for this tap (blocks): so that its hand at full reach rests PRESS into whom it is for. */
+    /** How far in front of its user it stands for this tap (blocks): so that its fist at full stretch is PRESS into whom it is for. */
     static float place(Heal h){
         if(Float.isNaN(h.aim))return AHEAD;
-        return MathHelper.clamp(h.aim+PRESS-handReach(),NEAR,FAR);
+        return MathHelper.clamp(h.aim+PRESS-fistReach(),NEAR,FAR);
     }
-    /** How far ahead of the stand's feet its right hand reaches laid on (blocks, at its size 1). */
-    static float handReach(){return GoldRush.grown(MEND,1,1)[0];}
-    /** Where its right hand is {@code t} seconds into the tap (blocks ahead, to its right and up from its feet, at its size 1). */
-    static float[] hand(Heal h,float t){
-        float[] w=new float[NAMES.size()];stances(t,h.stopped,w);
-        float[] a=GoldRush.grown(GUARD,1,1),b=GoldRush.grown(MEND,1,1);
+    /** How far ahead of the stand's feet its right fist reaches driven in (blocks, at its size 1). */
+    static float fistReach(){return GoldRush.grown(MEND,1,ARMS)[0];}
+    /** How far from its user it stands through the hold (blocks): its knuckles DEPTH from their middle, the fist well in them. */
+    static float selfPlace(){return fistReach()+DEPTH;}
+    /** Held: how far further in the fist presses {@code t} seconds in (blocks): a little with each healing, eased off before the next. */
+    static float press(Heal h,float t){
+        float since=t-TOUCH;if(since<0||t>h.ends())return 0;
+        float every=GoldExperienceRules.SELF_EVERY/20f,u=since%every;
+        return PUSH*Math.min(1,u/.02f)*(1-smooth((u-.02f)/PUSH_OFF));
+    }
+    /** How big its arm is {@code t} seconds into healing {@code h}. */
+    static float arms(Heal h,float t){return 1+(ARMS-1)*smooth(t/StandRush.RISE)*(1-back(h,t));}
+    /** Where its right fist's knuckles are {@code t} seconds in (blocks ahead, to its right and up from its feet, at its size 1). */
+    static float[] fist(Heal h,float t){
+        float[] w=new float[NAMES.size()];stances(h,t,w);float size=arms(h,t);
+        float[] a=GoldRush.grown(GUARD,1,size),b=GoldRush.grown(MEND,1,size);
         return new float[]{a[0]*w[GUARD]+b[0]*w[MEND],a[1]*w[GUARD]+b[1]*w[MEND],a[2]*w[GUARD]+b[2]*w[MEND]};
     }
-    /** How much the hand's light is on {@code t} seconds into the tap (0 to 1): up as it goes out, down after the touch. */
-    static float glow(Heal h,float t){
-        float g=smooth((t-OUT_FROM)/.12f)*(1-smooth((t-STAYS)/.2f));
-        return Float.isNaN(h.stopped)?g:g*(1-smooth((t-h.stopped)/CUT));
+    /** Where its right shoulder is then (the same way). */
+    static float[] shoulder(Heal h,float t){
+        float[] w=new float[NAMES.size()];stances(h,t,w);
+        float[] a=GoldRush.SHOULDERS[GUARD][1],b=GoldRush.SHOULDERS[MEND][1];
+        return new float[]{a[0]*w[GUARD]+b[0]*w[MEND],a[1]*w[GUARD]+b[1]*w[MEND],a[2]*w[GUARD]+b[2]*w[MEND]};
     }
-
-    // ───────────────────────────── the hold's pose ─────────────────────────────
-
-    /** Adds the barrage on its user {@code t} seconds into the hold into {@code w}: the muda rush's fists, one every HALF seconds. */
-    static void barrage(float t,int seed,float[] w,float share){GoldRush.barrage(t-LEAD,seed,w,share,HALF);}
-    /** How far from its user it stands through the hold (blocks): its fists at full stretch stop BITE into their body. */
-    static float selfPlace(){return GoldRush.grown(RUSH_L,0,ARMS*(1+STRETCH))[0]+BODY-BITE;}
-    /** How big its arms are {@code t} seconds into hold {@code h} before either stretches out. */
-    static float armSize(Heal h,float t){return 1+(ARMS-1)*smooth(t/GoldRush.RISE)*(1-smooth((t-h.ends())/(GoldRush.SETTLE+GoldRush.LINGER)));}
-    /** How much the barrage is on (0 to 1): in once it has come round, out as it ends. */
-    static float on(Heal h,float t){return smooth((t-GoldRush.RISE*.6f)/(GoldRush.RISE*.4f))*(1-smooth((t-h.ends())/.08f));}
-    /** The fist of the hold landing {@code t} seconds in: {which (from 0), how far out it is (0 to 1)}, or null before the first. */
-    static float[] fist(float t){
-        float u=(t-LEAD)/HALF;if(u<=0)return null;
-        int k=(int)Math.floor(u);return new float[]{k,smooth(u-k)};
-    }
+    /** How much the fist's light is on {@code t} seconds in (0 to 1): up as it winds, on while it is in, out as it is drawn out. */
+    static float glow(Heal h,float t){return smooth((t-.04f)/.14f)*(1-back(h,t));}
+    /** How much the healing through the fist is on (0 to 1): from the moment it is in until it is drawn out. */
+    static float on(Heal h,float t){return smooth((t-TOUCH+.02f)/.05f)*(1-smooth((t-leaves(h))/.1f));}
 
     /** Whether healing {@code h} shows {@code t} seconds into it. */
-    static boolean shows(Heal h,float t){return t>=0&&t<=(h.self?h.ends():h.end())+LINGER+RETURN;}
+    static boolean shows(Heal h,float t){return t>=0&&t<=guarded(h)+LINGER+RETURN;}
     /**
      * Healing {@code h} this frame on a look that already holds the stand's pose: its stances take over from it (and
      * give way again as it goes back), and {@code shape} says where it stands; {@code facing} the way its user faces as
@@ -210,37 +211,15 @@ public final class GoldHeal {
     static boolean pose(Heal h,float delta,GoldExperienceLook look,GoldRush.Shape shape,float[] scratch,float facing){
         float t=h.age(delta);if(!shows(h,t))return false;
         java.util.Arrays.fill(scratch,0);
-        if(!h.self){
-            stances(t,h.stopped,scratch);
-            float in=smooth(t/TAKE)*(1-smooth((t-h.end()-LINGER)/RETURN));
-            for(int i=0;i<scratch.length;i++)look.weights[i]=look.weights[i]*(1-in)+scratch[i]*in;
-            shape.engage=StandPunch.burst(t/StandRush.RISE)*(1-smooth((t-h.end()-LINGER)/RETURN));
-            shape.yaw=h.yaw;shape.ahead=place(h);shape.raise=GoldRush.RAISE;shape.side=0;shape.inward=0;
-            return true;
-        }
-        float end=h.ends();
-        if(t<=end)barrage(t,h.seed,scratch,1);
-        else{float k=smooth((t-end)/GoldRush.SETTLE);barrage(end,h.seed,scratch,1-k);scratch[GUARD]+=k;}
-        float in=smooth(t/TAKE)*(1-smooth((t-end-LINGER)/RETURN));
+        stances(h,t,scratch);
+        float end=guarded(h),in=smooth(t/TAKE)*(1-smooth((t-end-LINGER)/RETURN));
         for(int i=0;i<scratch.length;i++)look.weights[i]=look.weights[i]*(1-in)+scratch[i]*in;
-        float size=armSize(h,t);
-        look.armL=size*(1+STRETCH*GoldRush.out(scratch,GoldRush.LEFT));look.armR=size*(1+STRETCH*GoldRush.out(scratch,GoldRush.RIGHT));
-        shape.engage=StandPunch.burst(t/GoldRush.RISE)*(1-smooth((t-end-LINGER)/RETURN));
-        shape.yaw=facing;shape.ahead=selfPlace();shape.raise=GoldRush.RAISE;shape.side=SIDE;shape.inward=1;
+        float size=arms(h,t);
+        look.armL=look.armL*(1-in)+size*in;look.armR=look.armR*(1-in)+size*in;
+        shape.engage=StandPunch.burst(t/StandRush.RISE)*(1-smooth((t-end-LINGER)/RETURN));shape.raise=GoldRush.RAISE;
+        if(h.self){shape.yaw=facing;shape.ahead=selfPlace()-press(h,t);shape.side=SIDE;shape.inward=1;}
+        else{shape.yaw=h.yaw;shape.ahead=place(h);shape.side=0;shape.inward=0;}
         return true;
-    }
-    /** Afterimage {@code i} of its arms through the hold this frame: its stances and arms into {@code into}; returns how strongly it shows (0: not). */
-    static float phantom(Heal h,int i,float delta,GoldExperienceLook into){
-        if(!h.self||i>=GoldRush.PHANTOMS.length)return 0;
-        float t=h.age(delta);
-        float show=smooth((t-GoldRush.RISE)/.08f)*(1-smooth((t-h.ends())/.08f))*GoldRush.PHANTOMS[i][4]*.8f*PHANTOMS;
-        if(show<=0)return 0;
-        var w=into.weights;java.util.Arrays.fill(w,0);
-        barrage(t-GoldRush.PHANTOMS[i][0],h.seed+101*(i+1),w,1);
-        float size=armSize(h,t),left=GoldRush.out(w,GoldRush.LEFT),right=GoldRush.out(w,GoldRush.RIGHT);
-        into.armL=size*(1+STRETCH*left);into.armR=size*(1+STRETCH*right);
-        into.showL=smooth(left);into.showR=smooth(right);
-        return show;
     }
 
     // ───────────────────────────── what others ask ─────────────────────────────

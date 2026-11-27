@@ -55,11 +55,9 @@ public final class GoldRush {
      * Adds the barrage's stances {@code t} seconds into it into {@code w} ({@code share} of them): from the guard the
      * first fist goes out, then each next fist goes out as the one before comes back, eased to a dead stop at each end.
      */
-    public static void barrage(float t,int seed,float[] w,float share){barrage(t,seed,w,share,HALF);}
-    /** The same with a fist every {@code half} seconds (2.149.0: the healing of its user throws one every tenth of a second). */
-    public static void barrage(float t,int seed,float[] w,float share,float half){
+    public static void barrage(float t,int seed,float[] w,float share){
         if(t<=0){w[GUARD]+=share;return;}
-        float u=t/half;int k=(int)Math.floor(u);float s=smooth(u-k);
+        float u=t/HALF;int k=(int)Math.floor(u);float s=smooth(u-k);
         int from=k==0?GUARD:fist(k-1,seed),to=fist(k,seed);
         w[from]+=share*(1-s);w[to]+=share*s;
     }

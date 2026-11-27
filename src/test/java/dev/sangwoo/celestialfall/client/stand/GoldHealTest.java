@@ -12,9 +12,9 @@ import static dev.sangwoo.celestialfall.stand.GoldExperienceStance.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Gold Experience's healing as it is drawn (2.149.0): the tap's hand and the hold's barrage on its user smooth at 60
- * fps to their end and stopped or let go at any moment; the hand on whom it is for as the server heals them, each fist
- * on its user as the server's blow heals; the leaves winding up about the healed body.
+ * Gold Experience's healing as it is drawn (2.149.0): one punch with the fist left in, the tap's and the hold's smooth
+ * at 60 fps to their end and stopped or let go at any moment; the fist in as the server heals; held, in until it is
+ * let go; the leaves winding up about the healed body.
  */
 class GoldHealTest {
     static final float FRAME=1/60f;
@@ -53,69 +53,77 @@ class GoldHealTest {
         assertEquals(0,engage,.02,"back at its user's shoulder ("+what+")");assertEquals(1,armR,.01);assertEquals(1,armL,.01);
         assertEquals(1,look.weights[IDLE],.02,"at rest again ("+what+")");
     }
-    @Test void theHandGoesOutAndBackWithoutAJumpAt60fps()throws Exception{
+    @Test void tappedTheFistGoesInAndOutWithoutAJumpAt60fps()throws Exception{
         float until=GoldHeal.LENGTH+GoldHeal.LINGER+GoldHeal.RETURN+.3f;
         watch(tap(Float.NaN),until,"tapped");
         watch(tap(2.4f),until,"tapped at someone");
         for(float at:new float[]{0,.08f,.2f,.28f}){
             var h=tap(1.5f);h.stopped=at;
             watch(h,until,"stopped at "+at);
-            float[] w=new float[NAMES.size()];GoldHeal.stances(at+GoldHeal.CUT,at,w);
+            float[] w=new float[NAMES.size()];GoldHeal.stances(h,at+GoldHeal.CUT,w);
             assertEquals(1,w[GUARD],1e-4,"in its guard "+GoldHeal.CUT+" s after it was stopped at "+at);
         }
     }
-    @Test void theHandIsOnThemAsTheServerHealsThem(){
-        assertEquals(GoldExperienceRules.MEND_CONTACT/20f,GoldHeal.TOUCH,1e-6,"the hand is laid on on the server's tick");
+    @Test void itIsOnePunchDrivenInAsTheServerHeals(){
+        assertEquals(GoldExperienceRules.MEND_CONTACT/20f,GoldHeal.TOUCH,1e-6,"the fist is in on the server's tick");
+        assertEquals(GoldExperienceRules.SELF_FIRST/20f,GoldHeal.TOUCH,1e-6,"and in its user as their first healing comes");
         assertEquals(GoldExperienceRules.MEND_LENGTH/20f,GoldHeal.LENGTH,1e-6);
-        float[] w=new float[NAMES.size()];
-        GoldHeal.stances(0,Float.NaN,w);assertEquals(1,w[GUARD],1e-5,"from its guard");
-        w=new float[NAMES.size()];GoldHeal.stances(GoldHeal.TOUCH,Float.NaN,w);assertEquals(1,w[MEND],1e-5,"laid on");
-        w=new float[NAMES.size()];GoldHeal.stances(GoldHeal.STAYS,Float.NaN,w);assertEquals(1,w[MEND],1e-5,"it stays");
-        w=new float[NAMES.size()];GoldHeal.stances(GoldHeal.GUARDED,Float.NaN,w);assertEquals(1,w[GUARD],1e-5,"back in its guard");
-        // laid on softly: it never speeds up into them (slower and slower over its last third)
-        float last=Float.MAX_VALUE;
-        for(float t=GoldHeal.TOUCH-.08f;t<=GoldHeal.TOUCH+1e-4;t+=FRAME){
+        var h=tap(Float.NaN);float[] w=new float[NAMES.size()];
+        GoldHeal.stances(h,0,w);assertEquals(1,w[GUARD],1e-5,"from its guard");
+        w=new float[NAMES.size()];GoldHeal.stances(h,GoldHeal.TOUCH,w);assertEquals(1,w[MEND],1e-5,"driven in");
+        w=new float[NAMES.size()];GoldHeal.stances(h,GoldHeal.STAYS,w);assertEquals(1,w[MEND],1e-5,"left in a moment");
+        w=new float[NAMES.size()];GoldHeal.stances(h,GoldHeal.GUARDED,w);assertEquals(1,w[GUARD],1e-5,"back in its guard");
+        // a punch: faster and faster, fastest as it goes in
+        float last=0;
+        for(float t=GoldHeal.OUT_FROM+FRAME;t<=GoldHeal.TOUCH+1e-4;t+=FRAME){
             float step=GoldHeal.reach(t)-GoldHeal.reach(t-FRAME);
-            assertTrue(step<=last+1e-4&&step>=-1e-6,"it speeds up at "+t);last=step;
+            assertTrue(step>=last-1e-4,"it slows at "+t);last=step;
         }
-        // the hand is open and out at a body's chest, and it stands so that the hand rests on the first one in its way
-        float[] out=GoldHeal.hand(tap(Float.NaN),GoldHeal.TOUCH);
-        assertTrue(out[0]>1.1f,"out: "+out[0]);assertTrue(out[2]>1.0f&&out[2]<1.7f,"at a body's chest: "+out[2]);
+        // the fist is out at a body's chest, and it stands so that the fist is well into the first one in its way
+        float[] out=GoldHeal.fist(h,GoldHeal.TOUCH);
+        assertTrue(out[0]>1.2f,"out: "+out[0]);assertTrue(out[2]>1.0f&&out[2]<1.7f,"at a body's chest: "+out[2]);
+        assertEquals(GoldHeal.fistReach(),out[0],1e-4);
         for(float aim:new float[]{2.0f,2.8f,3.6f}){
             float place=GoldHeal.place(tap(aim));
-            assertEquals(aim+GoldHeal.PRESS,place+GoldHeal.handReach(),1e-4,"its hand on them at "+aim);
+            assertEquals(aim+GoldHeal.PRESS,place+GoldHeal.fistReach(),1e-4,"its fist into them at "+aim);
         }
+        assertTrue(GoldHeal.PRESS>=.15f,"driven in, not laid on");
         assertEquals(GoldHeal.NEAR,GoldHeal.place(tap(.3f)),1e-6,"never on top of its user");
         assertEquals(GoldHeal.AHEAD,GoldHeal.place(tap(Float.NaN)),1e-6);
     }
-    @Test void heldItsFistsFallOnItsUserWithoutAJumpHoweverLongItIsHeld()throws Exception{
-        float after=GoldHeal.LINGER+GoldHeal.RETURN+.4f;
+    @Test void heldTheFistStaysInItsUserWithoutAJumpHoweverLongItIsHeld()throws Exception{
+        float after=GoldHeal.CUT+GoldHeal.LINGER+GoldHeal.RETURN+.4f;
         watch(hold(),GoldExperienceRules.SELF_LENGTH/20f+after,"held to its end");
-        for(float at:new float[]{.02f,.1f,.33f,1.07f,2.5f,4.99f}){
+        for(float at:new float[]{.02f,.1f,.2f,.33f,1.07f,2.5f,4.99f}){
             var h=hold();h.ended=at;
             watch(h,at+after,"let go at "+at);
         }
     }
-    @Test void eachFistIsOnItsUserAsTheServersBlowHeals(){
-        // fist k is at full stretch on the tick the server's blow k heals
-        for(int k=0;k<GoldExperienceRules.SELF_BLOWS;k++){
-            float at=(GoldExperienceRules.SELF_FIRST+GoldExperienceRules.SELF_EVERY*k)/20f;
-            assertTrue(GoldExperienceRules.selfBlow(GoldExperienceRules.SELF_FIRST+GoldExperienceRules.SELF_EVERY*k));
-            float[] w=new float[NAMES.size()];GoldHeal.barrage(at,5,w,1);
-            assertEquals(1,w[GoldRush.fist(k,5)],2e-3,"fist "+k+" out as blow "+k+" heals");
-            assertEquals((k&1)==0?1:0,GoldRush.out(w,GoldRush.LEFT),2e-3,"left and right in turn");
+    @Test void heldItIsOneFistLeftInNotABarrage(){
+        var h=hold();
+        // in from the first healing to the last, never drawn back between
+        for(float t=GoldHeal.TOUCH;t<=GoldExperienceRules.SELF_LAST/20f+1e-4;t+=FRAME){
+            float[] w=new float[NAMES.size()];GoldHeal.stances(h,t,w);
+            assertEquals(1,w[MEND],1e-4,"the fist is in at "+t);
         }
-        assertEquals(GoldExperienceRules.SELF_BLOWS,GoldExperienceRules.selfBlows(GoldExperienceRules.SELF_LENGTH));
-        // it stands at its user's front right, its fists stopping on their body
+        for(int s:GoldRush.LEFT){float[] w=new float[NAMES.size()];GoldHeal.stances(h,1f,w);assertEquals(0,w[s],1e-6,"no fist of the rush");}
+        // let go, it is drawn out to the guard
+        h.ended=2f;float[] w=new float[NAMES.size()];GoldHeal.stances(h,2f+GoldHeal.CUT,w);assertEquals(1,w[GUARD],1e-4);
+        // it stands at its user's front right with its knuckles well inside their body, pressing a little with each healing
         assertTrue(GoldHeal.SIDE>20&&GoldHeal.SIDE<80,"at their front right");
-        float reach=GoldRush.grown(RUSH_L,0,GoldHeal.ARMS*(1+GoldHeal.STRETCH))[0];
-        assertEquals(GoldHeal.BODY-GoldHeal.BITE,GoldHeal.selfPlace()-reach,1e-5,"its fists stop a little into their body");
+        assertEquals(GoldHeal.DEPTH,GoldHeal.selfPlace()-GoldHeal.fistReach(),1e-5);assertTrue(GoldHeal.DEPTH<.13f,"inside a player's body (half as deep as .125)");
         assertTrue(GoldHeal.selfPlace()>StandPresence.GAP,"never nearer than a stand keeps");
-        // the afterimages of its arms fly only while it lasts
-        var h=hold();var look=new GoldExperienceLook();
-        GoldRushTest.clock(1f);assertTrue(GoldHeal.phantom(h,0,GoldRushTest.clock(1f),look)>0);
-        h.ended=1f;assertEquals(0,GoldHeal.phantom(h,0,GoldRushTest.clock(1.2f),look),1e-6);
-        assertEquals(0,GoldHeal.phantom(tap(1),0,GoldRushTest.clock(.2f),look),1e-6,"none for the tap");
+        var held=hold();float every=GoldExperienceRules.SELF_EVERY/20f,most=0,prev=0;
+        for(float t=0;t<1.2f;t+=FRAME/4){
+            float p=GoldHeal.press(held,t);assertTrue(p>=0&&p<=GoldHeal.PUSH+1e-6);most=Math.max(most,p);
+            assertTrue(Math.abs(p-prev)<GoldHeal.PUSH*.25f,"its press jumps at "+t);prev=p;
+        }
+        assertTrue(most>GoldHeal.PUSH*.9f,"it presses");
+        assertEquals(0,GoldHeal.press(held,GoldHeal.TOUCH-.01f),1e-6,"not before it is in");
+        assertTrue(GoldHeal.press(held,GoldHeal.TOUCH+every+.02f)>GoldHeal.PUSH*.9f,"with each healing");
+        // its light is on while the fist is in
+        assertEquals(0,GoldHeal.on(held,GoldHeal.TOUCH-.05f),1e-6);assertEquals(1,GoldHeal.on(held,1f),1e-6);
+        held.ended=1f;assertEquals(0,GoldHeal.on(held,1.2f),1e-6);
     }
     @Test void theLeavesWindUpAboutTheHealedBodyAndAreGone(){
         for(int k=0;k<GoldHealFx.LEAVES_N;k++){

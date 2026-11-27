@@ -920,19 +920,21 @@ POSES['over_punch'] = {
     **FIST,
 }
 
-# Y tapped, the healing of another (2.149.0): client/stand/GoldHeal goes guard -> mend -> guard. It leans in on its
-# front leg and lays its open right hand on whoever it is for, at their chest's height, the arm long but not locked, the
-# left hand open at its side, the head bowed a little onto its hand. Nothing in it is a blow: the hands are open.
+# Y, the healing (2.149.0): one fist driven in and left in (user: "주먹을 한 번 꽂아서 주먹을 박아넣고 힐 되게";
+# client/stand/GoldHeal goes guard -> mend -> guard, the same for another tapped and for its user held). It leans in on
+# its front leg with the hips and chest turned behind the right fist, which is out straight at a body's chest and stays
+# there; the left fist is back at the ribs, the head bowed a little onto the fist it has driven in.
 POSES['mend'] = {
     'root': {'pos': (0, .3, -3.6)},
-    'hips': {'rot': (12, -16, 0)}, 'torso': {'rot': (9, -10, 0)}, 'chest': {'rot': (7, -10, 0)},
-    'neck': {'rot': (-2, 14, 0)}, 'head': {'rot': (2, 16, 0)},
-    'right_arm': {'reach': ((-.6, SHOULDER_Y - 3.6, -23.0), (-.5, -1, 0))},
-    'left_arm': {'reach': ((5.0, SHOULDER_Y - 8.6, -2.6), (.6, -.5, .6))},
+    'hips': {'rot': (13, -18, 0)}, 'torso': {'rot': (9, -12, 0)}, 'chest': {'rot': (7, -14, 0)},
+    'neck': {'rot': (-2, 16, 0)}, 'head': {'rot': (2, 20, 0)},
+    'right_arm': {'reach': ((-.6, SHOULDER_Y - 3.4, -24.5), (-.5, -1, 0))},
+    'left_arm': {'reach': RUSH_BACK['left']},
     'left_leg': {'rot': (-30, 0, -4)}, 'left_shin': {'rot': (36, 0, 0)}, 'left_foot': {'rot': (14, 0, 0)},
     'right_leg': {'rot': (26, 0, 6)}, 'right_shin': {'rot': (30, 0, 0)}, 'right_foot': {'rot': (36, 0, 0)},
     'right_wing': {'rot': (0, -18, 0)}, 'left_wing': {'rot': (0, 18, 0)},
     'hide_0': {'rot': (12, 0, 0)}, 'hide_1': {'rot': (12, 0, 0)}, 'hide_2': {'rot': (10, 0, 0)},
+    **FIST,
 }
 
 # a fist's knuckles as it is drawn (the end of the palm, the fingers folded): where the rush's light is (GoldRush)

@@ -31,19 +31,21 @@ import static dev.sangwoo.celestialfall.stand.GoldExperienceRules.*;
  * Gold Experience's Y, its healing (2.149.0; GoldExperienceRules has the user's words and the numbers). The user's
  * client says which it is (gold_heal_v1, one byte: TAP, Y tapped; HOLD, Y held past the threshold; RELEASE, Y let go)
  * and the server decides.
+ * It is one punch with the fist left in (the user: "주먹을 한 번 꽂아서 주먹을 박아넣고 힐 되게"), never a barrage.
  * <ul>
- * <li>Tapped: the stand comes round to the front and lays its hand on the first one in its way, the way its user faced
- * as it began, MEND_CONTACT ticks on: whoever that is (anyone alive: friend or foe, a boss, a dummy, a mob) is healed
- * MEND. With no one in its way as Y is tapped nothing happens, and nothing is spent. Its user walks freely through it; struck,
- * staggered or incapacitated before the hand lands, or the stand gone in, stops it short.</li>
- * <li>Held: the stand comes round to its user and drives its fists into them, each blow healing them SELF_EACH (no
- * harm, no cry), from SELF_FIRST every SELF_EVERY ticks, SELF_BLOWS in all, until Y is let go. Its user walks at a
- * tenth of their speed (the rush's slow walk) and can do nothing else; a blow on them, a stagger, anything that holds
- * them or the stand gone in stops it.</li>
+ * <li>Tapped: the stand comes round to the front and drives one fist into the first one in its way, the way its user
+ * faced as it began, MEND_CONTACT ticks on: whoever that is (anyone alive: friend or foe, a boss, a dummy, a mob) is
+ * healed MEND (no harm, no cry). With no one in its way as Y is tapped nothing happens, and nothing is spent. Its user
+ * walks freely through it; struck, staggered or incapacitated before the fist is in, or the stand gone in, stops it
+ * short.</li>
+ * <li>Held: the stand comes round to its user and drives one fist into them, SELF_FIRST ticks on, and leaves it in:
+ * from then they are healed SELF_EACH every SELF_EVERY ticks, SELF_BLOWS times in all, until Y is let go. Its user
+ * walks at a tenth of their speed (the rush's slow walk) and can do nothing else; a blow on them, a stagger, anything
+ * that holds them or the stand gone in stops it.</li>
  * </ul>
  * One cooldown for both (HEAL_COOLDOWN), running once either is over or from where it was stopped. Neither starts while
  * the rush or the overdrive punch is on, nor those while either of these is. Every viewer within 128 blocks is told
- * (gold_heal_event_v1): what began, what the hand healed, each blow's healing, and the end.
+ * (gold_heal_event_v1): what began, what the fist healed, each healing of its user, and the end.
  */
 public final class GoldExperienceHeal {
     public static final Identifier INPUT=CelestialFall.id("gold_heal_v1"),EVENT=CelestialFall.id("gold_heal_event_v1");
