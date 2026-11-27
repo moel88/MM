@@ -41,6 +41,9 @@ public abstract class MinecraftClientMixin {
     @Inject(method="handleInputEvents",at=@At("HEAD"))
     private void botand$drainLockedActions(CallbackInfo ci) {
         var mc=(MinecraftClient)(Object)this;
+        // (2.148.0) their soul out of their body (Gold Experience's overdrive): the body can do nothing, but the attack key
+        // is the soul's (its blows pass through everything: nothing is sent)
+        if(dev.sangwoo.celestialfall.client.stand.SoulClient.out())while(mc.options.attackKey.wasPressed())dev.sangwoo.celestialfall.client.stand.SoulClient.attack();
         if(!CombatClient.actionLocked())return;
         for(var key:new net.minecraft.client.option.KeyBinding[]{mc.options.attackKey,mc.options.useKey,mc.options.pickItemKey,mc.options.dropKey,mc.options.swapHandsKey,mc.options.inventoryKey})while(key.wasPressed()){}
         for(var key:mc.options.hotbarKeys)while(key.wasPressed()){}

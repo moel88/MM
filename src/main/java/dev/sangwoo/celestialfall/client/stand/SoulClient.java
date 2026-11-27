@@ -45,8 +45,15 @@ import net.minecraft.util.math.Vec3d;
 public final class SoulClient {
     /** Ticks the soul takes to come out of the body as it begins (it fades in) and to fly back into it at the end. */
     static final int OUT=5,BACK=6;
-    /** How see-through the soul is, and its tint (a pale blue). */
-    static final float ALPHA=.62f,RED=.72f,GREEN=.88f,BLUE=1f;
+    /**
+     * How see-through the soul's own skin is and its tint (it is lit from within: no shade on it), and the pale blue
+     * laid over all of it, how strong (the first take had only the skin, at .62: a dark skin read as a second body, not
+     * as a soul).
+     */
+    static final float ALPHA=.5f,RED=.78f,GREEN=.9f,BLUE=1f,VEIL=.3f;
+    static final int PALE=0xbcdcff;
+    /** The pale veil is drawn this much bigger than the body about its middle (so it lies over the skin, not in it). */
+    static final float SWELL=1.03f;
     /** A soul's stride is this much longer than a body's (it goes twice as fast: its legs do not quite). */
     static final float STRIDE=1.45f;
     /** Half its width and its height (a player's). */
@@ -111,7 +118,7 @@ public final class SoulClient {
     /** For the checks: the local soul as "x,y,z,yaw,speed,combo,back" (blocks; blocks a tick), or null. */
     public static String describe(){
         var s=soul;if(s==null)return null;
-        return String.format(java.util.Locale.ROOT,"%.2f,%.2f,%.2f,%.0f,%.3f,%d,%d",s.at.feet().x,s.at.feet().y,s.at.feet().z,s.yaw,s.at.feet().subtract(s.prev).horizontalLength(),s.combo,s.backAt>=0?1:0);
+        return String.format(java.util.Locale.ROOT,"%.2f,%.2f,%.2f,%.0f,%.3f,%d,%d",s.at.feet().x,s.at.feet().y,s.at.feet().z,MathHelper.wrapDegrees(s.yaw),s.at.feet().subtract(s.prev).horizontalLength(),s.combo,s.backAt>=0?1:0);
     }
 
     // ───────────────────────────── its keys ─────────────────────────────
@@ -254,8 +261,26 @@ public final class SoulClient {
     /** Every layer but the body's own skin goes nowhere, and the skin is drawn see-through, pale and lit from within: a soul. */
     private static final class Veil implements VertexConsumerProvider {
         final VertexConsumerProvider to;final RenderLayer skin;final float alpha;
-        Veil(VertexConsumerProvider to,Identifier skin,float alpha){this.to=to;this.skin=RenderLayer.getEntityTranslucent(skin);this.alpha=alpha;}
-        @Override public VertexConsumer getBuffer(RenderLayer layer){return layer==skin?new Tint(to.getBuffer(layer),alpha):NOTHING;}
+        final RenderLayer lit;final boolean flat;
+        Veil(VertexConsumerProvider to,Identifier skin,float alpha,boolean flat){this.to=to;this.skin=RenderLayer.getEntityTranslucent(skin);lit=RenderLayer.getEntityTranslucentEmissive(skin);this.alpha=alpha;this.flat=flat;}
+        @Override public VertexConsumer getBuffer(RenderLayer layer){
+            if(layer!=skin)return NOTHING;
+            return flat?new Flat(to.getBuffer(RenderLayer.getDebugQuads()),alpha):new Tint(to.getBuffer(lit),alpha);
+        }
+    }
+    /** The body's shape in the one pale colour (no texture, no light). */
+    private static final class Flat implements VertexConsumer {
+        final VertexConsumer to;final int a;double x,y,z;
+        Flat(VertexConsumer to,float alpha){this.to=to;a=Math.max(0,Math.min(255,Math.round(alpha*255)));}
+        @Override public VertexConsumer vertex(double x,double y,double z){this.x=x;this.y=y;this.z=z;return this;}
+        @Override public VertexConsumer color(int r,int g,int b,int al){return this;}
+        @Override public VertexConsumer texture(float u,float v){return this;}
+        @Override public VertexConsumer overlay(int u,int v){return this;}
+        @Override public VertexConsumer light(int u,int v){return this;}
+        @Override public VertexConsumer normal(float nx,float ny,float nz){return this;}
+        @Override public void next(){to.vertex(x,y,z).color(PALE>>16&255,PALE>>8&255,PALE&255,a).next();}
+        @Override public void fixedColor(int r,int g,int b,int al){}
+        @Override public void unfixColor(){}
     }
     private static final class Tint implements VertexConsumer {
         final VertexConsumer to;final float alpha;
@@ -305,7 +330,13 @@ public final class SoulClient {
         p.handSwingProgress=p.lastHandSwingProgress=0;
         drawing=true;dispatcher.setRenderShadows(false);
         try{
-            dispatcher.render(p,at.x-cam.x,at.y-cam.y,at.z-cam.z,face,delta,ctx.matrixStack(),new Veil(ctx.consumers(),p.getSkinTexture(),ALPHA*show),0xF000F0);
+            dispatcher.render(p,at.x-cam.x,at.y-cam.y,at.z-cam.z,face,delta,ctx.matrixStack(),new Veil(ctx.consumers(),p.getSkinTexture(),ALPHA*show,false),0xF000F0);
+            // and the pale veil over it, a little bigger about its middle
+            var m=ctx.matrixStack();double half=p.getHeight()*.5;
+            m.push();m.translate(at.x-cam.x,at.y-cam.y+half,at.z-cam.z);m.scale(SWELL,SWELL,SWELL);m.translate(0,-half,0);
+            try{dispatcher.render(p,0,0,0,face,delta,m,new Veil(ctx.consumers(),p.getSkinTexture(),VEIL*show,true),0xF000F0);}
+            finally{m.pop();}
+            if(ctx.consumers() instanceof VertexConsumerProvider.Immediate immediate)immediate.draw(RenderLayer.getDebugQuads());
         }finally{
             drawing=false;dispatcher.setRenderShadows(mc.options.getEntityShadows().getValue());
             p.bodyYaw=by;p.prevBodyYaw=pby;p.headYaw=hy;p.prevHeadYaw=phy;p.setYaw(y);p.prevYaw=py;p.setPitch(pt);p.prevPitch=ppt;p.hurtTime=hurt;
