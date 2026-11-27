@@ -166,11 +166,12 @@ public final class GoldExperienceRules {
     // answered: one cooldown of 50 s for both, from the frog's end, or from the fly's popping or the end of its 20 s
     // untouched; the frog reflects every blow for its ten seconds, its user taking none and the striker all of it; the
     // punch deals 5, and a guard taking it turns one of the two guarding arms into the fly; the fly lives 20 s at most).
-    // With the stand out, T with an item in the main hand: the stand's fist touches it and it becomes a frog on its user's
-    // shoulder; T with the hand empty: the stand drives a fist into the first one in its way, and a part of them flies off
+    // With the stand out, T with an item in the main hand: it becomes a frog on its user's shoulder (2.151.1: of itself,
+    // the stand playing no part: "아이템 개구리로 바꿀때는 스탠드가 아이템 안 때려도 돼 손에 들고 있는게 자동으로
+    // 개구리로 변하게"; till 2.151.0 the stand's fist touched it); T with the hand empty: the stand drives a fist into the first one in its way, and a part of them flies off
     // and becomes a fly that hovers in front of them (stand/GoldFlyEntity, GoldFlyPath).
 
-    /** With an item: ticks in the stand's fist touches it and the frog is born (it reflects from then), how long it lives, and its end (the item back in its user's hand). */
+    /** With an item: ticks in the item held up turns into the frog (it reflects from then), how long it lives, and its end (the item back in its user's hand). */
     public static final int FROG_BORN=6,FROG_LASTS=200,FROG_END=FROG_BORN+FROG_LASTS;
     /** With the hand empty: ticks in the punch lands, how long it is, and its damage. */
     public static final int FLY_CONTACT=8,FLY_PUNCH_LENGTH=22;

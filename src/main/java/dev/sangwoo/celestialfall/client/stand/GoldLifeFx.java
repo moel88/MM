@@ -34,8 +34,8 @@ import static dev.sangwoo.celestialfall.client.stand.StandPunchFx.way;
  * The light of Gold Experience's T, giving life (2.151.0), drawn with its rush's on the effect layer (StandRushFx calls it
  * pass by pass): gold, and the green of new leaves where life is given, as its healing's. None of it over the screen.
  * <ul>
- * <li>The frog: the stand's fist glows as it reaches for the item held up; at its touch light blooms on the hand, a ring
- * opens round it and leaves wind up out of it as the item becomes the frog; motes trail its leap to the shoulder. Each
+ * <li>The frog: light gathers into the item held up (2.151.1: the stand plays no part in it, it turns of itself); as it
+ * turns light blooms on the hand, a ring opens round it and leaves wind up out of it; motes trail its leap to the shoulder. Each
  * blow it turns back: a ring bursts off it toward the striker, a thread of gold runs to them and bursts on them. Its end:
  * light blooms on the hand again as it is the item once more (or bursts where it is, ended early).</li>
  * <li>The punch: the fist's light gathers as it winds up, a short smear as it is thrown, a burst on whom it lands on
@@ -141,7 +141,7 @@ final class GoldLifeFx {
     static void alpha(EffectMesh m){
         for(var s:FRAME){
             if(!s.life.frog)continue;
-            float since=s.t-GoldLife.TOUCH;
+            float since=s.t-GoldLife.BORN;
             Vec3d hand=hand(s);
             sprout(m,hand,9,s.life.seed,since/.9f,.45,1,true);sprout(m,hand,9,s.life.seed,since/.9f,.45,1,false);
             if(Float.isNaN(s.life.early)){
@@ -160,17 +160,21 @@ final class GoldLifeFx {
         for(var d:DOWNS)swat(m,d);
     }
 
-    /** The frog's light: the touch's bloom, its leap's motes, the blows it turns back, its end. */
+    /** The frog's light: gathering into the item, its bloom as it turns, its leap's motes, the blows it turns back, its end. */
     static void frog(EffectMesh m,Shown s){
         var l=s.life;float t=s.t;
-        // the stand's fist reaching for the item glows
-        if(s.body!=null){
-            float g=GoldLife.glow(l,t);
-            if(g>0){Vec3d fist=on(GoldLife.fist(l,t),s.body);float near=clear(m,fist);m.softDisc(fist,.28,AMBER,.32f*g*near);m.softDisc(fist,.14,PALE,.45f*g*near);}
-        }
         Vec3d hand=hand(s);
-        // the touch: light blooms on the hand, a ring opens round it
-        bloom(m,hand,t-GoldLife.TOUCH,l.seed,1);
+        // light gathering into the item held up: a glow swelling on it, motes drawn in, a ring closing on it
+        float g=GoldLife.gathered(l,t);
+        if(g>0){
+            float near=clear(m,hand),pulse=.5f+.5f*(float)Math.sin(t*Math.PI*2*7);
+            m.softDisc(hand,.14+.16*g+.03*pulse*g,AMBER,.34f*g*near);m.softDisc(hand,.06+.06*g,PALE,.5f*g*near);
+            FxLib.ring(m,hand,.42-.3*g,.025+.02*g,GOLD,.55f*g*near);
+        }
+        // (not right before the camera: its user's own first person, where the hand is not drawn; nor once it ended before it turned)
+        if(clear(m,hand)>.5f&&(Float.isNaN(l.early)||l.early>=GoldLife.BORN))FxLib.converge(m,hand,.55,9,t,GoldLife.GATHER_FROM-.03f,GoldLife.BORN,GOLD,l.seed+3);
+        // as it turns: light blooms on the hand, a ring opens round it
+        bloom(m,hand,t-GoldLife.BORN,l.seed,1);
         // the leap to the shoulder (and back): motes trailing it
         float[] w=GoldLife.seat(l,t);
         if(w[1]>0){
@@ -330,12 +334,13 @@ final class GoldLifeFx {
         float g=(t-GoldLife.FALLEN+.04f)/.45f;
         if(g>=0&&g<1){Vec3d feet=o.getPos().add(0,.05,0);FxLib.ring(m,feet,.4+1.1*Ease.out(g,0,1),.07*(1-.5*g),AMBER,.45f*(1-g));}
     }
-    /** The effect layer: the touch and the end light the hand, a blow turned back lights the striker, the punch whom it lands on, a swat its owner. */
+    /** The effect layer: the light gathering, the turning and the end light the hand, a blow turned back lights the striker, the punch whom it lands on, a swat its owner. */
     static void frame(FxFrame f,Vec3d camera){
         for(var s:FRAME){
             var l=s.life;
             if(l.frog){
-                float u=(s.t-GoldLife.TOUCH)/.6f;if(u>=0&&u<1)f.light(hand(s),0xffe6a0,5,1.6f*(1-u));
+                float u=(s.t-GoldLife.BORN)/.6f;if(u>=0&&u<1)f.light(hand(s),0xffe6a0,5,1.6f*(1-u));
+                float g=GoldLife.gathered(l,s.t);if(g>0)f.light(hand(s),0xffd27a,3.5f,.9f*g);
                 for(var r:l.reflected){float since=s.t-r.at();if(since>=0&&since<.4f&&MinecraftClient.getInstance().world.getEntityById(r.striker()) instanceof LivingEntity e)f.light(e.getPos().add(0,e.getHeight()*.6,0),0xffd27a,6,1.8f*(1-since/.4f));}
             }else if(l.landed()&&l.struck>=0){
                 float u=(s.t-l.landedAt)/.4f;

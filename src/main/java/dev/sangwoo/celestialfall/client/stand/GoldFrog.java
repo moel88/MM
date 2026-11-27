@@ -28,8 +28,8 @@ import org.joml.Vector4f;
  * The frog of Gold Experience's T (2.151.0: GoldLife has its moments), drawn on its user's body as it is drawn this
  * frame: the game's own frog (its model and its three skins, one chosen by the T), a little over half its size.
  * <ul>
- * <li>Held up in the raised hand the item shrinks away in a flash and the frog grows out of it, a little too big for a
- * moment; it leaps onto the shoulder of the other arm and sits there, riding it as the arm moves.</li>
+ * <li>Held up in the raised hand the item shrinks away of itself in a flash and the frog grows out of it, a little too
+ * big for a moment; it leaps onto the shoulder of the other arm and sits there, riding it as the arm moves.</li>
  * <li>Each blow it turns back it croaks (its throat swells) and flicks its tongue, turned toward the striker, glowing
  * gold.</li>
  * <li>Its time nearly up it leaps back into the hand held up again and shrinks into the item, which grows back out of it;
@@ -81,7 +81,7 @@ public final class GoldFrog extends FeatureRenderer<AbstractClientPlayerEntity,P
         var body=getContextModel();
         boolean right=player.getMainArm()!=Arm.LEFT,slim="slim".equals(player.getModel());
         Vector3f hand=hand(body,right,slim),seat=seat(body,!right,slim);
-        // the item in the raised hand: there until the touch, shrinking away into the frog (and at the end growing back out of it)
+        // the item in the raised hand: there until it turns, shrinking away into the frog (and at the end growing back out of it)
         float item=GoldLife.itemShown(l,t);
         if(item>.01f&&!l.item.isEmpty()){
             matrices.push();
@@ -139,8 +139,8 @@ public final class GoldFrog extends FeatureRenderer<AbstractClientPlayerEntity,P
     }
     /** How brightly it glows gold {@code t} seconds into the T: as it is born, as it turns a blow back, as it goes back into the item or bursts. */
     static float glow(GoldLife.Life l,float t){
-        float g=1-GoldLife.smooth((t-GoldLife.TOUCH)/.3f);
-        if(t<GoldLife.TOUCH)g=0;
+        float g=1-GoldLife.smooth((t-GoldLife.BORN)/.3f);
+        if(t<GoldLife.BORN)g=0;
         for(var r:l.reflected){float since=t-r.at();if(since>=0&&since<.4f)g=Math.max(g,(1-since/.4f)*.9f);}
         if(Float.isNaN(l.early))g=Math.max(g,GoldLife.smooth((t-GoldLife.UNMORPH+.1f)/.2f));
         else g=Math.max(g,GoldLife.smooth((t-l.early)/.06f));

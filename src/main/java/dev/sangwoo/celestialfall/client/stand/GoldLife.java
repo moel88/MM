@@ -40,8 +40,9 @@ import static dev.sangwoo.celestialfall.stand.GoldExperienceStance.*;
  * Gold Experience's T, giving life, as it is drawn, and its key (2.151.0: GoldExperienceRules has the user's words). The
  * server runs it (GoldExperienceLife); here is what the stand and the bodies do through it, on its own clock.
  * <ul>
- * <li>An item in the hand: its user holds it up before them, the stand comes round in front of them, turned to them, and
- * touches it with its fist (the server's FROG_BORN); the item shrinks away in a flash of gold and a frog grows in their
+ * <li>An item in the hand: its user holds it up before them and it turns of itself (2.151.1: the stand plays no part in
+ * it, user request "아이템 개구리로 바꿀때는 스탠드가 아이템 안 때려도 돼 손에 들고 있는게 자동으로 개구리로 변하게"):
+ * light gathers into it, and as the server's FROG_BORN comes it shrinks away in a flash of gold and a frog grows in their
  * hand, which hops onto their other shoulder and sits there (GoldFrog) until its time is nearly up, when they hold the
  * hand up again, it hops back into it and is the item once more as the server gives it back.</li>
  * <li>The hand empty: the stand comes round to the front and from its guard drives a short punch into the first one in
@@ -53,14 +54,16 @@ import static dev.sangwoo.celestialfall.stand.GoldExperienceStance.*;
  * them. Every moment is a function of the clocks.
  */
 public final class GoldLife {
-    /** The frog's moments (seconds on its clock): the hand is up, the stand's fist touches it (the server's FROG_BORN), the item has become the frog, its hop to the shoulder, the hand down. */
-    static final float RAISED=.18f,TOUCH=GoldExperienceRules.FROG_BORN/20f,MORPHED=TOUCH+.14f,HOP_FROM=TOUCH+.16f,HOP_TO=TOUCH+.46f,LOWER_FROM=.5f,LOWER_TO=.78f;
+    /** The frog's moments (seconds on its clock): the hand is up, the item turns into the frog (the server's FROG_BORN), it has become the frog, its hop to the shoulder, the hand down. */
+    static final float RAISED=.18f,BORN=GoldExperienceRules.FROG_BORN/20f,MORPHED=BORN+.14f,HOP_FROM=BORN+.16f,HOP_TO=BORN+.46f,LOWER_FROM=.5f,LOWER_TO=.78f;
+    /** The light gathering into the item held up before it turns (seconds): from, full as it turns, and how long it takes to give way to the turning's bloom. */
+    static final float GATHER_FROM=.08f,GATHER_GONE=.12f;
     /** Its end (the server's FROG_END), and its moments before it: the hand up again, the hop back into it, the frog the item again. */
     static final float END=GoldExperienceRules.FROG_END/20f,RAISE_AGAIN=END-.8f,RAISED_AGAIN=END-.6f,HOP_BACK=END-.55f,HOPPED_BACK=END-.27f,UNMORPH=END-.24f,LOWER_AGAIN=END+.05f,LOWERED_AGAIN=END+.32f;
     /** Ended early: how long the frog takes to burst into light where it is. */
     static final float BURST=.22f;
-    /** The stand's touch (seconds): its fist starts out, stays on the item until, is back in its guard; it stays a moment then goes back. */
-    static final float OUT_FROM=.12f,STAYS=.42f,GUARDED=.6f,LINGER=.1f,RETURN=.4f,TAKE=.1f;
+    /** The stand through the punch (seconds): it stays a moment in its guard after it, then goes back; and how long it takes to come in. */
+    static final float LINGER=.1f,RETURN=.4f,TAKE=.1f;
     /** The punch (seconds): wound up, loaded until, lands (the server's FLY_CONTACT), held out until, back in the guard; stopped short, back in it. */
     static final float WOUND=.2f,LOAD=.27f,CONTACT=GoldExperienceRules.FLY_CONTACT/20f,HELD=.62f,PUNCH_GUARDED=.86f,CUT=.15f;
     /** How deep the punch's wind-up goes (of the overdrive's), how big its arms are, how far in front its user it stands with no one known and no nearer or further, and how deep its fist goes in. */
@@ -181,15 +184,15 @@ public final class GoldLife {
         if(!Float.isNaN(l.early))return t<l.early?up:up*(1-smooth((t-l.early)/.2f));
         return Math.max(up,smooth((t-RAISE_AGAIN)/(RAISED_AGAIN-RAISE_AGAIN))*(1-smooth((t-LOWER_AGAIN)/(LOWERED_AGAIN-LOWER_AGAIN))));
     }
-    /** How big the item is in the hand (0 to 1): there until the touch, shrinking away into the frog; at the end growing back out of it. */
+    /** How big the item is in the hand (0 to 1): there until it turns, shrinking away into the frog; at the end growing back out of it. */
     static float itemShown(Life l,float t){
-        float going=1-smooth((t-TOUCH)/(MORPHED-TOUCH-.03f));
+        float going=1-smooth((t-BORN)/(MORPHED-BORN-.03f));
         if(!Float.isNaN(l.early))return going;
         return t<END-1?going:smooth((t-UNMORPH-.04f)/(END-UNMORPH-.04f))*(1-smooth((t-LOWERED_AGAIN+.04f)/.04f));
     }
-    /** How big the frog is (0 to 1, a little over as it pops out): out of the item at the touch; back into it at the end, or bursting early. */
+    /** How big the frog is (0 to 1, a little over as it pops out): out of the item as it turns; back into it at the end, or bursting early. */
     static float frogShown(Life l,float t){
-        float u=(t-TOUCH-.03f)/(MORPHED-TOUCH-.03f);if(u<=0)return 0;
+        float u=(t-BORN-.03f)/(MORPHED-BORN-.03f);if(u<=0)return 0;
         float grown=u>=1?1:(float)(1+.18*Math.sin(Math.PI*u))*smooth(u);
         if(!Float.isNaN(l.early)){float k=(t-l.early)/BURST;return k<=0?grown:k>=1?0:grown*(1+.35f*k)*(1-k*k);}
         return grown*(1-smooth((t-UNMORPH)/(END-UNMORPH-.04f)));
@@ -205,14 +208,18 @@ public final class GoldLife {
     static float hop(float t,float a,float b){return t<=a||t>=b?0:(t-a)/(b-a);}
     /** Whether the frog shows {@code t} seconds in. */
     static boolean frogShows(Life l,float t){return t>=0&&t<=over(l);}
+    /**
+     * How much light has gathered into the item held up {@code t} seconds in (0 to 1): from as the hand comes up, faster
+     * and faster, full as it turns into the frog, then gone with its flash; nothing if it ended before it turned.
+     */
+    static float gathered(Life l,float t){
+        if(!l.frog||t<GATHER_FROM||t>=BORN+GATHER_GONE||!Float.isNaN(l.early)&&l.early<BORN)return 0;
+        float u=MathHelper.clamp((t-GATHER_FROM)/(BORN-GATHER_FROM),0,1);
+        return u*u*(1-smooth((t-BORN)/GATHER_GONE));
+    }
 
     // ───────────────────────────── the stand ─────────────────────────────
 
-    /** The touch: how far out its fist is {@code t} seconds in (0 its guard, 1 on the item): faster and faster, then held, then back. */
-    static float touchReach(float t){
-        float u=MathHelper.clamp((t-OUT_FROM)/(TOUCH-OUT_FROM),0,1);
-        return (float)Math.pow(u,1.6)*(1-smooth((t-STAYS)/(GUARDED-STAYS)));
-    }
     /** The punch: how far wound up (0 to WIND_DEPTH) and how far thrown (0 to 1) it is {@code t} seconds in. */
     static float wind(float t){return WIND_DEPTH*smooth(t/WOUND);}
     static float strike(float t){float u=MathHelper.clamp((t-LOAD)/(CONTACT-LOAD),0,1);return (float)Math.pow(u,1.6);}
@@ -221,22 +228,19 @@ public final class GoldLife {
         float k=smooth((t-HELD)/(PUNCH_GUARDED-HELD));
         return Float.isNaN(l.stopped)?k:Math.max(k,smooth((t-l.stopped)/CUT));
     }
-    /** When the stand's part in it is done (back in its guard, seconds). */
-    static float done(Life l){
-        if(l.frog)return GUARDED;
-        return Float.isNaN(l.stopped)?PUNCH_GUARDED:Math.min(PUNCH_GUARDED,l.stopped+CUT);
-    }
-    /** Adds the stances {@code t} seconds into it into {@code w}. */
+    /** When the stand's part in the punch is done (back in its guard, seconds). */
+    static float done(Life l){return Float.isNaN(l.stopped)?PUNCH_GUARDED:Math.min(PUNCH_GUARDED,l.stopped+CUT);}
+    /** Adds the punch's stances {@code t} seconds into it into {@code w} (the frog has none: the stand plays no part in it). */
     public static void stances(Life l,float t,float[] w){
-        if(l.frog){float in=touchReach(t);w[GUARD]+=1-in;w[MEND]+=in;return;}
+        if(l.frog)return;
         float at=Float.isNaN(l.stopped)?t:Math.min(t,l.stopped);
         float wind=wind(at),strike=strike(at),back=back(l,t);
         w[GUARD]+=(1-wind)*(1-strike)*(1-back)+back;
         w[OVER_WIND]+=wind*(1-strike)*(1-back);
         w[OVER_PUNCH]+=strike*(1-back);
     }
-    /** Whether the stand shows in it {@code t} seconds in. */
-    static boolean shows(Life l,float t){return t>=0&&t<=done(l)+LINGER+RETURN;}
+    /** Whether the stand shows in it {@code t} seconds in: through the punch (never the frog's: it turns of itself). */
+    static boolean shows(Life l,float t){return !l.frog&&t>=0&&t<=done(l)+LINGER+RETURN;}
     /** How big its arms are. */
     static float arms(Life l,float t){return l.frog?1:1+(ARMS-1)*smooth(t/StandRush.RISE)*(1-back(l,t));}
     /** How far in front of its user it stands for the punch: its fist at full stretch BITE into the first one in its way. */
@@ -248,45 +252,33 @@ public final class GoldLife {
     static float[] fist(Life l,float t){
         float[] w=new float[NAMES.size()];stances(l,t,w);
         float size=arms(l,t);float[] out=new float[3];
-        for(int s:new int[]{GUARD,MEND,OVER_WIND,OVER_PUNCH}){
+        for(int s:new int[]{GUARD,OVER_WIND,OVER_PUNCH}){
             if(w[s]<=0)continue;
             float[] f=GoldRush.grown(s,1,size);
             for(int i=0;i<3;i++)out[i]+=f[i]*w[s];
         }
         return out;
     }
-    /** How much the stand's fist's light is on (0 to 1). */
+    /** How much the stand's fist's light is on through the punch (0 to 1; none for the frog). */
     static float glow(Life l,float t){
-        if(l.frog)return smooth((t-.05f)/.2f)*(1-smooth((t-STAYS)/.15f));
+        if(l.frog)return 0;
         float c=smooth((t-.05f)/.2f)*(1-strike(t));
         return Float.isNaN(l.stopped)?c:c*(1-smooth((t-l.stopped)/CUT));
     }
     /**
-     * T this frame on a look that already holds the stand's pose: its stances take over (and give way again as it goes
-     * back), and {@code shape} says where it stands: for the frog, in front of its user turned to them, its fist on the
-     * item they hold up; for the punch, in front of them facing the way it goes. Returns whether it shows.
+     * T this frame on a look that already holds the stand's pose: the punch's stances take over (and give way again as it
+     * goes back), and {@code shape} says where it stands: in front of its user facing the way it goes. Returns whether it
+     * shows: never for the frog (2.151.1), which the item in the hand turns into of itself, the stand where it was.
      */
-    static boolean pose(Life l,float delta,GoldExperienceLook look,GoldRush.Shape shape,float[] scratch,PlayerEntity user){
-        return pose(l,delta,look,shape,scratch,MathHelper.lerpAngleDegrees(delta,user.prevBodyYaw,user.bodyYaw),user.getHeight(),user.getMainArm()!=Arm.LEFT);
-    }
-    /** The same for a user whose body faces {@code body} this frame, {@code height} tall, right-handed or not. */
-    static boolean pose(Life l,float delta,GoldExperienceLook look,GoldRush.Shape shape,float[] scratch,float body,double height,boolean rightHanded){
+    static boolean pose(Life l,float delta,GoldExperienceLook look,GoldRush.Shape shape,float[] scratch){
+        if(l.frog)return false;
         float t=l.age(delta);if(!shows(l,t))return false;
         java.util.Arrays.fill(scratch,0);stances(l,t,scratch);
         float end=done(l),in=smooth(t/TAKE)*(1-smooth((t-end-LINGER)/RETURN));
         for(int i=0;i<scratch.length;i++)look.weights[i]=look.weights[i]*(1-in)+scratch[i]*in;
         float size=arms(l,t);look.armL=look.armL*(1-in)+size*in;look.armR=look.armR*(1-in)+size*in;
         shape.engage=StandPunch.burst(t/StandRush.RISE)*(1-smooth((t-end-LINGER)/RETURN));
-        if(!l.frog){shape.yaw=l.yaw;shape.ahead=place(l);shape.raise=GoldRush.RAISE;shape.side=0;shape.inward=0;return true;}
-        // the frog: the stand turned to its user, standing where its touching fist meets the item held up before them
-        double k=height/1.8;
-        double side=rightHanded?1:-1;
-        float[] f=GoldRush.grown(MEND,1,1);
-        double ahead=HAND_AHEAD*k+f[0],right=side*HAND_SIDE*k+f[1];
-        shape.yaw=body+180;
-        // that place from its user, as an angle to the right of the way it faces (theirs turned round) and a distance
-        shape.side=(float)Math.toDegrees(Math.atan2(-right,-ahead));shape.ahead=(float)Math.hypot(ahead,right);
-        shape.raise=(float)(HAND_UP*k-f[2]-StandPresence.UP);shape.inward=0;
+        shape.yaw=l.yaw;shape.ahead=place(l);shape.raise=GoldRush.RAISE;shape.side=0;shape.inward=0;
         return true;
     }
 

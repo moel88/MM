@@ -48,8 +48,8 @@ import static dev.sangwoo.celestialfall.stand.GoldExperienceRules.*;
  * Gold Experience's T, giving life (2.151.0; GoldExperienceRules has the user's words and the numbers). With the stand
  * out, T (gold_life_v1, no payload) does one of two things by what its user holds in their main hand:
  * <ul>
- * <li>An item: one of it goes out of the hand, the stand's fist touches it and it becomes a frog on its user's shoulder
- * (FROG_BORN ticks in), for FROG_LASTS ticks. Every blow on its user meanwhile ({@link #reflects}, LivingCombatMixin: a
+ * <li>An item: one of it goes out of the hand and becomes a frog on its user's shoulder of itself (FROG_BORN ticks in;
+ * 2.151.1: the stand plays no part in it), for FROG_LASTS ticks. Every blow on its user meanwhile ({@link #reflects}, LivingCombatMixin: a
  * blow is harm with a striker other than them) does them nothing and the striker takes all of it (at the end of the
  * tick, so no skill's own reckoning is torn under it). Then the frog is the item again, in their hand (or their
  * inventory, or at their feet). Dying, leaving or losing the stand first, it is the item at once.</li>

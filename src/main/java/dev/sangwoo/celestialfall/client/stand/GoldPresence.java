@@ -254,10 +254,10 @@ final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceSt
                 if(front)shape.over(shape2);
                 front=true;
             }else beat=null;
-            // (2.151.0) giving life: the frog's touch (turned to its user, its fist on the item they hold up before them)
-            // or the punch (in front of them, the way it goes)
+            // (2.151.0) giving life: the punch (in front of them, the way it goes); the frog it plays no part in (2.151.1:
+            // the item held up turns of itself, the stand where it was)
             life=GoldLife.of(owner);
-            if(life!=null&&out&&GoldLife.pose(life,delta,look,front?shape2:shape,scratch,p)){
+            if(life!=null&&out&&GoldLife.pose(life,delta,look,front?shape2:shape,scratch)){
                 if(front)shape.over(shape2);
                 front=true;
             }else life=null;

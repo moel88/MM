@@ -13,10 +13,10 @@ import static dev.sangwoo.celestialfall.stand.GoldExperienceStance.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Gold Experience's T as it is drawn (2.151.0): the stand's touch on the item held up and its punch smooth at 60 fps
- * (stopped short at any moment too), on the server's ticks; the item becoming the frog and the frog the item again
- * without a blank or a jump; the part flying off turning into the fly without a blank; one knocked down falling on
- * their back and getting up without a jump.
+ * Gold Experience's T as it is drawn (2.151.0): its punch smooth at 60 fps (stopped short at any moment too), on the
+ * server's ticks; the stand playing no part in the frog (2.151.1), the item turning of itself as the light gathers into
+ * it; the item becoming the frog and the frog the item again without a blank or a jump; the part flying off turning into
+ * the fly without a blank; one knocked down falling on their back and getting up without a jump.
  */
 class GoldLifeTest {
     static final float FRAME=1/60f;
@@ -38,7 +38,7 @@ class GoldLifeTest {
         for(float t=0;t<=until;t+=FRAME){
             float delta=GoldRushTest.clock(t);
             look.only(IDLE);look.armL=look.armR=1;
-            boolean on=GoldLife.pose(l,delta,look,shape,scratch,30,1.8,true);shown|=on;
+            boolean on=GoldLife.pose(l,delta,look,shape,scratch);shown|=on;
             if(!on)shape.engage=0;
             float sum=0;for(float w:look.weights){assertTrue(w>=-1e-5,what+" at "+t);sum+=w;}
             assertEquals(1,sum,1e-4,"weights at "+t+" ("+what+")");
@@ -60,8 +60,7 @@ class GoldLifeTest {
         assertEquals(0,engage,.02,"back at its user's shoulder ("+what+")");assertEquals(1,armR,.01);assertEquals(1,armL,.01);
         assertEquals(1,look.weights[IDLE],.02,"at rest again ("+what+")");
     }
-    @Test void theStandsTouchAndItsPunchAreSmoothAt60fps()throws Exception{
-        watch(frog(),GoldLife.GUARDED+GoldLife.LINGER+GoldLife.RETURN+.3f,"the frog");
+    @Test void itsPunchIsSmoothAt60fps()throws Exception{
         float until=GoldLife.PUNCH_GUARDED+GoldLife.LINGER+GoldLife.RETURN+.3f;
         watch(punch(Float.NaN),until,"a punch at no one");
         watch(punch(1.6f),until,"a punch at someone");
@@ -72,13 +71,36 @@ class GoldLifeTest {
             assertEquals(1,w[GUARD],1e-4,"in its guard "+GoldLife.CUT+" s after it was stopped at "+at);
         }
     }
-    @Test void theTouchAndThePunchLandOnTheServersTicks(){
-        assertEquals(GoldExperienceRules.FROG_BORN/20f,GoldLife.TOUCH,1e-6,"the fist on the item as the frog is born");
+    @Test void theStandPlaysNoPartInTheFrogTheItemTurnsOfItself(){
+        // (2.151.1, user request: "아이템 개구리로 바꿀때는 스탠드가 아이템 안 때려도 돼 손에 들고 있는게 자동으로 개구리로 변하게")
+        var l=frog();var look=new GoldExperienceLook();var shape=new GoldRush.Shape();float[] scratch=new float[NAMES.size()];
+        for(float t=0;t<=GoldLife.over(l)+.5f;t+=FRAME){
+            look.only(IDLE);
+            assertFalse(GoldLife.pose(l,GoldRushTest.clock(t),look,shape,scratch),"the stand comes for the item at "+t);
+            assertEquals(1,look.weights[IDLE],1e-6,"the stand's look untouched at "+t);
+            float[] w=new float[NAMES.size()];GoldLife.stances(l,t,w);
+            for(float x:w)assertEquals(0,x,1e-9,"a stance of the stand's at "+t);
+            assertEquals(0,GoldLife.glow(l,t),1e-9,"the stand's fist glows at "+t);
+        }
+        // the light gathers into the item from as the hand comes up, faster and faster, full as it turns, then is gone
+        assertEquals(GoldExperienceRules.FROG_BORN/20f,GoldLife.BORN,1e-6,"it turns as the server's frog is born");
+        assertTrue(GoldLife.GATHER_FROM<GoldLife.RAISED,"it starts gathering as the hand comes up");
+        assertEquals(0,GoldLife.gathered(l,GoldLife.GATHER_FROM),1e-6);
+        assertEquals(1,GoldLife.gathered(l,GoldLife.BORN),1e-6,"full as it turns");
+        assertEquals(0,GoldLife.gathered(l,GoldLife.BORN+GoldLife.GATHER_GONE),1e-6,"gone into its flash");
+        float last=0,step=0;
+        for(float t=GoldLife.GATHER_FROM;t<=GoldLife.BORN+1e-4;t+=FRAME){
+            float g=GoldLife.gathered(l,t);assertTrue(g-last>=step-1e-4,"it slows at "+t);step=g-last;last=g;
+        }
+        for(float t=0,prev=0;t<=GoldLife.BORN+GoldLife.GATHER_GONE+.05f;t+=FRAME){float g=GoldLife.gathered(l,t);assertTrue(Math.abs(g-prev)<.3,"a jump at "+t);prev=g;}
+        // ended before it turned, no light gathers after
+        var e=frog();e.early=.2f;assertEquals(0,GoldLife.gathered(e,.25f),1e-6);
+        // the punch's light stays its own
+        assertTrue(GoldLife.glow(punch(Float.NaN),.2f)>0);assertEquals(0,GoldLife.gathered(punch(Float.NaN),.2f),1e-6);
+    }
+    @Test void thePunchLandsOnTheServersTick(){
         assertEquals(GoldExperienceRules.FLY_CONTACT/20f,GoldLife.CONTACT,1e-6,"the punch lands on the server's tick");
-        var f=frog();float[] w=new float[NAMES.size()];
-        GoldLife.stances(f,0,w);assertEquals(1,w[GUARD],1e-5);
-        w=new float[NAMES.size()];GoldLife.stances(f,GoldLife.TOUCH,w);assertEquals(1,w[MEND],1e-5,"its fist on the item");
-        w=new float[NAMES.size()];GoldLife.stances(f,GoldLife.GUARDED,w);assertEquals(1,w[GUARD],1e-5);
+        float[] w;
         // the punch: wound up, then faster and faster, fastest as it lands
         var p=punch(Float.NaN);
         w=new float[NAMES.size()];GoldLife.stances(p,GoldLife.CONTACT,w);assertEquals(1,w[OVER_PUNCH],1e-5,"at full stretch as it lands");
@@ -99,16 +121,16 @@ class GoldLifeTest {
     @Test void theItemBecomesTheFrogAndTheFrogTheItemWithoutABlankOrAJump(){
         var l=frog();
         assertEquals(1,GoldLife.itemShown(l,0),1e-6,"the item in the hand held up");
-        assertEquals(0,GoldLife.frogShown(l,GoldLife.TOUCH),1e-6,"no frog before the touch");
+        assertEquals(0,GoldLife.frogShown(l,GoldLife.BORN),1e-6,"no frog before it turns");
         assertEquals(1,GoldLife.frogShown(l,GoldLife.MORPHED),1e-6,"the frog, whole");
         assertEquals(0,GoldLife.itemShown(l,GoldLife.MORPHED),1e-6,"the item gone into it");
-        assertEquals(0,GoldLife.seat(l,GoldLife.TOUCH)[0],1e-6,"born in the hand");
+        assertEquals(0,GoldLife.seat(l,GoldLife.BORN)[0],1e-6,"born in the hand");
         assertEquals(1,GoldLife.seat(l,GoldLife.HOP_TO+.01f)[0],1e-6,"on the shoulder");
         assertEquals(1,GoldLife.seat(l,5)[0],1e-6,"sits there");
         assertEquals(0,GoldLife.seat(l,GoldLife.HOPPED_BACK+.01f)[0],1e-6,"back in the hand at the end");
         assertEquals(0,GoldLife.frogShown(l,GoldLife.END),1e-3,"the frog gone into the item as the server gives it back");
         assertEquals(1,GoldLife.itemShown(l,GoldLife.END),1e-3,"the item in the hand again");
-        assertEquals(1,GoldLife.raised(l,GoldLife.TOUCH),1e-6,"the hand up at the touch");
+        assertEquals(1,GoldLife.raised(l,GoldLife.BORN),1e-6,"the hand up as it turns");
         assertEquals(1,GoldLife.raised(l,GoldLife.END),1e-6,"and as the item comes back");
         assertEquals(0,GoldLife.raised(l,5),1e-6,"down in between");
         float item=1,frog=0,where=0,raised=0;
