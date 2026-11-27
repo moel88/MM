@@ -118,6 +118,8 @@ public final class HitStun {
         if(entity instanceof ServerPlayerEntity p){dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumInhale.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.struck(p);dev.sangwoo.celestialfall.isosang.IsosangAttack.struck(p);
             // (2.114.0) and X Chara's knife's
             dev.sangwoo.celestialfall.xchara.XCharaAttack.struck(p);
+            // (2.148.0) and Gold Experience's overdrive punch, before it lands
+            dev.sangwoo.celestialfall.stand.GoldExperienceOverdrive.struck(p);
             // (2.119.0) and their E, before its press lands
             dev.sangwoo.celestialfall.xchara.XCharaHeal.struck(p);}
     }

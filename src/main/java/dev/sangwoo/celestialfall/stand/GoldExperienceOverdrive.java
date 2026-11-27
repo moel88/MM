@@ -120,6 +120,13 @@ public final class GoldExperienceOverdrive {
             if((o.until-now)%20==0)tell(o,OUT,now);
         }
     }
+    /** A blow landed on this player: their stand's punch not yet landed is stopped short, its cooldown running from now (HitStun.attackerDamaged, as Star Platinum's). */
+    public static void struck(ServerPlayerEntity p){
+        var s=PUNCHES.get(p.getUuid());long now=p.getWorld().getTime();
+        if(s==null||s.world!=p.getServerWorld()||s.landed||!s.flying(now))return;
+        s.start=Long.MIN_VALUE/4;s.landed=true;s.ready=NoCooldownState.enabled(p)?now:overReady(now);
+        send(p,s,STOPPED,null,false,0);
+    }
     /** The first one in the punch's way (the nearest, to its near side), in sight, or null. */
     private static LivingEntity first(ServerPlayerEntity p,Punch s){
         var world=p.getServerWorld();Vec3d at=p.getPos(),f=Vec3d.fromPolar(0,s.yaw),right=new Vec3d(-f.z,0,f.x);

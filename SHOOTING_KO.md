@@ -389,6 +389,13 @@
 - 프레임 이름의 둘째 숫자는 장면 시계(틱)입니다(초가 아님). Q를 누른 다음 틱에 나옵니다(로그 'stand out at').
 - 볼 것: 웅크린 채 나와 그림의 자세로 펼치고 대기로 내려앉는지, 스탠드와 플레이어 둘 다 금색 아우라인지(흰색 없이), 걸을 때 기울며 따라오는지, 들어갈 때 웅크리며 빨려 드는지.
 
+### 골드 익스피리언스 감각폭주 (R, 2.148.0)
+- 목록(960x540): 예열 `SUMMON;stand=gold_experience;face=180;dummy=1;dfw=3;time=6000;len=60;slows=0:2;save=0-1;then=KEY_Q@4/KEY_R@20`, 시전자(옆 카메라, 강펀치 → 걸어가 러시: 숫자가 2씩 오름) `...;len=170;fov=55;hud=1;orbit=7.0/1.8/0/118/3.0/0/1.2;then=KEY_Q@6/KEY_R@40/KEYDOWN_W@60/KEYUP_W@73/KEYDOWN_E@78/KEYUP_E@150`, 맞은 사람(게임 카메라) `SUMMON;stand=gold_experience;face=180;dummy=1;dattack=1;dfw=1.6;time=6000;len=160;hud=1;pitch=14;dist=4.2;then=SOULOUT@20/KEYDOWN_S@26/KEYUP_S@44/KEYDOWN_D@48/KEYUP_D@58/ATTACKDOWN@62/ATTACKUP@63/...`. `SHOTS_LANG=ko_kr`.
+- `SOULOUT@n`은 서버가 플레이어의 영혼을 내보냅니다(`GoldExperienceOverdrive.out`: 싱글에는 감각폭주를 걸어 줄 상대가 없습니다). 이동 키(`KEYDOWN_W` 등)와 `ATTACKDOWN`이 영혼을 움직입니다.
+- 로그: 'overdrive punch at'(age,landed,struck,guarded,hit,stopped), "the dummy's soul is out/back at", 'soul at'(영혼의 자리·속도·평타 번호와 몸의 자리·체력), 'soul back in the body at'. 러시의 'dummy health'가 2씩 줄면 2배입니다.
+- 볼 것: 준비(주먹에 빛이 모임) → 타격 → 더미가 조금 밀리고 금색 별, 피해 숫자 10 뒤로 2씩. 영혼은 옅은 하늘빛 반투명, 몸은 금색 별을 단 채 제자리, 둘 사이에 빛의 실, 5초 뒤 영혼이 몸으로 날아 돌아옴.
+- 멀티플레이: `MP_ONLY=goldover python3 tools/kageno/mp/run_mp.py 폴더`(`MpClient.GOLDOVER_SCRIPT`·`soulWatch`, `MpServer.goldOver`). 관찰자는 파일 `OUT/soul`이 있는 동안 W를 누르고 공격 키를 눌러 제 영혼을 움직입니다.
+
 ### 골드 익스피리언스 무다 러시 (E, 2.147.0)
 - 목록(960x540 배율 16, 약 10분): `B="SUMMON;stand=gold_experience;face=180;dummy=1;dfw=3;time=6000"`로 예열 `$B;len=60;slows=0:2;save=0-1;then=KEY_Q@4/KEYDOWN_E@20/KEYUP_E@40`, 옆 카메라 `$B;len=150;fov=50;orbit=5.0/1.6/0/115/1.4/0/1.2;then=KEY_Q@6/KEYDOWN_E@50/KEYUP_E@128`(끝까지 30타), 게임 카메라 `$B;len=120;hud=1;cool=1;pitch=14;dist=4.2;then=KEY_Q@6/KEYDOWN_E@44/KEYDOWN_W@50/KEYUP_W@74/KEYUP_E@78`(걸으며 치다가 도중에 뗌, 쿨타임 목록 '무다 러시'). `SHOTS_LANG=ko_kr`.
 - 로그: 'rush on at', 'rush blow N struck', 'dummy health'. `stand.csv`의 러시 칸은 스타플래티나와 같습니다.
