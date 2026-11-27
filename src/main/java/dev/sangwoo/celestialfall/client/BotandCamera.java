@@ -142,7 +142,7 @@ public final class BotandCamera {
     private static boolean acting() {
         var mc=MinecraftClient.getInstance();var s=CombatClient.snapshot(mc.player.getUuid());
         return s.guard()||s.attack()>0||mc.options.attackKey.isPressed()||mc.options.useKey.isPressed()||StandClient.aimingThrust()||CutsceneFlash.localGlowing()
-            ||dev.sangwoo.celestialfall.client.stand.StandRush.localRushing()||dev.sangwoo.celestialfall.client.stand.StandInhale.localInhaling();
+            ||dev.sangwoo.celestialfall.client.stand.StandRush.localRushing()||dev.sangwoo.celestialfall.client.stand.StandInhale.localInhaling()||dev.sangwoo.celestialfall.client.stand.GoldHeal.localSelfing();
     }
     /**
      * (2.142.0, user request: "쉬프트락도 로블록스처럼 바꿔봐 지금 쉬프트락 이상해") The shift lock's body, as Roblox's: it

@@ -16,6 +16,6 @@ public abstract class StandFovMixin {
     private void botand$stableGuardLens(CallbackInfoReturnable<Float> cir){
         var p=(AbstractClientPlayerEntity)(Object)this;
         if(MapClient.enabled()&&(CombatClient.snapshot(p.getUuid()).guard()||CombatClient.slowed(p)||StandClient.rWalking(p.getUuid())||StandClient.eWalking(p.getUuid())
-            ||dev.sangwoo.celestialfall.client.stand.StandRush.rushing(p.getUuid())||dev.sangwoo.celestialfall.client.stand.StandInhale.inhaling(p.getUuid())||StandClient.skillSlowed(p)||AtomicClient.locked(p.getUuid())||AtomicClient.held(p)))cir.setReturnValue(1f);
+            ||dev.sangwoo.celestialfall.client.stand.StandRush.rushing(p.getUuid())||dev.sangwoo.celestialfall.client.stand.StandInhale.inhaling(p.getUuid())||dev.sangwoo.celestialfall.client.stand.GoldHeal.selfing(p.getUuid())||StandClient.skillSlowed(p)||AtomicClient.locked(p.getUuid())||AtomicClient.held(p)))cir.setReturnValue(1f);
     }
 }

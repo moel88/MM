@@ -41,6 +41,7 @@ public final class CelestialFallClient implements ClientModInitializer {
         dev.sangwoo.celestialfall.client.stand.StandRush.initialize();
         dev.sangwoo.celestialfall.client.stand.GoldPunch.initialize();
         dev.sangwoo.celestialfall.client.stand.SoulClient.initialize();
+        dev.sangwoo.celestialfall.client.stand.GoldHeal.initialize();
         dev.sangwoo.celestialfall.client.stand.StandInhale.initialize();
         dev.sangwoo.celestialfall.client.stand.StandBeatdown.initialize();
         dev.sangwoo.celestialfall.client.stand.StandTimeStop.initialize();

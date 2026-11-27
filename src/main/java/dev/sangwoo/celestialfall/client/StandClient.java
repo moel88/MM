@@ -166,7 +166,7 @@ public final class StandClient {
      */
     public static boolean skillSlowed(net.minecraft.entity.player.PlayerEntity p){
         var speed=p.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED);
-        return speed!=null&&(speed.getModifier(KagenoManager.R_SLOW)!=null||speed.getModifier(KagenoManager.E_SLOW)!=null||speed.getModifier(dev.sangwoo.celestialfall.stand.StarPlatinumRush.SLOW)!=null
+        return speed!=null&&(speed.getModifier(KagenoManager.R_SLOW)!=null||speed.getModifier(KagenoManager.E_SLOW)!=null||speed.getModifier(dev.sangwoo.celestialfall.stand.StarPlatinumRush.SLOW)!=null||speed.getModifier(dev.sangwoo.celestialfall.stand.GoldExperienceHeal.SLOW)!=null
             // (2.109.0) a skill with a cutscene's glow, before it is cast (CutsceneGlow)
             ||speed.getModifier(dev.sangwoo.celestialfall.combat.CutsceneGlow.SLOW_ID)!=null);
     }

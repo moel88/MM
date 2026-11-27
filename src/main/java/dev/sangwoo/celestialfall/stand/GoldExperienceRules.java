@@ -76,4 +76,33 @@ public final class GoldExperienceRules {
     public static long overReady(long end){return end+OVER_COOLDOWN;}
     /** What harm of {@code amount} comes to for a body whose soul is out of it. */
     public static float overHarm(float amount,boolean out){return out?amount*OVER_TAKEN:amount;}
+    // ---- Y, the healing (2.149.0, user request: "이번에는 Y스킬 만들자 힐 스킬이고 꾹 누르면 스탠드가 나와 나를 때리면서
+    // 자기자신을 힐 히고 그냥 톡 누르면 스탠드가 나와서 상대 힐 해주는 스킬"; asked and answered: held, 10 a second for
+    // five seconds at most; tapped, 60 at once; one cooldown of 45 s for both; held, they walk slowly and a blow on them
+    // stops it). With the stand out, Y tapped (let go within HEAL_HOLD ticks) makes it come round to the front and lay
+    // its hand on the first one in its way, who is healed MEND as it touches them; Y held makes it come round to its
+    // user and drive its fists into them, each blow healing them SELF_EACH, until Y is let go or the blows have run out.
+
+    /** Y held this many ticks is the hold (the user's own healing); let go sooner it is the tap (Lee So-sang's R's and Kageno's T's threshold). */
+    public static final int HEAL_HOLD=8;
+    /** Tapped: ticks in its hand touches whoever it is for, how long it is, and what it heals them. */
+    public static final int MEND_CONTACT=6,MEND_LENGTH=16;
+    public static final float MEND=60;
+    /** Held: its first blow on its user (ticks in), ticks from one to the next, how many there are and what each heals: ten a second for five seconds. */
+    public static final int SELF_FIRST=3,SELF_EVERY=2,SELF_BLOWS=50;
+    public static final float SELF_EACH=1,SELF_TOTAL=SELF_EACH*SELF_BLOWS;
+    /** The last blow, and the healing's end if Y is held all the way (its fists have gone back by then). */
+    public static final int SELF_LAST=SELF_FIRST+SELF_EVERY*(SELF_BLOWS-1),SELF_LENGTH=SELF_LAST+3;
+    /** How much of their speed its user loses while it heals them (the rush's). */
+    public static final double SELF_SLOW=StarPlatinumRules.RUSH_SLOW;
+    /** Ticks from either one's end until Y is ready again (45 s: one cooldown for both). */
+    public static final int HEAL_COOLDOWN=900;
+    /** Whether a blow lands on its user {@code age} ticks into their healing. */
+    public static boolean selfBlow(long age){return age>=SELF_FIRST&&age<=SELF_LAST&&(age-SELF_FIRST)%SELF_EVERY==0;}
+    /** How many blows have landed {@code age} ticks into it. */
+    public static int selfBlows(long age){return age<SELF_FIRST?0:(int)Math.min(SELF_BLOWS,(age-SELF_FIRST)/SELF_EVERY+1);}
+    /** Whether a body is in reach of its hand (the overdrive punch's way). */
+    public static boolean mendLane(double forward,double side,double height,double halfWidth){return overLane(forward,side,height,halfWidth);}
+    /** The tick Y is ready again after either ended (over, let go or stopped short) at {@code end}. */
+    public static long healReady(long end){return end+HEAL_COOLDOWN;}
 }

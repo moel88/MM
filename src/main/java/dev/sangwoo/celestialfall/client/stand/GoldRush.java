@@ -55,9 +55,11 @@ public final class GoldRush {
      * Adds the barrage's stances {@code t} seconds into it into {@code w} ({@code share} of them): from the guard the
      * first fist goes out, then each next fist goes out as the one before comes back, eased to a dead stop at each end.
      */
-    public static void barrage(float t,int seed,float[] w,float share){
+    public static void barrage(float t,int seed,float[] w,float share){barrage(t,seed,w,share,HALF);}
+    /** The same with a fist every {@code half} seconds (2.149.0: the healing of its user throws one every tenth of a second). */
+    public static void barrage(float t,int seed,float[] w,float share,float half){
         if(t<=0){w[GUARD]+=share;return;}
-        float u=t/HALF;int k=(int)Math.floor(u);float s=smooth(u-k);
+        float u=t/half;int k=(int)Math.floor(u);float s=smooth(u-k);
         int from=k==0?GUARD:fist(k-1,seed),to=fist(k,seed);
         w[from]+=share*(1-s);w[to]+=share*s;
     }
@@ -73,7 +75,23 @@ public final class GoldRush {
     static float on(StandRush.Rush r,float t){return Ease.smooth(t,RISE*.6f,RISE)*(1-Ease.smooth(t,r.ends(),r.ends()+.08f));}
 
     /** Where the rush puts the body this frame: how far round to the front, the way it faces, how far ahead it stands and how much higher. */
-    public static final class Shape {float engage,yaw,ahead,raise;}
+    public static final class Shape {
+        float engage,yaw,ahead,raise;
+        /**
+         * (2.149.0) Where round its user it stands (degrees to the right of {@code yaw}; 0, right in front) and how far it
+         * turns in on them (0 facing {@code yaw}, 1 facing its user): the healing of its user stands at their front
+         * right and turns on them.
+         */
+        float side,inward;
+        void set(Shape o){engage=o.engage;yaw=o.yaw;ahead=o.ahead;raise=o.raise;side=o.side;inward=o.inward;}
+        void clear(){engage=0;side=0;inward=0;}
+        /** This place gives way to {@code o}'s as far as {@code o} is engaged beside it (two skills never run together; one just after another, the later takes over from where the earlier had got to). */
+        void over(Shape o){
+            float sum=engage+o.engage,k=sum<1e-4f?1:o.engage/sum;
+            yaw=MathHelper.lerpAngleDegrees(k,yaw,o.yaw);ahead+=(o.ahead-ahead)*k;raise+=(o.raise-raise)*k;side+=(o.side-side)*k;inward+=(o.inward-inward)*k;
+            engage=Math.max(engage,o.engage);
+        }
+    }
     /**
      * Rush {@code r} this frame on a look that already holds the stand's pose beside its user: the rush's stances take
      * over from it (and give way to it again as it goes back), its arms grow, and {@code shape} says where it stands.
@@ -92,7 +110,7 @@ public final class GoldRush {
         shape.engage=engage(r,t);
         shape.yaw=r.yaw(delta);
         shape.ahead=r.prevPlace+(r.place-r.prevPlace)*MathHelper.clamp(delta,0,1);
-        shape.raise=RAISE;
+        shape.raise=RAISE;shape.side=0;shape.inward=0;
         return true;
     }
     /**

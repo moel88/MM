@@ -56,6 +56,8 @@ public final class StandRushFx {
         boolean gold=GoldRushFx.prepare(mc,tickDelta,camera);
         // (2.148.0) and its overdrive punch's (GoldPunchFx)
         gold|=GoldPunchFx.prepare(mc,tickDelta,camera);
+        // (2.149.0) and its healing's (GoldHealFx)
+        gold|=GoldHealFx.prepare(mc,tickDelta,camera);
         if(mc.world==null)return false;
         for(var e:StandRush.all().entrySet()){
             var r=e.getValue();var user=mc.world.getPlayerByUuid(e.getKey());
@@ -93,7 +95,7 @@ public final class StandRushFx {
 
     /** Dark ink under the light: the body's fists' bursts and the bursts on whom it strikes get an ink edge. */
     public static void alpha(EffectMesh m){
-        GoldRushFx.alpha(m);GoldPunchFx.alpha(m);
+        GoldRushFx.alpha(m);GoldPunchFx.alpha(m);GoldHealFx.alpha(m);
         for(var s:FRAME){
             if(s.body!=null)for(int j=0;j<3;j++){
                 // the fists that have landed in the last FIST seconds: their bursts
@@ -110,7 +112,7 @@ public final class StandRushFx {
         }
     }
     public static void additive(EffectMesh m){
-        GoldRushFx.additive(m);GoldPunchFx.additive(m);
+        GoldRushFx.additive(m);GoldPunchFx.additive(m);GoldHealFx.additive(m);
         for(var s:FRAME){
             float on=s.on();
             if(s.body!=null&&on>0){
@@ -262,7 +264,7 @@ public final class StandRushFx {
     }
     /** The effect layer: the barrage lights the world in front of it, flickering with its fists, and each blow lights whom it strikes. */
     public static void frame(FxFrame f,Vec3d camera){
-        GoldRushFx.frame(f,camera);GoldPunchFx.frame(f,camera);
+        GoldRushFx.frame(f,camera);GoldPunchFx.frame(f,camera);GoldHealFx.frame(f,camera);
         for(var s:FRAME){
             float on=s.on();
             if(s.body!=null&&on>0){

@@ -172,7 +172,7 @@ public final class GoldPunch {
         for(int i=0;i<scratch.length;i++)look.weights[i]=look.weights[i]*(1-in)+scratch[i]*in;
         float size=arms(p,t);
         look.armL=look.armL*(1-in)+size*in;look.armR=look.armR*(1-in)+size*in;
-        shape.engage=engage(p,t);shape.yaw=p.yaw;shape.ahead=place(p);shape.raise=RAISE;
+        shape.engage=engage(p,t);shape.yaw=p.yaw;shape.ahead=place(p);shape.raise=RAISE;shape.side=0;shape.inward=0;
         return true;
     }
 

@@ -32,14 +32,28 @@ public final class HealNumbers {
         if((now-e.updated)/20f>HOLD+EXIT)e.total=0;
         e.total+=amount;e.updated=now;e.serial++;
     }
+    /**
+     * (2.149.0) Any living body healed {@code amount} at once (Gold Experience's hand heals whoever it is laid on: a
+     * dummy, a mob, a boss): the same number over it. A player's goes with their own.
+     */
+    public static void show(net.minecraft.entity.LivingEntity e,double amount,long now){
+        if(e instanceof net.minecraft.entity.player.PlayerEntity){show(e.getUuid(),amount,now);return;}
+        var en=OTHERS.computeIfAbsent(e.getId(),k->new Entry());
+        if((now-en.updated)/20f>HOLD+EXIT)en.total=0;
+        en.total+=amount;en.updated=now;en.serial++;
+    }
+    private static final Map<Integer,Entry> OTHERS=new HashMap<>();
     public static void render(MinecraftClient mc,MatrixStack matrices,float delta,Vec3d camera){
         if(mc.world==null)return;long now=mc.world.getTime();var vertices=mc.getBufferBuilders().getEntityVertexConsumers();boolean drew=false;
         ENTRIES.keySet().removeIf(id->mc.world.getPlayerByUuid(id)==null);
-        for(var p:mc.world.getPlayers()){
+        OTHERS.entrySet().removeIf(o->(now-o.getValue().updated)/20f>HOLD+EXIT+1||!(mc.world.getEntityById(o.getKey()) instanceof net.minecraft.entity.LivingEntity));
+        java.util.List<net.minecraft.entity.LivingEntity> bodies=new java.util.ArrayList<>(mc.world.getPlayers());
+        for(int id:OTHERS.keySet())bodies.add((net.minecraft.entity.LivingEntity)mc.world.getEntityById(id));
+        for(var p:bodies){
             if(!p.isAlive()||p.isInvisible()||p.isSleeping())continue;
             // Kageno's passive is watched for in their health; anyone else has a number only when a skill shows one
-            boolean passive=StandClient.visible(p);
-            var e=passive?ENTRIES.computeIfAbsent(p.getUuid(),k->new Entry()):ENTRIES.get(p.getUuid());if(e==null)continue;
+            boolean player=p instanceof net.minecraft.entity.player.PlayerEntity,passive=player&&StandClient.visible((net.minecraft.entity.player.PlayerEntity)p);
+            var e=!player?OTHERS.get(p.getId()):passive?ENTRIES.computeIfAbsent(p.getUuid(),k->new Entry()):ENTRIES.get(p.getUuid());if(e==null)continue;
             float h=p.getHealth();
             if(passive&&e.health>=0&&h>e.health+.2f&&h-e.health<=1.01f){
                 if((now-e.updated)/20f>HOLD+EXIT)e.total=0;

@@ -131,6 +131,19 @@ public final class GoldPresence {
                     dispatcher.render(arm,b.at().x-cam.x,b.at().y-cam.y,b.at().z-cam.z,b.yaw(),delta,c.matrixStack(),c.consumers(),dispatcher.getLight(arm,delta));
                 }
             }
+            // (2.149.0) the healing of its user: the afterimages of its arms the same way, fainter
+            if(rush==null&&s.heal!=null&&s.heal.self){
+                for(int i=0;i<GoldRush.PHANTOMS.length;i++){
+                    if(s.arms[i]==null)s.arms[i]=new GoldPuppet(mc.world);
+                    var arm=s.arms[i];
+                    float a=GoldHeal.phantom(s.heal,i,delta,arm.look)*look.alpha;if(a<.02f)continue;
+                    arm.look.armsOnly=true;arm.look.alpha=a;arm.look.out=1;arm.look.scale=look.scale;arm.look.shadow=0;arm.look.glow=0;arm.look.lean=arm.look.roll=0;
+                    arm.look.red=GoldRush.RED;arm.look.green=GoldRush.GREEN;arm.look.blue=GoldRush.BLUE;
+                    arm.age=s.puppet.age;
+                    var b=GoldRush.phantomBody(s.body,i);arm.place(b.at(),b.yaw());
+                    dispatcher.render(arm,b.at().x-cam.x,b.at().y-cam.y,b.at().z-cam.z,b.yaw(),delta,c.matrixStack(),c.consumers(),dispatcher.getLight(arm,delta));
+                }
+            }
             // coming out or going back: faint golden afterimages where it was a moment ago (the same pose: GeckoLib
             // poses a body once a frame)
             float main=look.out;ghost.set(look);
@@ -173,8 +186,10 @@ public final class GoldPresence {
         /** Where it was last drawn and the frame it was drawn in; the bodies of its rush's flying arms; the rush's place for it this frame. */
         StandPresence.Body body;long bodyFrame=-1;final GoldPuppet[] arms=new GoldPuppet[GoldRush.PHANTOMS.length];
         final GoldRush.Shape shape=new GoldRush.Shape(),shape2=new GoldRush.Shape();
-        /** Whether it stands in front of its user this frame (its rush's or its punch's place: {@code shape}). */
+        /** Whether it stands in front of its user this frame (its rush's, its punch's or its healing's place: {@code shape}). */
         boolean front;
+        /** Its user's healing if it shows this frame (2.149.0). */
+        GoldHeal.Heal heal;
 final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceStance.NAMES.size()];
         /** Its look, place and facing on the last frame drawn and that frame's moment: how it stands while its user is stopped in a time stop. */
         final GoldExperienceLook held=new GoldExperienceLook();Vec3d heldAt;float heldYaw,heldDelta=1;
@@ -218,12 +233,15 @@ final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceSt
             // just after the other, the punch takes over from where the rush had got to)
             var punch=GoldPunch.of(owner);
             boolean punching=punch!=null&&out&&GoldPunch.pose(punch,delta,look,rush==null?shape:shape2,scratch);
-            if(punching&&rush!=null){
-                float sum=shape.engage+shape2.engage,k=sum<1e-4f?1:shape2.engage/sum;
-                shape.yaw=MathHelper.lerpAngleDegrees(k,shape.yaw,shape2.yaw);shape.ahead+=(shape2.ahead-shape.ahead)*k;shape.raise+=(shape2.raise-shape.raise)*k;
-                shape.engage=Math.max(shape.engage,shape2.engage);
-            }
+            if(punching&&rush!=null)shape.over(shape2);
             front=rush!=null||punching;
+            // (2.149.0) the healing: its stances over those, and where it stands (the tap in front of its user; the hold
+            // at their front right, turned on them, by the way they face as it follows it)
+            heal=GoldHeal.of(owner);
+            if(heal!=null&&out&&GoldHeal.pose(heal,delta,look,front?shape2:shape,scratch,MathHelper.lerpAngleDegrees(delta,prevYaw,yaw))){
+                if(front)shape.over(shape2);
+                front=true;
+            }else heal=null;
             float calm=front?1-shape.engage:1;
             var v=prevVel.lerp(vel,delta);float y=MathHelper.lerpAngleDegrees(delta,prevYaw,yaw);
             double r=Math.toRadians(y),fx=-Math.sin(r),fz=Math.cos(r);
@@ -234,6 +252,8 @@ final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceSt
             if(rush!=null)look.glow=Math.max(look.glow,look.out*(1+.45f*GoldRush.on(rush,rush.age(delta))));
             // and brighter still as its fist's light gathers for the overdrive punch
             if(punching)look.glow=Math.max(look.glow,look.out*(1+.7f*GoldPunch.charge(punch,punch.age(delta))));
+            // and a little brighter as it heals
+            if(heal!=null)look.glow=Math.max(look.glow,look.out*(1+.4f*(heal.self?GoldHeal.on(heal,heal.age(delta)):GoldHeal.glow(heal,heal.age(delta)))));
             put(p,delta,look,front?shape:null);
             return rush;
         }
@@ -251,10 +271,13 @@ final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceSt
                 // where it is now and where it strikes from, as a turn round its user and a distance from them
                 double ax=at.x-home.x,az=at.z-home.z;
                 double fromAngle=Math.atan2(ax*-fz+az*fx,ax*fx+az*fz),fromDist=Math.hypot(ax,az);
-                double ang=fromAngle+wrapRad(-fromAngle)*e,dist=fromDist+(shape.ahead-fromDist)*e;
+                double ang=fromAngle+wrapRad(Math.toRadians(shape.side)-fromAngle)*e,dist=fromDist+(shape.ahead-fromDist)*e;
                 double ux=Math.cos(ang),us=Math.sin(ang);
                 at=new Vec3d(home.x+fx*ux*dist-fz*us*dist,at.y+(home.y+StandPresence.UP+shape.raise-at.y)*e,home.z+fz*ux*dist+fx*us*dist);
-                y=y+MathHelper.wrapDegrees(shape.yaw-y)*e;
+                // the way it faces: where its user faces, or (the healing of its user) in on them
+                float to=shape.yaw;
+                if(shape.inward>0)to=MathHelper.lerpAngleDegrees(shape.inward,to,(float)Math.toDegrees(Math.atan2(-(home.x-at.x),home.z-at.z)));
+                y=y+MathHelper.wrapDegrees(to-y)*e;
             }
             puppet.place(home.lerp(at,look.out),y);
         }

@@ -149,7 +149,7 @@ public final class CombatManager {
     public static boolean busyOtherwise(PlayerEntity p) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
         if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p)
-            ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p)||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(p)
+            ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p)||dev.sangwoo.celestialfall.stand.GoldExperienceHeal.selfing(p)||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(p)
             ||dev.sangwoo.celestialfall.xchara.XCharaUltimate.involved(p)||dev.sangwoo.celestialfall.samurai.SamuraiUltimate.involved(p))return true;
         // (2.138.0) X Chara's teleport on its way (the fifth of a second before it moves them): they may only walk
         if(dev.sangwoo.celestialfall.xchara.XCharaBlink.casting(p))return true;
@@ -163,7 +163,7 @@ public final class CombatManager {
         // (2.107.0) dead, waiting to be brought back (AutoRespawn): only their view moves, nothing they do goes through
         if(p.isDead())return true;
         if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.isosang.IsosangAttack.busy(p)||dev.sangwoo.celestialfall.xchara.XCharaAttack.busy(p)||dev.sangwoo.celestialfall.xchara.XCharaHeal.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p)
-            ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p)||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(p)
+            ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p)||dev.sangwoo.celestialfall.stand.GoldExperienceHeal.selfing(p)||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(p)
             ||CutsceneGlow.glowing(p)||dev.sangwoo.celestialfall.xchara.XCharaUltimate.involved(p)||dev.sangwoo.celestialfall.samurai.SamuraiUltimate.involved(p))return true;
         var e=STATES.get(p.getUuid());return e!=null&&e.entityId==p.getId()&&e.dimension.equals(p.getWorld().getRegistryKey().getValue())&&e.state.locked(p.getWorld().getTime());
     }
@@ -198,7 +198,7 @@ public final class CombatManager {
         }
         long now=p.getWorld().getTime();var s=state(p);
         s.incapacitate(now,ticks,slowTicks,slow);
-        dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);
+        dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);dev.sangwoo.celestialfall.stand.GoldExperienceHeal.struck(p);
         dev.sangwoo.celestialfall.stand.StarPlatinumInhale.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.struck(p);
         dev.sangwoo.celestialfall.stand.KagenoManager.disable(p);dev.sangwoo.celestialfall.isosang.IsosangAttack.struck(p);dev.sangwoo.celestialfall.xchara.XCharaAttack.struck(p);dev.sangwoo.celestialfall.xchara.XCharaHeal.struck(p);
         p.clearActiveItem();p.setSprinting(false);if(p.currentScreenHandler!=p.playerScreenHandler)p.closeHandledScreen();
@@ -256,7 +256,7 @@ public final class CombatManager {
         }
         var s=state(p);
         s.stagger(now,until,Stagger.SLOW);
-        dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);
+        dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);dev.sangwoo.celestialfall.stand.GoldExperienceHeal.struck(p);
         dev.sangwoo.celestialfall.stand.StarPlatinumInhale.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.struck(p);
         dev.sangwoo.celestialfall.stand.KagenoManager.disable(p);dev.sangwoo.celestialfall.isosang.IsosangAttack.struck(p);dev.sangwoo.celestialfall.xchara.XCharaAttack.struck(p);dev.sangwoo.celestialfall.xchara.XCharaHeal.struck(p);
         p.clearActiveItem();p.setSprinting(false);if(p.currentScreenHandler!=p.playerScreenHandler)p.closeHandledScreen();

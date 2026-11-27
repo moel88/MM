@@ -66,4 +66,25 @@ class GoldExperienceRulesTest {
         // it shoves them back a little: well under Star Platinum's finisher's throw
         assertTrue(OVER_SHOVE>0&&OVER_SHOVE<StarPlatinumRules.FLY/2&&OVER_SHOVE_UP<StarPlatinumRules.FLY_UP);
     }
+    @Test void yHealsAnotherAtATouchOrItsUserBlowByBlowOnOneCooldown(){
+        // tapped: one touch of 60, as quick as a blow
+        assertEquals(60,MEND,1e-6);assertEquals(6,MEND_CONTACT);assertTrue(MEND_LENGTH>MEND_CONTACT);
+        // held: ten a second for five seconds
+        assertEquals(50,SELF_TOTAL,1e-6);assertEquals(50,SELF_BLOWS);
+        assertEquals(10,20f/SELF_EVERY*SELF_EACH,1e-6,"ten a second");
+        assertEquals(100,SELF_EVERY*SELF_BLOWS,"over five seconds");
+        int blows=0;for(long age=0;age<=SELF_LENGTH+20;age++){if(selfBlow(age))blows++;assertEquals(blows,selfBlows(age),"blows by "+age);}
+        assertEquals(SELF_BLOWS,blows);
+        assertFalse(selfBlow(SELF_FIRST-1));assertTrue(selfBlow(SELF_FIRST));assertFalse(selfBlow(SELF_FIRST+1));assertTrue(selfBlow(SELF_LAST));assertFalse(selfBlow(SELF_LAST+SELF_EVERY));
+        // let go at any moment it has healed what has landed by then
+        assertEquals(0,selfBlows(SELF_FIRST-1));assertEquals(1,selfBlows(SELF_FIRST));assertEquals(10,selfBlows(SELF_FIRST+SELF_EVERY*9+1));
+        // one cooldown of 45 s for both, from the end
+        assertEquals(900,HEAL_COOLDOWN);assertEquals(1000+900,healReady(1000));
+        // held: its user walks at a tenth of their speed (the rush's)
+        assertEquals(StarPlatinumRules.RUSH_SLOW,SELF_SLOW,1e-9);
+        // the threshold between the two is Lee So-sang's R's
+        assertEquals(dev.sangwoo.celestialfall.isosang.IsosangRules.R_HOLD_TICKS,HEAL_HOLD);
+        // the hand reaches whom the overdrive punch would
+        assertTrue(mendLane(2,0,0,.3));assertFalse(mendLane(6,0,0,.3));assertFalse(mendLane(2,3,0,.3));
+    }
 }
