@@ -968,9 +968,10 @@ public final class MpClient implements ClientModInitializer {
      * stand's palm on the ground), then the tree bursts up under them: the watcher takes 30 and is pushed out from it, the
      * caster flung about 8 blocks up and 3 on, their fall spared. The caster out of the way and the watcher before the tree
      * ("TREEFRONT"), the watcher strikes it ("STRIKE+": its attack every 12 ticks): each blow comes back on the watcher,
-     * nothing on the tree. It withers and is gone 146 ticks after H; H again: refused (45 s from then). The cooldowns off,
-     * the watcher's guard up toward it: H takes nothing off it. The cooldowns on, the watcher strikes the caster as the palm
-     * goes down ("HITME"): stopped short, no tree, H refused from then. Q (the stand back): H: nothing.
+     * nothing on the tree. H while it stands: refused. It withers and is gone 410 ticks after H (20 s after it burst up);
+     * H again: refused (90 s from then). The cooldowns off, the watcher's guard up toward it: H takes nothing off it. Its
+     * tree gone, the cooldowns on, the watcher strikes the caster as the palm goes down ("HITME"): stopped short, no tree,
+     * H refused from then. Q (the stand back): H: nothing.
      */
     private static final String[] GOLDTREE_SCRIPT={
         "5 GOLD","8 NOCDOFF","30 HOME","35 HEAL",
@@ -978,11 +979,12 @@ public final class MpClient implements ClientModInitializer {
         "60 Q","70 WPOS3/-1.5","80 HEAL","85 H",
         "150 TREEFRONT","160 STRIKE+","205 STRIKE-",
         "245 H",
-        "260 NOCDON","265 HOME","270 HEAL","275 GUARD+","285 H","330 GUARD-",
-        "440 NOCDOFF","450 HOME","455 HEAL","460 H","465 HITME",
-        "485 H",
-        "495 Q","515 H",
-        "525 END"};
+        "505 H",
+        "515 NOCDON","520 HOME","525 HEAL","530 GUARD+","540 H","585 GUARD-",
+        "960 NOCDOFF","970 HOME","975 HEAL","980 H","985 HITME",
+        "1005 H",
+        "1015 Q","1035 H",
+        "1045 END"};
     private static final String[] STEPS=ONLY.equals("goldtree")?GOLDTREE_SCRIPT:ONLY.equals("goldlife")?GOLDLIFE_SCRIPT:ONLY.equals("goldbeat")?GOLDBEAT_SCRIPT:ONLY.equals("goldheal")?GOLDHEAL_SCRIPT:ONLY.equals("goldover")?GOLDOVER_SCRIPT:ONLY.equals("goldrush")?GOLDRUSH_SCRIPT:ONLY.equals("samurai")?SAMURAI_SCRIPT:ONLY.equals("xcharax")?XCHARAX_SCRIPT:ONLY.equals("xcharaerase")?XCHARAERASE_SCRIPT:ONLY.equals("xcharaknives")?XCHARAKNIVES_SCRIPT:ONLY.equals("xcharashot")?XCHARASHOT_SCRIPT:ONLY.equals("xcharacut")?XCHARACUT_SCRIPT:ONLY.equals("xcharaslam")?XCHARASLAM_SCRIPT:ONLY.equals("xcharay")?XCHARAY_SCRIPT:ONLY.equals("xcharaz")?XCHARAZ_SCRIPT:ONLY.equals("xcharat")?XCHARAT_SCRIPT:ONLY.equals("xcharae")?XCHARAE_SCRIPT:ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("xcharaboss")?XCHARABOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
@@ -1154,7 +1156,7 @@ public final class MpClient implements ClientModInitializer {
                     if(ONLY.equals("glow"))glowWatch();
                     if(ONLY.equals("vanilla"))vanillaWatch();
                     if(ONLY.equals("isosanggauge")||ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh"))watcherStill();
-                    if(age>(ONLY.equals("goldtree")?900:ONLY.equals("goldlife")?1400:ONLY.equals("goldbeat")?1400:ONLY.equals("goldheal")?720:ONLY.equals("goldover")?700:ONLY.equals("goldrush")?900:ONLY.equals("xcharax")?900:ONLY.equals("xcharaerase")?1700:ONLY.equals("xcharacut")?760:ONLY.equals("xcharaslam")?1000:ONLY.equals("xcharay")?700:ONLY.equals("xcharaz")?900:ONLY.equals("xcharat")?1500:ONLY.equals("xcharae")?2400:ONLY.equals("xcharaplain")?1000:ONLY.equals("xcharaq")?900:ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("goldtree")?1300:ONLY.equals("goldlife")?1400:ONLY.equals("goldbeat")?1400:ONLY.equals("goldheal")?720:ONLY.equals("goldover")?700:ONLY.equals("goldrush")?900:ONLY.equals("xcharax")?900:ONLY.equals("xcharaerase")?1700:ONLY.equals("xcharacut")?760:ONLY.equals("xcharaslam")?1000:ONLY.equals("xcharay")?700:ONLY.equals("xcharaz")?900:ONLY.equals("xcharat")?1500:ONLY.equals("xcharae")?2400:ONLY.equals("xcharaplain")?1000:ONLY.equals("xcharaq")?900:ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }

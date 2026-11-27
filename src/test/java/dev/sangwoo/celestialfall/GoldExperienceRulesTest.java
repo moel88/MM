@@ -152,13 +152,16 @@ class GoldExperienceRulesTest {
     }
     /**
      * (2.152.0) H, the tree of life: the stand's palm on the ground, then the tree bursting up under its user strikes 30
-     * round it out to 6 blocks and flings them about 8 blocks high; it stands, withers and is back in the ground; 45
-     * seconds from then (the user's numbers).
+     * round it out to 6 blocks and flings them about 8 blocks high; it stands, withers and is back in the ground 20 seconds
+     * after it burst up; 90 seconds from then (the user's numbers: "나무 쿨타임을 1분30초로 늘리고 나무가 있는 시간을 20초로
+     * 늘리자 쿨타임은 20초가 지난 시점부터 흐르게").
      */
     @Test void hBringsUpATreeThatStrikesRoundItAndFlingsItsUserHigh(){
         assertTrue(TREE_TOUCH<TREE_BURST&&TREE_BURST<TREE_GROWN&&TREE_GROWN<TREE_WITHER&&TREE_WITHER<TREE_END);
         assertEquals(30,TREE_DAMAGE,1e-6);assertEquals(6,TREE_RADIUS,1e-9);
-        assertEquals(900,TREE_COOLDOWN,"45 seconds");assertEquals(1000+900,treeReady(1000));
+        assertEquals(20*20,TREE_END-TREE_BURST,"there 20 seconds from its burst");
+        assertTrue(TREE_END-TREE_WITHER<=20,"withering at the end of them, within a second");
+        assertEquals(1800,TREE_COOLDOWN,"90 seconds");assertEquals(1000+1800,treeReady(1000),"from its end");
         assertTrue(treeArea(5.9,0,0,0));assertTrue(treeArea(6.2,0,0,.3),"a body's side within it");assertFalse(treeArea(6.4,0,0,.3));
         assertFalse(treeArea(1,-2,0,.3),"not far under its foot");assertFalse(treeArea(1,4,0,.3),"nor high over it");
         // pushed straight out from the trunk; one right on it the way its user faced

@@ -268,8 +268,9 @@ public final class GoldTreeFx {
         Vec3d foot=s.tree.spot;float facing=s.entity!=null?s.entity.facing():s.tree.yaw;
         for(int i=0;i<TIPS.size();i++){
             double[] tip=TIPS.get(i);
-            // a few fall as it stands, the rest as it withers
-            float start=Ease.hash(i*7+3)<.18?burstAt(s.tree)+1.5f+4f*(float)Ease.hash(i*11):wither+.5f*(float)Ease.hash(i*13);
+            // a few fall now and then as it stands (all its 20 s), the rest as it withers
+            float stand=(GoldExperienceRules.TREE_WITHER-GoldExperienceRules.TREE_BURST)/20f;
+            float start=Ease.hash(i*7+3)<.35?burstAt(s.tree)+1.5f+Math.max(0,stand-3f)*(float)Ease.hash(i*11):wither+.5f*(float)Ease.hash(i*13);
             float u=(s.t-start)/1.4f;if(u<0||u>=1)continue;
             Vec3d from=world(foot,facing,tip[0],tip[1],tip[2]);
             double drop=(from.y-foot.y)*(u*u*.6+u*.4),sway=.35*Math.sin(u*9+i);

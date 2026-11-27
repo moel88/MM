@@ -217,15 +217,18 @@ public final class GoldExperienceRules {
     // stand bring a tree up under its user that strikes those round it and carries them up. Asked and answered: the stand
     // touches the ground and the tree grows out of it ("내리치지 말고 스탠드가 땅을 만지고 나무가 자라나게 원작 같은 굵은
     // 나무로"), 30 within 6 blocks, a cooldown of 45 s; whom it strikes is pushed out and a guard takes it; its user leaps
-    // about 8 blocks.)
+    // about 8 blocks. Then, before it went out: "나무 쿨타임을 1분30초로 늘리고 나무가 있는 시간을 20초로 늘리자 쿨타임은
+    // 20초가 지난 시점부터 흐르게": the tree there for 20 s from its burst (its last 0.8 s withering back into the ground),
+    // the cooldown 90 s from then.)
     // With the stand out, H on the ground: the stand kneels at its user's side and lays its palm on the ground (TREE_TOUCH);
     // at TREE_BURST a thick tree bursts up out of the ground under its user, strikes everyone round it (TREE_DAMAGE within
     // TREE_RADIUS, pushed out from the trunk; a guard takes it) and flings its user up (TREE_RISE blocks, TREE_AHEAD on the
     // way they faced; no harm from that fall). It stands until TREE_WITHER, every blow on it coming back, all of it, on
-    // whoever struck it, and is back in the ground by TREE_END; the cooldown runs from then (2.44.0's rule).
+    // whoever struck it, and is back in the ground by TREE_END, 20 s after it burst up; the cooldown runs from then (the
+    // user's rule, as 2.44.0's).
 
     /** H: ticks in the stand's palm is on the ground, the tree bursts up (its blow, its user's leap), it is grown, it begins to wither, and it is gone. */
-    public static final int TREE_TOUCH=7,TREE_BURST=10,TREE_GROWN=22,TREE_WITHER=130,TREE_END=146;
+    public static final int TREE_TOUCH=7,TREE_BURST=10,TREE_GROWN=22,TREE_WITHER=394,TREE_END=410;
     /** Its blow on everyone round it. */
     public static final float TREE_DAMAGE=30;
     /** How far round the trunk it strikes (blocks, to the near side of a body) and how far below and above its foot. */
@@ -234,8 +237,8 @@ public final class GoldExperienceRules {
     public static final double TREE_PUSH=.62,TREE_PUSH_UP=.42;
     /** Its user's leap: how high over where they stood (blocks, the top of the arc), and how far on the way they faced by the time they are down again. */
     public static final double TREE_RISE=8,TREE_AHEAD=3;
-    /** Ticks from the tree's end until H is ready again (45 s). */
-    public static final int TREE_COOLDOWN=900;
+    /** Ticks from the tree's end until H is ready again (90 s). */
+    public static final int TREE_COOLDOWN=1800;
     /** The longest its user is spared the harm of the leap's fall (ticks), should they never come down. */
     public static final int TREE_SPARED=200;
     /** The game's own fall of a body in the air: what it loses of its speed upward and keeps of it, and keeps of its speed along the ground, every tick. */
