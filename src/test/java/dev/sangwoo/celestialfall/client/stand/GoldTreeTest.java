@@ -134,6 +134,52 @@ class GoldTreeTest {
         assertEquals(0,GoldTreeGrowth.jolt(1.1,3),1e-6);
     }
     /**
+     * Its user is never hidden behind it (2.152.0, the first filming: flung three blocks on past it, they stood for its six
+     * seconds behind its trunk from the camera behind them): drawn see-through where its trunk stands between a camera and
+     * the body it follows, whole where it stands beyond the body, off the line, or under the line; not as it bursts up;
+     * and never a jump between frames, however fast the camera swings or the body falls.
+     */
+    @Test void itsUserIsNeverHiddenBehindIt(){
+        double grown=40;
+        // the tree at the origin, its user 3 blocks on (+z), the camera 4.46 behind them, a little over their head
+        double by=1.0,cy=2.7;
+        assertTrue(GoldTreeGrowth.opacity(0,0,0,0,cy,3-4.46,0,by,3,grown)<=GoldTreeGrowth.SEE_MIN+1e-4,"behind the trunk from the camera: see-through");
+        // the camera turned round in front of them (the tree beyond their body): all of it
+        assertEquals(1,GoldTreeGrowth.opacity(0,0,0,0,cy,3+4.46,0,by,3,grown),1e-6);
+        // well off to the side of the line: all of it
+        assertEquals(1,GoldTreeGrowth.opacity(0,0,0,4,cy,3-4.46,4,by,3,grown),1e-6);
+        // the line passing high over its forks (they are in the air above it): all of it
+        assertEquals(1,GoldTreeGrowth.opacity(0,0,0,0,10.7,-2.1,0,9,2.4,grown),1e-6);
+        // one standing right before its trunk with the camera behind them, the tree at their back: all of it
+        assertEquals(1,GoldTreeGrowth.opacity(0,0,0,0,cy,-1-4.46,0,by,-1,grown),1e-6);
+        // as it bursts up, its user just flung up over it: all of it (the burst is the thing to see)
+        assertEquals(1,GoldTreeGrowth.opacity(0,0,0,0,cy+1.5,.6-4.46,0,by+1.5,.6,3),1e-6);
+        // the camera swinging round them a frame at a time (a turn in two seconds), what shows eased: no jump
+        float shown=Float.NaN;double most=0;
+        for(int k=0;k<=240;k++){
+            double a=k*Math.PI*2/120,cx=-4.6*Math.sin(a),cz=3-4.6*Math.cos(a);
+            float should=GoldTreeGrowth.opacity(0,0,0,cx,cy,cz,0,by,3,grown),next=GoldTreeGrowth.eased(shown,should,1/3.0);
+            if(!Float.isNaN(shown))most=Math.max(most,Math.abs(next-shown));shown=next;
+        }
+        assertTrue(most<.08,"a camera swinging round: at most "+most+" a frame");
+        // its user flung up and on and down behind it, the camera behind them, a frame at a time (the game's leap, 3 frames a tick)
+        double v=GoldExperienceRules.leapSpeed(GoldExperienceRules.TREE_RISE),y=0,z=0,f=GoldExperienceRules.treeLeap()[0];
+        shown=Float.NaN;most=0;float least=1,early=1;
+        for(int tick=0;tick<80;tick++){
+            double y0=y,z0=z;
+            if(tick==0||y>0){y=Math.max(0,y+v);v=(v-GoldExperienceRules.GRAVITY)*GoldExperienceRules.DRAG;z+=f;f*=tick==0?GoldExperienceRules.GRIP:GoldExperienceRules.AIR;}
+            for(int k=0;k<3;k++){
+                double u=k/3.0,up=y0+(y-y0)*u,on=z0+(z-z0)*u,age=tick+u;
+                float should=GoldTreeGrowth.opacity(0,0,0,0,up+2.7,on-4.46,0,up+1,on,age),next=GoldTreeGrowth.eased(shown,should,1/3.0);
+                if(!Float.isNaN(shown))most=Math.max(most,Math.abs(next-shown));shown=next;least=Math.min(least,shown);
+                if(age<20)early=Math.min(early,shown);
+            }
+        }
+        assertTrue(most<.08,"the leap: at most "+most+" a frame");
+        assertEquals(1,early,1e-4,"all of it shows as it bursts up and its user goes up over it");
+        assertTrue(least<GoldTreeGrowth.SEE_MIN+.02,"down behind it, they are seen through it ("+least+")");
+    }
+    /**
      * Its model is the pictures' tree (2.152.0, "나무는 이렇게 생겼어"): all branches, about three times a body's height and
      * nearly as wide, a few small leaves cut to their shape; every branch that grows is a bone of it, every face on its texture.
      */

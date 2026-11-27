@@ -97,4 +97,42 @@ public final class GoldTreeGrowth {
     }
     /** How dark it is as it withers (0 green and brown, 1 as dark as it goes). */
     public static float dimmed(double age,double wither){return smooth((age-wither)/(WITHER*.6));}
+
+    /**
+     * Seen through (2.152.0, the first filming: its user, flung on past it, stood for its six seconds hidden behind its
+     * trunk from the camera behind them). It is drawn see-through where it stands between a camera and the body that
+     * camera follows. It is all branches: only its trunk and the forks of its limbs take the sight, so: how far round its
+     * trunk the line from the camera to the body must pass for all of it (blocks), and over what further distance it
+     * comes back; the heights at its trunk (over its foot) between which the line is taken (blocks: from just under its
+     * foot, up to about where its limbs spread, fading out over the crown); how far before the body its trunk must stand on
+     * that line (blocks); and how much of it then shows. Not as it bursts up, its user just flung up over it (from
+     * SEE_FROM ticks after the burst, over SEE_IN): the burst is the thing to see.
+     */
+    static final double SEE_R=.8,SEE_EDGE=1.1,SEE_LOW=-.8,SEE_FOOT=-.3,SEE_FORKS=3.4,SEE_OVER=6.4,SEE_AHEAD=.8,SEE_FROM=14,SEE_IN=8;
+    public static final float SEE_MIN=.28f;
+    /** How fast what shows follows what should (ticks): a quick fade, never a jump from frame to frame however fast the camera or the body moves. */
+    public static final double SEE_TAU=2.4;
+    static double between(double v,double from,double to){double u=(v-from)/(to-from);u=u<0?0:u>1?1:u;return u*u*(3-2*u);}
+    /**
+     * How much of the tree standing at {@code t*}, {@code age} ticks after it burst up, should show (1 all of it, down to
+     * SEE_MIN), seen from a camera at {@code c*} that follows a body at {@code b*} (its middle): less as its trunk comes
+     * between them, more again as it goes; all of it where it stands beyond the body or off the line, or the line passes
+     * over its forks. A continuous function of all of them.
+     */
+    public static float opacity(double tx,double ty,double tz,double cx,double cy,double cz,double bx,double by,double bz,double age){
+        double ux=bx-cx,uz=bz-cz,len2=ux*ux+uz*uz;
+        double sRaw=len2<1e-8?0:((tx-cx)*ux+(tz-cz)*uz)/len2,s=Math.max(0,Math.min(1,sRaw));
+        double d=Math.hypot(cx+s*ux-tx,cz+s*uz-tz);
+        // how far before the body its trunk stands, along the line (blocks): none, or beyond the body, and it hides nothing of it
+        double before=(1-sRaw)*Math.sqrt(len2);
+        double y=cy+s*(by-cy)-ty;
+        double w=(1-between(d,SEE_R,SEE_R+SEE_EDGE))*between(before,0,SEE_AHEAD)
+            *between(y,SEE_LOW,SEE_FOOT)*(1-between(y,SEE_FORKS,SEE_OVER))*between(age,SEE_FROM,SEE_FROM+SEE_IN);
+        return (float)(1-(1-SEE_MIN)*w);
+    }
+    /** What shows {@code dt} ticks on, from {@code shown}, following {@code should} (SEE_TAU); a long gap (or none heard yet) takes it at once. */
+    public static float eased(float shown,float should,double dt){
+        if(!(dt>=0)||dt>10||Float.isNaN(shown))return should;
+        return (float)(shown+(should-shown)*(1-Math.exp(-dt/SEE_TAU)));
+    }
 }

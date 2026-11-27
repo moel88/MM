@@ -295,6 +295,9 @@ public final class GoldTreeFx {
             if(!grows(t))continue;
             float since=s.t-burstAt(t);
             if(since>=0&&since<.9f)f.light(t.spot.add(0,1,0),0xffe0a0,11,3.6f*FxLib.kick(since,0,.25f));
+            // once its user is down, its leaves fall leaving no streak behind them (the layer's afterglow drew a falling
+            // leaf as a pale green beam in the first filming): they are leaves, not lights
+            if(since>=1.2f)f.afterglow(.12f);
             for(var r:t.turned){float d=s.t-r.at();if(d>=0&&d<.45f&&MinecraftClient.getInstance().world.getEntityById(r.striker()) instanceof LivingEntity e)f.light(e.getPos().add(0,e.getHeight()*.6,0),0xffd27a,6,1.8f*(1-d/.45f));}
         }
     }
