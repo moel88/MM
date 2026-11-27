@@ -239,7 +239,7 @@ public final class KagenoRenderer {
         stack.peek().getPositionMatrix().set(view);stack.peek().getNormalMatrix().set(new org.joml.Matrix3f(view));
         var solids=dev.sangwoo.celestialfall.client.vfx.FxLayer.solids(stack,camera);
         for(var x:casts)KagenoSkills.of(x.cast.skill()).solids(x,solids);
-        if(status){dev.sangwoo.celestialfall.client.stand.StandPunchFx.solids(solids);dev.sangwoo.celestialfall.client.stand.StandBeatdownFx.solids(solids);dev.sangwoo.celestialfall.client.stand.StandTimeStopFx.solids(solids);}
+        if(status){dev.sangwoo.celestialfall.client.stand.StandPunchFx.solids(solids);dev.sangwoo.celestialfall.client.stand.StandBeatdownFx.solids(solids);dev.sangwoo.celestialfall.client.stand.GoldBeatdownFx.solids(solids);dev.sangwoo.celestialfall.client.stand.StandTimeStopFx.solids(solids);}
         dev.sangwoo.celestialfall.client.vfx.FxLayer.finishSolids(solids);
         for(var x:casts)KagenoSkills.of(x.cast.skill()).blocks(x);
         var d=dev.sangwoo.celestialfall.client.vfx.FxLayer.begin(view,matrix,camera);

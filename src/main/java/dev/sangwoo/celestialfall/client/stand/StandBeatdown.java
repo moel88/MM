@@ -185,7 +185,7 @@ public final class StandBeatdown {
         return null;
     }
     /** Whether this one is held where they are by a cutscene now (its user or the one struck): they neither move nor act (KagenoManager.frozen on this client). */
-    public static boolean holds(Entity e){return MapClient.enabled()&&running(e)!=null;}
+    public static boolean holds(Entity e){return MapClient.enabled()&&running(e)!=null||GoldBeatdown.holds(e);}
     /** The cutscene the one struck is in, while it shows them (into the moments after it, until they are shown where they really are). */
     static Beat struck(Entity e){
         for(var b:BEATS.values())if(b.victim==e.getId()&&b.victimId.equals(e.getUuid())){float t=b.age(0);if(t>=CUT-.05f&&t<=b.over()+2.5f)return b;}
@@ -201,6 +201,8 @@ public final class StandBeatdown {
      */
     public static boolean quietHurt(net.minecraft.entity.LivingEntity e){
         var mc=MinecraftClient.getInstance();if(mc.player==null||e!=mc.player)return false;
+        // (2.150.0) Gold Experience's beatdown's blows too
+        if(GoldBeatdown.quietHurt(e))return true;
         for(var b:BEATS.values()){
             if(b.victim!=e.getId()||!b.victimId.equals(e.getUuid()))continue;
             float t=b.age(0);if(t<CUT||t>b.over()+.5f)continue;
@@ -345,7 +347,8 @@ public final class StandBeatdown {
      * Killed by the fall, they lie where they came down and do not get up.
      */
     public static Body shown(Entity e,float delta){
-        var b=struck(e);if(b==null)return null;
+        // (2.150.0) Gold Experience's beatdown shows the one it struck the same way
+        var b=struck(e);if(b==null)return GoldBeatdown.shown(e,delta);
         float t=b.age(delta),over=b.over();
         if(killed(e,t))return flight(b,Math.min(t,GETUP));
         if(t<over)return victim(b,t);
@@ -372,14 +375,14 @@ public final class StandBeatdown {
      * is drawn): to face its user, then leaning back, rolling and spinning about its middle.
      */
     public static void turn(Entity e,float delta,float bodyYaw,net.minecraft.client.util.math.MatrixStack m){
-        var b=struck(e);if(b==null)return;
+        var b=struck(e);var gold=b==null?GoldBeatdown.struck(e):null;if(b==null&&gold==null)return;
         var body=shown(e,delta);if(body==null)return;
         // dead, they lie as the cutscene laid them: not tipped over on their side as well (the renderer's turn as one dies, undone)
         if(e instanceof net.minecraft.entity.LivingEntity l&&l.deathTime>0){
             float k=Math.min(1,MathHelper.sqrt((l.deathTime+delta-1)/20f*1.6f));
             m.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Z.rotationDegrees(-k*90));
         }
-        float face=MathHelper.wrapDegrees(bodyYaw-facing(b))*body.hold();
+        float face=MathHelper.wrapDegrees(bodyYaw-(b!=null?facing(b):GoldBeatdown.facing(gold)))*body.hold();
         if(face!=0)m.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Y.rotationDegrees(face));
         if(body.lean()==0&&body.roll()==0&&body.spin()==0)return;
         m.translate(0,body.pivot(),0);
@@ -580,6 +583,7 @@ public final class StandBeatdown {
      * and its user through the rush, the line and the one struck sent flying (hidesUser).
      */
     public static boolean hidden(Entity e){
+        if(GoldBeatdown.hidden(e))return true;
         var b=cinematic();if(b==null||shotEye==null)return false;
         boolean victim=b.victim==e.getId()&&b.victimId.equals(e.getUuid());
         if(!victim&&!b.user.equals(e.getUuid()))return false;

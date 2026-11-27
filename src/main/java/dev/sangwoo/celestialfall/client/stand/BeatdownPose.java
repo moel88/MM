@@ -119,11 +119,14 @@ public final class BeatdownPose {
     public static MotionPose of(PlayerEntity player,float delta){
         var b=StandBeatdown.of(player.getUuid());
         if(b!=null){float t=b.age(delta);if(t>=CUT+.1f&&t<b.over()+.1f)return user(t);}
+        // (2.150.0) Gold Experience's beatdown's user
+        var gold=GoldBeatdown.of(player.getUuid());
+        if(gold!=null&&gold.scene){float t=gold.age(delta);if(t>=GoldBeatdown.CUT+.02f&&t<gold.over()+.1f)return GoldBeatdownPose.user(t);}
         return struckOf(player,delta);
     }
     /** The body of {@code e} this frame if a beatdown's cutscene has them as the one struck (null if none does): a player's, or the training dummy's, which has the same joints. */
     public static MotionPose struckOf(net.minecraft.entity.Entity e,float delta){
-        var s=StandBeatdown.struck(e);if(s==null)return null;
+        var s=StandBeatdown.struck(e);if(s==null)return GoldBeatdownPose.struckOf(e,delta);
         float t=s.age(delta);
         if(StandBeatdown.killed(e,t))return struck(s,Math.min(t,GETUP));
         return t>=CUT&&t<s.over()?struck(s,t):null;

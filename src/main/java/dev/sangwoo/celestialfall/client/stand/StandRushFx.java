@@ -58,6 +58,8 @@ public final class StandRushFx {
         gold|=GoldPunchFx.prepare(mc,tickDelta,camera);
         // (2.149.0) and its healing's (GoldHealFx)
         gold|=GoldHealFx.prepare(mc,tickDelta,camera);
+        // (2.150.0) and its beatdown's (GoldBeatdownFx)
+        gold|=GoldBeatdownFx.prepare(mc,tickDelta,camera);
         if(mc.world==null)return false;
         for(var e:StandRush.all().entrySet()){
             var r=e.getValue();var user=mc.world.getPlayerByUuid(e.getKey());
@@ -95,7 +97,7 @@ public final class StandRushFx {
 
     /** Dark ink under the light: the body's fists' bursts and the bursts on whom it strikes get an ink edge. */
     public static void alpha(EffectMesh m){
-        GoldRushFx.alpha(m);GoldPunchFx.alpha(m);GoldHealFx.alpha(m);
+        GoldRushFx.alpha(m);GoldPunchFx.alpha(m);GoldHealFx.alpha(m);GoldBeatdownFx.alpha(m);
         for(var s:FRAME){
             if(s.body!=null)for(int j=0;j<3;j++){
                 // the fists that have landed in the last FIST seconds: their bursts
@@ -112,7 +114,7 @@ public final class StandRushFx {
         }
     }
     public static void additive(EffectMesh m){
-        GoldRushFx.additive(m);GoldPunchFx.additive(m);GoldHealFx.additive(m);
+        GoldRushFx.additive(m);GoldPunchFx.additive(m);GoldHealFx.additive(m);GoldBeatdownFx.additive(m);
         for(var s:FRAME){
             float on=s.on();
             if(s.body!=null&&on>0){
@@ -244,7 +246,7 @@ public final class StandRushFx {
     }
     /** A little dust kicked up round the feet of whom the rush strikes, now and then (the effect layer's anime dust). */
     public static void dust(Matrix4f matrix,Vec3d camera){
-        GoldRushFx.dust(matrix,camera);
+        GoldRushFx.dust(matrix,camera);GoldBeatdownFx.dust(matrix,camera);
         if(!FxLayer.available()||!KagenoFire.ready())return;
         var world=MinecraftClient.getInstance().world;if(world==null)return;
         List<Vec3d> dust=new ArrayList<>();List<float[]> puffs=new ArrayList<>();
@@ -264,7 +266,7 @@ public final class StandRushFx {
     }
     /** The effect layer: the barrage lights the world in front of it, flickering with its fists, and each blow lights whom it strikes. */
     public static void frame(FxFrame f,Vec3d camera){
-        GoldRushFx.frame(f,camera);GoldPunchFx.frame(f,camera);GoldHealFx.frame(f,camera);
+        GoldRushFx.frame(f,camera);GoldPunchFx.frame(f,camera);GoldHealFx.frame(f,camera);GoldBeatdownFx.frame(f,camera);
         for(var s:FRAME){
             float on=s.on();
             if(s.body!=null&&on>0){

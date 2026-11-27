@@ -45,7 +45,7 @@ public abstract class BeatdownRenderMixin {
     /** No names over anyone's head while this client's camera is a beatdown's cutscene's (2.66.0: its close shots had the one struck's name fill the frame), as its HUD is hidden. */
     @Inject(method="render(Lnet/minecraft/entity/Entity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",at=@At("HEAD"),cancellable=true)
     private void botand$beatdownNames(Entity e,float yaw,float delta,MatrixStack matrices,VertexConsumerProvider vertices,int light,CallbackInfo ci){
-        if(StandBeatdown.cinematic()!=null||dev.sangwoo.celestialfall.client.xchara.XCharaClient.cinematic()!=null||dev.sangwoo.celestialfall.client.samurai.SamuraiClient.cinematic()!=null)ci.cancel();
+        if(StandBeatdown.cinematic()!=null||dev.sangwoo.celestialfall.client.stand.GoldBeatdown.cinematic()!=null||dev.sangwoo.celestialfall.client.xchara.XCharaClient.cinematic()!=null||dev.sangwoo.celestialfall.client.samurai.SamuraiClient.cinematic()!=null)ci.cancel();
         // (2.127.0) nor over a body drawn again as X Chara's pull's flat silhouette
         else if(dev.sangwoo.celestialfall.client.xchara.PullClient.silhouetting())ci.cancel();
     }

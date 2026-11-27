@@ -22,6 +22,8 @@ public final class CinematicHud {
         var c=new DrawContext(mc,mc.getBufferBuilders().getEntityVertexConsumers());
         // Star Platinum's beatdown (2.64.0): black bars sliding in from the top and the bottom as its cutscene begins
         if(dev.sangwoo.celestialfall.client.stand.StandBeatdown.cinematic()!=null)letterbox(mc,c,dev.sangwoo.celestialfall.client.stand.StandBeatdown.bars(delta));
+        // (2.150.0) Gold Experience's beatdown: the same bars
+        else if(dev.sangwoo.celestialfall.client.stand.GoldBeatdown.cinematic()!=null)letterbox(mc,c,dev.sangwoo.celestialfall.client.stand.GoldBeatdown.bars(delta));
         // (Kageno's: nothing over it but its hit count, below as every cutscene's)
         else if(StandClient.cinematic()!=null){}
         // (the samurai's G, 2.143.0: its own frames are drawn above)

@@ -53,6 +53,7 @@ public final class CinematicDirector {
         return MapClient.enabled() && mc.world!=null && mc.player!=null && (HeavenClient.cinematic()!=null
             || StandClient.cinematic()!=null || AtomicClient.cinematic()!=null || active()!=null
             || dev.sangwoo.celestialfall.client.stand.StandBeatdown.cinematic()!=null
+            || dev.sangwoo.celestialfall.client.stand.GoldBeatdown.cinematic()!=null
             || dev.sangwoo.celestialfall.client.isosang.IsosangCinema.active()
             || dev.sangwoo.celestialfall.client.xchara.XCharaClient.cinematic()!=null
             || dev.sangwoo.celestialfall.client.samurai.SamuraiClient.cinematic()!=null);
@@ -66,7 +67,7 @@ public final class CinematicDirector {
         // Star Platinum's beatdown (2.64.0): its shots cut in hard and hand back over a moment (StandBeatdown.camera)
         // (the user's 2.87.0 preview) a G shared with everyone in its arena comes first
         if(dev.sangwoo.celestialfall.client.isosang.GArenaClient.shared())return 1;
-        if(dev.sangwoo.celestialfall.client.stand.StandBeatdown.cinematic()!=null)return 1;
+        if(dev.sangwoo.celestialfall.client.stand.StandBeatdown.cinematic()!=null||dev.sangwoo.celestialfall.client.stand.GoldBeatdown.cinematic()!=null)return 1;
         // X Chara's G (2.112.0): its strange space's shots cut in and out hard (XCharaClient.camera)
         if(dev.sangwoo.celestialfall.client.xchara.XCharaClient.cinematic()!=null)return 1;
         // the samurai's G (2.143.0): its shots cut in and out hard (SamuraiClient.camera)
@@ -82,6 +83,7 @@ public final class CinematicDirector {
     public static double fov(double vanilla,float delta) {
         if(dev.sangwoo.celestialfall.client.isosang.GArenaClient.shared())return dev.sangwoo.celestialfall.client.isosang.IsosangCinema.fov(vanilla,delta);
         if(dev.sangwoo.celestialfall.client.stand.StandBeatdown.cinematic()!=null)return dev.sangwoo.celestialfall.client.stand.StandBeatdown.fov(vanilla,delta);
+        if(dev.sangwoo.celestialfall.client.stand.GoldBeatdown.cinematic()!=null)return dev.sangwoo.celestialfall.client.stand.GoldBeatdown.fov(vanilla,delta);
         if(dev.sangwoo.celestialfall.client.xchara.XCharaClient.cinematic()!=null)return dev.sangwoo.celestialfall.client.xchara.XCharaClient.fov(vanilla,delta);
         if(dev.sangwoo.celestialfall.client.samurai.SamuraiClient.cinematic()!=null)return dev.sangwoo.celestialfall.client.samurai.SamuraiClient.fov(vanilla,delta);
         if(dev.sangwoo.celestialfall.client.isosang.IsosangCinema.active())return dev.sangwoo.celestialfall.client.isosang.IsosangCinema.fov(vanilla,delta);
@@ -97,6 +99,7 @@ public final class CinematicDirector {
     public static float roll(float delta) {
         if(dev.sangwoo.celestialfall.client.isosang.GArenaClient.shared())return dev.sangwoo.celestialfall.client.isosang.IsosangCinema.roll(delta);
         if(dev.sangwoo.celestialfall.client.stand.StandBeatdown.cinematic()!=null)return dev.sangwoo.celestialfall.client.stand.StandBeatdown.roll(delta);
+        if(dev.sangwoo.celestialfall.client.stand.GoldBeatdown.cinematic()!=null)return dev.sangwoo.celestialfall.client.stand.GoldBeatdown.roll(delta);
         if(dev.sangwoo.celestialfall.client.xchara.XCharaClient.cinematic()!=null)return 0;
         if(dev.sangwoo.celestialfall.client.samurai.SamuraiClient.cinematic()!=null)return dev.sangwoo.celestialfall.client.samurai.SamuraiClient.roll(delta);
         if(dev.sangwoo.celestialfall.client.isosang.IsosangCinema.active())return dev.sangwoo.celestialfall.client.isosang.IsosangCinema.roll(delta);
@@ -111,6 +114,7 @@ public final class CinematicDirector {
     public static Pose pose(Vec3d vanilla,float yaw,float pitch,float delta) {
         if(dev.sangwoo.celestialfall.client.isosang.GArenaClient.shared())return dev.sangwoo.celestialfall.client.isosang.IsosangCinema.camera(vanilla,yaw,pitch,delta);
         if(dev.sangwoo.celestialfall.client.stand.StandBeatdown.cinematic()!=null)return dev.sangwoo.celestialfall.client.stand.StandBeatdown.camera(vanilla,yaw,pitch,delta);
+        if(dev.sangwoo.celestialfall.client.stand.GoldBeatdown.cinematic()!=null)return dev.sangwoo.celestialfall.client.stand.GoldBeatdown.camera(vanilla,yaw,pitch,delta);
         if(dev.sangwoo.celestialfall.client.xchara.XCharaClient.cinematic()!=null)return dev.sangwoo.celestialfall.client.xchara.XCharaClient.camera(vanilla,yaw,pitch,delta);
         if(dev.sangwoo.celestialfall.client.samurai.SamuraiClient.cinematic()!=null)return dev.sangwoo.celestialfall.client.samurai.SamuraiClient.camera(vanilla,yaw,pitch,delta);
         if(dev.sangwoo.celestialfall.client.isosang.IsosangCinema.active())return dev.sangwoo.celestialfall.client.isosang.IsosangCinema.camera(vanilla,yaw,pitch,delta);

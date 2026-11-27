@@ -131,6 +131,19 @@ public final class GoldPresence {
                     dispatcher.render(arm,b.at().x-cam.x,b.at().y-cam.y,b.at().z-cam.z,b.yaw(),delta,c.matrixStack(),c.consumers(),dispatcher.getLight(arm,delta));
                 }
             }
+            // (2.150.0) the beatdown's rush: the same afterimages of its arms, leaning as it leans
+            if(rush==null&&s.beat!=null){
+                for(int i=0;i<GoldRush.PHANTOMS.length;i++){
+                    if(s.arms[i]==null)s.arms[i]=new GoldPuppet(mc.world);
+                    var arm=s.arms[i];
+                    float a=GoldBeatdown.phantom(s.beat,i,delta,arm.look)*look.alpha;if(a<.02f)continue;
+                    arm.look.armsOnly=true;arm.look.alpha=a;arm.look.out=1;arm.look.scale=look.scale;arm.look.shadow=0;arm.look.glow=0;arm.look.lean=look.lean;arm.look.roll=0;
+                    arm.look.red=GoldRush.RED;arm.look.green=GoldRush.GREEN;arm.look.blue=GoldRush.BLUE;
+                    arm.age=s.puppet.age;
+                    var b=GoldRush.phantomBody(s.body,i);arm.place(b.at(),b.yaw());
+                    dispatcher.render(arm,b.at().x-cam.x,b.at().y-cam.y,b.at().z-cam.z,b.yaw(),delta,c.matrixStack(),c.consumers(),dispatcher.getLight(arm,delta));
+                }
+            }
             // coming out or going back: faint golden afterimages where it was a moment ago (the same pose: GeckoLib
             // poses a body once a frame)
             float main=look.out;ghost.set(look);
@@ -177,6 +190,8 @@ public final class GoldPresence {
         boolean front;
         /** Its user's healing if it shows this frame (2.149.0). */
         GoldHeal.Heal heal;
+        /** Its user's beatdown if it shows this frame (2.150.0). */
+        GoldBeatdown.Beat beat;
 final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceStance.NAMES.size()];
         /** Its look, place and facing on the last frame drawn and that frame's moment: how it stands while its user is stopped in a time stop. */
         final GoldExperienceLook held=new GoldExperienceLook();Vec3d heldAt;float heldYaw,heldDelta=1;
@@ -213,6 +228,7 @@ final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceSt
             if(pos==null)follow(p);
             look(ticks-1d+delta,look);
             look.armL=look.armR=1;look.showL=look.showR=1;look.armsOnly=false;
+            shape.lean=0;shape2.lean=0;
             // (2.147.0) the muda rush: its stances over the pose it has, and where it stands
             var rush=StandRush.of(owner);
             if(rush!=null&&(!rush.gold()||!out||!GoldRush.pose(rush,delta,look,shape,scratch)))rush=null;
@@ -229,18 +245,28 @@ final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceSt
                 if(front)shape.over(shape2);
                 front=true;
             }else heal=null;
+            // (2.150.0) the beatdown: its punch's and its rush's stances over those, and where it stands (in front of
+            // the one struck, then under them, leaning back)
+            beat=GoldBeatdown.of(owner);
+            if(beat!=null&&out&&GoldBeatdown.pose(beat,delta,look,front?shape2:shape,scratch)){
+                if(front)shape.over(shape2);
+                front=true;
+            }else beat=null;
             float calm=front?1-shape.engage:1;
             var v=prevVel.lerp(vel,delta);float y=MathHelper.lerpAngleDegrees(delta,prevYaw,yaw);
             double r=Math.toRadians(y),fx=-Math.sin(r),fz=Math.cos(r);
             double forward=v.x*fx+v.z*fz,side=-v.x*fz+v.z*fx;
             look.lean=MathHelper.clamp((float)forward*2.4f,-8,16)*look.out*calm;
             look.roll=MathHelper.clamp((float)side*-2f,-10,10)*look.out*calm;
+            if(front)look.lean+=shape.lean*shape.engage;
             // its aura burns a little brighter through the barrage
             if(rush!=null)look.glow=Math.max(look.glow,look.out*(1+.45f*GoldRush.on(rush,rush.age(delta))));
             // and brighter still as its fist's light gathers for the overdrive punch
             if(punching)look.glow=Math.max(look.glow,look.out*(1+.7f*GoldPunch.charge(punch,punch.age(delta))));
             // and a little brighter as it heals
             if(heal!=null)look.glow=Math.max(look.glow,look.out*(1+.4f*GoldHeal.glow(heal,heal.age(delta))));
+            // and through its beatdown
+            if(beat!=null)look.glow=Math.max(look.glow,look.out*(1+GoldBeatdown.glow(beat,beat.age(delta))));
             put(p,delta,look,front?shape:null);
             return rush;
         }

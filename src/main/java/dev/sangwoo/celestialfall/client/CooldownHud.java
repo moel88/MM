@@ -189,9 +189,11 @@ public final class CooldownHud {
         if(inhale!=inhaleSeen){show(INHALE,gold?HEALING:inhaleName(),inhale-time,gold?dev.sangwoo.celestialfall.stand.GoldExperienceRules.HEAL_COOLDOWN:dev.sangwoo.celestialfall.stand.StarPlatinumRules.INHALE_COOLDOWN,now);inhaleSeen=inhale;}
         // its beatdown (2.64.0): from when its blow is over, or its cutscene (the server's ready tick, told with its punches'
         // news; 2.73.0: from its ledger, which keeps it as they leave or die, once the server has told it)
-        long beatdown=!star?0:ledger?LongCooldownsClient.ready(LongCooldowns.Skill.BEATDOWN):dev.sangwoo.celestialfall.client.stand.StandAttack.beatdownReady(p.getUuid());
-        int beatdownLength=ledger?LongCooldownsClient.length(LongCooldowns.Skill.BEATDOWN):dev.sangwoo.celestialfall.stand.StarPlatinumRules.BEATDOWN_COOLDOWN;
-        if(beatdown!=beatdownSeen){show(BEATDOWN,beatdownName(),beatdown-time,beatdownLength,now);beatdownSeen=beatdown;}
+        // (2.150.0) the beatdown's box is Gold Experience's beatdown's too (its own name and length; not kept in the ledger)
+        if(!gold)dev.sangwoo.celestialfall.client.stand.GoldBeatdown.forget(p.getUuid());
+        long beatdown=gold?dev.sangwoo.celestialfall.client.stand.GoldBeatdown.ready(p.getUuid()):!star?0:ledger?LongCooldownsClient.ready(LongCooldowns.Skill.BEATDOWN):dev.sangwoo.celestialfall.client.stand.StandAttack.beatdownReady(p.getUuid());
+        int beatdownLength=gold?dev.sangwoo.celestialfall.stand.GoldExperienceRules.BEAT_COOLDOWN:ledger?LongCooldownsClient.length(LongCooldowns.Skill.BEATDOWN):dev.sangwoo.celestialfall.stand.StarPlatinumRules.BEATDOWN_COOLDOWN;
+        if(beatdown!=beatdownSeen){show(BEATDOWN,gold?SEVEN_PAGES:beatdownName(),beatdown-time,beatdownLength,now);beatdownSeen=beatdown;}
         // its time stop (2.67.0): from when time moves again, or its call was cut short (the server's ready tick, told as it
         // ends; 2.73.0: from its ledger once the server has told it, as the beatdown's)
         long timeStop=!star?0:ledger?LongCooldownsClient.ready(LongCooldowns.Skill.TIME_STOP):dev.sangwoo.celestialfall.client.stand.StandTimeStop.ready(p.getUuid());
@@ -290,7 +292,7 @@ public final class CooldownHud {
         // (2.112.0) X Chara's to theirs
         if(slot==XCHARA_G||slot==XCHARA||slot==XCHARA_E||slot==XCHARA_JAB||slot==XCHARA_CLONE||slot==XCHARA_WEAKEN||slot==XCHARA_PULL||slot==XCHARA_SLAM||slot==XCHARA_CUTTER||slot==XCHARA_SHOT||slot==XCHARA_KNIVES||slot==XCHARA_ERASE||slot==XCHARA_X||slot==XCHARA_Z)return "x_chara".equals(stand);
         // (2.147.0) the rush's box is Gold Experience's muda rush's too
-        if((slot==BARRAGE||slot==HEAVY||slot==INHALE)&&"gold_experience".equals(stand))return true;
+        if((slot==BARRAGE||slot==HEAVY||slot==INHALE||slot==BEATDOWN)&&"gold_experience".equals(stand))return true;
         return (slot<DASH?"kageno":"star_platinum").equals(stand);
     }
     /**
@@ -313,6 +315,8 @@ public final class CooldownHud {
     static final String OVERDRIVE="감각폭주";
     /** Gold Experience's healing in the list (2.149.0): the inhale's box, named for its own. */
     static final String HEALING="치유";
+    /** Gold Experience's beatdown in the list (2.150.0): the beatdown's box, named for its own (the user's word for it). */
+    static final String SEVEN_PAGES="7페이지 무다";
     /** Its heavy punch's name in the list (the user's word for it). */
     private static String heavyName(){return "강펀치";}
     /** Its Star Finger's name in the list (the user's word for it). */

@@ -81,12 +81,14 @@ public final class GoldRush {
          * right and turns on them.
          */
         float side,inward;
-        void set(Shape o){engage=o.engage;yaw=o.yaw;ahead=o.ahead;raise=o.raise;side=o.side;inward=o.inward;}
-        void clear(){engage=0;side=0;inward=0;}
+        /** (2.150.0) How far it leans as it stands there (degrees, forward: the beatdown's stand leans back under the one it drives up). */
+        float lean;
+        void set(Shape o){engage=o.engage;yaw=o.yaw;ahead=o.ahead;raise=o.raise;side=o.side;inward=o.inward;lean=o.lean;}
+        void clear(){engage=0;side=0;inward=0;lean=0;}
         /** This place gives way to {@code o}'s as far as {@code o} is engaged beside it (two skills never run together; one just after another, the later takes over from where the earlier had got to). */
         void over(Shape o){
             float sum=engage+o.engage,k=sum<1e-4f?1:o.engage/sum;
-            yaw=MathHelper.lerpAngleDegrees(k,yaw,o.yaw);ahead+=(o.ahead-ahead)*k;raise+=(o.raise-raise)*k;side+=(o.side-side)*k;inward+=(o.inward-inward)*k;
+            yaw=MathHelper.lerpAngleDegrees(k,yaw,o.yaw);ahead+=(o.ahead-ahead)*k;raise+=(o.raise-raise)*k;side+=(o.side-side)*k;inward+=(o.inward-inward)*k;lean+=(o.lean-lean)*k;
             engage=Math.max(engage,o.engage);
         }
     }
