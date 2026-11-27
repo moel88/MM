@@ -699,6 +699,15 @@
       }
     ]
   },
+  "gold_experience_beatdown": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_experience_beatdown",
+        "stream": true,
+        "preload": true
+      }
+    ]
+  },
   "star_platinum_heavy": {
     "sounds": [
       {

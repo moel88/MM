@@ -48,7 +48,7 @@ public final class CutsceneGlow {
     /** The slow walk's speed modifier (the client keeps its lens still while it is on, StandClient.skillSlowed). */
     public static final UUID SLOW_ID=UUID.fromString("c5e1f7a2-3b4d-4e8f-9a61-7d2b0c9e4f13");
     /** The skills that glow first. */
-    public static final int KAGENO_H=0,BEATDOWN=1,ISOSANG_G=2;
+    public static final int KAGENO_H=0,BEATDOWN=1,ISOSANG_G=2,GOLD_BEATDOWN=3;
     /** What the clients are told: a glow begins, is cut short, or is over and its skill cast. */
     public static final int BEGIN=0,CUT=1,CAST=2;
     /** How far its news goes (as the skills' own). */
@@ -125,6 +125,7 @@ public final class CutsceneGlow {
             case KAGENO_H->dev.sangwoo.celestialfall.progression.ProgressManager.canUseKageno(p);
             case BEATDOWN->dev.sangwoo.celestialfall.stand.StarPlatinumAttack.punches(p);
             case ISOSANG_G->dev.sangwoo.celestialfall.isosang.IsosangAttack.attacks(p);
+            case GOLD_BEATDOWN->dev.sangwoo.celestialfall.stand.GoldExperienceOverdrive.punches(p);
             default->false;
         };
     }
@@ -134,6 +135,7 @@ public final class CutsceneGlow {
             case KAGENO_H->dev.sangwoo.celestialfall.stand.KagenoManager.glowed(p);
             case BEATDOWN->dev.sangwoo.celestialfall.stand.StarPlatinumAttack.beatdownGlowed(p);
             case ISOSANG_G->dev.sangwoo.celestialfall.isosang.IsosangAttack.ultimateGlowed(p);
+            case GOLD_BEATDOWN->dev.sangwoo.celestialfall.stand.GoldExperienceBeatdown.glowed(p);
             default->false;
         };
     }
@@ -143,6 +145,7 @@ public final class CutsceneGlow {
             case KAGENO_H->dev.sangwoo.celestialfall.stand.KagenoManager.glowCut(p);
             case BEATDOWN->dev.sangwoo.celestialfall.stand.StarPlatinumAttack.beatdownGlowCut(p);
             case ISOSANG_G->dev.sangwoo.celestialfall.isosang.IsosangAttack.ultimateGlowCut(p);
+            case GOLD_BEATDOWN->dev.sangwoo.celestialfall.stand.GoldExperienceBeatdown.glowCut(p);
             default->{}
         }
     }

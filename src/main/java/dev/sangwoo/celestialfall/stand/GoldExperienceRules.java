@@ -108,4 +108,53 @@ public final class GoldExperienceRules {
     public static boolean mendLane(double forward,double side,double height,double halfWidth){return overLane(forward,side,height,halfWidth);}
     /** The tick Y is ready again after either ended (over, let go or stopped short) at {@code end}. */
     public static long healReady(long end){return end+HEAL_COOLDOWN;}
+
+    // ---- G, the beatdown: the seven-page muda (2.150.0, user request: "이번에는 G스킬 비트다운이고 7페이지 무다러쉬야
+    // 효과음은 영상을 보면 되고 비트다운도 영상을 참고해서 만들고 자료 검색도 해보면서 만들어", with the scene's
+    // video, 30.25 s; asked and answered: "눈 클로즈업 빼고 영상 그대로" (the video as it is but for its first shot, the
+    // eyes: 0.633 s), it begins as Star Platinum's beatdown does (G, the glow, an opening punch that must land on one
+    // with no guard up; a guard up breaks and nothing more comes of it), "스태플래티나 보다는 약하게", "3분"). The
+    // opening punch lands BEAT_CUT ticks in and the cutscene begins there, on the video's sound from where its second
+    // shot begins (tools/stand/cut_gold_beatdown.py): the recording's second tau is BEAT_CUT + 20 tau ticks in, and
+    // every moment below is one of the video's. It is the rush all the way: "muda muda" from its first moment (the
+    // video's shots: fists and the face struck, from behind the one struck, close on them, close on the stand), the
+    // "WRYYY" as the stand drives them up into the air from under them (BEAT_WRY to BEAT_WRY_END), the rush again high
+    // up, seen from over them; then it draws its fist far back (BEAT_WIND) and on the last "muda!" one blow
+    // (BEAT_FINAL) sends them flying far off, to come down at BEAT_LAND.
+
+    /** Ticks in: the opening punch lands (the cutscene begins there, and its sound), and how long the punch is if no cutscene comes of it. */
+    public static final int BEAT_CUT=16,BEAT_OPENER_LENGTH=30,BEAT_SOUND=BEAT_CUT;
+    /** The tick of the recording's second {@code tau}. */
+    public static int beatTick(double tau){return BEAT_CUT+(int)Math.round(tau*20);}
+    /** The rush's blows: one every BEAT_RUSH_EVERY ticks from BEAT_RUSH_FIRST, BEAT_RUSH_HITS in all, until the stand draws back for its last. */
+    public static final int BEAT_RUSH_FIRST=BEAT_CUT+2,BEAT_RUSH_EVERY=2,BEAT_RUSH_HITS=276,BEAT_RUSH_LAST=BEAT_RUSH_FIRST+BEAT_RUSH_EVERY*(BEAT_RUSH_HITS-1);
+    /** "WRYYY" (the video's 15.28 to 20.2 s): the stand drives them up into the air. */
+    public static final int BEAT_WRY=beatTick(14.65),BEAT_WRY_END=beatTick(19.55);
+    /** It draws back for the last blow (the video's 28.28 s), the blow lands (29.58 s), they come down, it is over. */
+    public static final int BEAT_WIND=beatTick(27.65),BEAT_FINAL=beatTick(28.95),BEAT_LAND=BEAT_FINAL+26,BEAT_END=BEAT_LAND+16;
+    /** Its damage at full health, more the lower it is (beatdownDamage: three quarters of Star Platinum's 60, as its rush is of Star Platinum's). */
+    public static final float BEAT_DAMAGE=45;
+    /** The rush's share of it between its blows, and the last blow's. */
+    public static final float BEAT_RUSH_SHARE=.65f,BEAT_FINAL_SHARE=1-BEAT_RUSH_SHARE;
+    /** Ticks from its end (its punch's, or its cutscene's) until it is ready again: three minutes. */
+    public static final int BEAT_COOLDOWN=3600;
+    /** Where the one struck is held (Star Platinum's beatdown's: on the blow's line, knocked back a little, room for the stand between). */
+    public static final double BEAT_BACK=.4,BEAT_HOLD_MIN=2.8,BEAT_HOLD_MAX=4.4;
+    /**
+     * How high they are held through the first of the rush (blocks, as there is room), how far its blows drive them on
+     * along the line, how high the "WRYYY" drives them (over where they stood), and how far the last blow sends them.
+     */
+    public static final double BEAT_LIFT=1.5,BEAT_DRIFT=1.6,BEAT_HIGH=6,BEAT_FLY=20;
+    public static float beatdownDamage(float health,float max){
+        float lost=max<=0?0:1-Math.max(0,Math.min(1,health/max));
+        return BEAT_DAMAGE*(1+lost);
+    }
+    /** The share of the beatdown's damage the blow {@code age} ticks into it deals (0 if none lands then). */
+    public static float beatShare(long age){
+        if(age>=BEAT_RUSH_FIRST&&age<=BEAT_RUSH_LAST&&(age-BEAT_RUSH_FIRST)%BEAT_RUSH_EVERY==0)return BEAT_RUSH_SHARE/BEAT_RUSH_HITS;
+        return age==BEAT_FINAL?BEAT_FINAL_SHARE:0;
+    }
+    public static double beatHold(double ahead){return Math.max(BEAT_HOLD_MIN,Math.min(BEAT_HOLD_MAX,ahead+BEAT_BACK));}
+    /** The tick G is ready again after it ended (its punch over, stopped short, or its cutscene) at {@code end}. */
+    public static long beatReady(long end){return end+BEAT_COOLDOWN;}
 }

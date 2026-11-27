@@ -73,12 +73,14 @@ public final class StarPlatinumBeatdown {
         ServerLifecycleEvents.SERVER_STOPPED.register(server->{BY_USER.clear();BY_VICTIM.clear();});
     }
     /** Whether this one is in a beatdown's cutscene now (its user, or the one struck). */
-    public static boolean involved(LivingEntity e){return e!=null&&!e.getWorld().isClient&&(BY_USER.containsKey(e.getUuid())||BY_VICTIM.containsKey(e.getUuid()));}
+    public static boolean involved(LivingEntity e){return e!=null&&!e.getWorld().isClient&&(BY_USER.containsKey(e.getUuid())||BY_VICTIM.containsKey(e.getUuid())||GoldExperienceBeatdown.involved(e));}
+    /** Whether this one is in Star Platinum's own beatdown's cutscene (not Gold Experience's, 2.150.0, which {@link #involved} counts too: everything that asks whether a beatdown has someone means either). */
+    private static boolean mine(LivingEntity e){return e!=null&&!e.getWorld().isClient&&(BY_USER.containsKey(e.getUuid())||BY_VICTIM.containsKey(e.getUuid()));}
     /** Whether this player is a beatdown's user, its cutscene going on now. */
     public static boolean casting(LivingEntity e){return e!=null&&!e.getWorld().isClient&&BY_USER.containsKey(e.getUuid());}
     /** Whether harm from {@code source} is kept from {@code e}: it is in a cutscene and this is not its own blow (what bypasses invulnerability, /kill or the void, still reaches them). */
     public static boolean shielded(LivingEntity e,DamageSource source){
-        return involved(e)&&BLOW.get()!=e&&!source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY);
+        return mine(e)&&BLOW.get()!=e&&!source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)||GoldExperienceBeatdown.shielded(e,source);
     }
 
     /**

@@ -122,6 +122,8 @@ public final class HitStun {
             dev.sangwoo.celestialfall.stand.GoldExperienceOverdrive.struck(p);
             // (2.149.0) and its healing: their own stops, the hand not yet laid on is stopped short
             dev.sangwoo.celestialfall.stand.GoldExperienceHeal.struck(p);
+            // (2.150.0) and its beatdown's opening punch, before it lands
+            dev.sangwoo.celestialfall.stand.GoldExperienceBeatdown.struck(p);
             // (2.119.0) and their E, before its press lands
             dev.sangwoo.celestialfall.xchara.XCharaHeal.struck(p);}
     }

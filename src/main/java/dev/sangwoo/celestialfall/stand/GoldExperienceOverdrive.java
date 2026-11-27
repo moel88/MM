@@ -90,7 +90,7 @@ public final class GoldExperienceOverdrive {
 
     /** R: the punch starts now if it may. Returns whether it did. */
     public static boolean request(ServerPlayerEntity p){
-        if(!punches(p)||p.isSleeping()||p.hasVehicle()||CombatManager.busy(p)||CombatManager.cinematic(p)||GoldExperienceHeal.active(p))return false;
+        if(!punches(p)||p.isSleeping()||p.hasVehicle()||CombatManager.busy(p)||CombatManager.cinematic(p)||GoldExperienceHeal.active(p)||GoldExperienceBeatdown.opening(p))return false;
         var s=state(p);long now=p.getWorld().getTime();boolean free=NoCooldownState.enabled(p);
         if(s.flying(now)||now<s.ready&&!free)return false;
         s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.landed=false;

@@ -101,7 +101,7 @@ public final class GoldExperienceHeal {
 
     private static boolean may(ServerPlayerEntity p,State s,long now){
         if(!heals(p)||p.isSleeping()||p.hasVehicle()||CombatManager.busy(p)||CombatManager.cinematic(p))return false;
-        if(s.on!=0||GoldExperienceOverdrive.punching(p)||StarPlatinumRush.rushing(p))return false;
+        if(s.on!=0||GoldExperienceOverdrive.punching(p)||StarPlatinumRush.rushing(p)||GoldExperienceBeatdown.opening(p))return false;
         return now>=s.ready||NoCooldownState.enabled(p);
     }
     /** Y tapped: the hand goes out to the first one in its way, if there is one. Returns whether it did. */
