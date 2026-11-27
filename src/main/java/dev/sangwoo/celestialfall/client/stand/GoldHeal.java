@@ -50,6 +50,8 @@ public final class GoldHeal {
     static final float AHEAD=1.05f,NEAR=.75f,FAR=3.0f,PRESS=.2f;
     /** Held: where round its user it stands (degrees to the right of the way they face), and how far from their middle its knuckles stop: well inside their body. */
     static final float SIDE=52,DEPTH=.1f;
+    /** Held: how much lower still than through the rush it floats (blocks): its fist goes into its user's chest, not their face (the first take in the game had it at a player's neck). */
+    static final float LOWER=.17f;
     /** How big its arm is through either. */
     static final float ARMS=1.08f;
     /** Held: how far further in the fist presses with each healing (blocks), and how long a press takes to ease off (seconds). */
@@ -217,7 +219,7 @@ public final class GoldHeal {
         float size=arms(h,t);
         look.armL=look.armL*(1-in)+size*in;look.armR=look.armR*(1-in)+size*in;
         shape.engage=StandPunch.burst(t/StandRush.RISE)*(1-smooth((t-end-LINGER)/RETURN));shape.raise=GoldRush.RAISE;
-        if(h.self){shape.yaw=facing;shape.ahead=selfPlace()-press(h,t);shape.side=SIDE;shape.inward=1;}
+        if(h.self){shape.yaw=facing;shape.ahead=selfPlace()-press(h,t);shape.side=SIDE;shape.inward=1;shape.raise=GoldRush.RAISE-LOWER;}
         else{shape.yaw=h.yaw;shape.ahead=place(h);shape.side=0;shape.inward=0;}
         return true;
     }
