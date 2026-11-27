@@ -212,7 +212,7 @@ public final class StarPlatinumTimeStop {
     private static void stop(Stop s,long now){
         s.stopped=true;s.center=s.user.getPos();
         double r2=TS_RANGE*TS_RANGE;
-        for(var e:s.world.getEntitiesByClass(LivingEntity.class,new Box(s.center,s.center).expand(TS_RANGE),e->e!=s.user&&e.isAlive()&&!e.isSpectator())){
+        for(var e:s.world.getEntitiesByClass(LivingEntity.class,new Box(s.center,s.center).expand(TS_RANGE),e->e!=s.user&&e.isAlive()&&!e.isSpectator()&&!(e instanceof GoldTreeEntity))){
             if(e.squaredDistanceTo(s.center)>r2||passedBy(e))continue;
             // (2.75.0) one who resists it moves on for their two seconds, untouched; it stops them as those run out (late)
             if(resists(e)){s.resisting.put(e,timeStopResistedUntil(now));BY_RESISTING.put(e.getUuid(),s);dev.sangwoo.celestialfall.boss.Bosses.provoke(e,s.user);continue;}

@@ -169,6 +169,8 @@ public final class GoldExperienceHeal {
             if(!mendLane(ahead,d.dotProduct(right),d.y,half)||!p.canSee(e))continue;
             // (one who has taken themselves off the map's rules, /botand vanilla, is not its to touch)
             if(e instanceof PlayerEntity other&&!MapGate.enabled(other))continue;
+            // (2.152.0) nor a tree (GoldTreeEntity): there is nothing in it to heal
+            if(e instanceof GoldTreeEntity)continue;
             if(ahead-half<best){best=ahead-half;first=e;}
         }
         return first;

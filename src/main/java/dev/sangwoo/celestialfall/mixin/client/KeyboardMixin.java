@@ -26,6 +26,8 @@ public abstract class KeyboardMixin {
         if(dev.sangwoo.celestialfall.client.stand.StandAttack.beatdownKey(window,key,action,modifiers)){ci.cancel();return;}
         // (2.150.0) Gold Experience's G, its beatdown
         if(dev.sangwoo.celestialfall.client.stand.GoldBeatdown.key(window,key,action,modifiers)){ci.cancel();return;}
+        // (2.152.0) Gold Experience's H, the tree of life
+        if(dev.sangwoo.celestialfall.client.stand.GoldTree.key(window,key,action,modifiers)){ci.cancel();return;}
         if(dev.sangwoo.celestialfall.client.stand.StandInhale.key(window,key,action,modifiers)){ci.cancel();return;}
         if(dev.sangwoo.celestialfall.client.stand.StandTimeStop.key(window,key,action,modifiers)){ci.cancel();return;}
         // (2.80.0) Lee So-sang's E (their inventory on I)

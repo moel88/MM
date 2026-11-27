@@ -27,6 +27,6 @@ public abstract class EraseCarryMixin {
     }
     @Inject(method="handleFallDamage",at=@At("HEAD"),cancellable=true)
     private void botand$eraseFall(float fallDistance,float damageMultiplier,DamageSource source,CallbackInfoReturnable<Boolean> ci){
-        if(XCharaErase.spared((LivingEntity)(Object)this))ci.setReturnValue(false);
+        if(XCharaErase.spared((LivingEntity)(Object)this)||dev.sangwoo.celestialfall.stand.GoldExperienceTree.spared((LivingEntity)(Object)this))ci.setReturnValue(false);
     }
 }

@@ -270,7 +270,7 @@ public final class GoldExperienceLife {
      */
     public static boolean reflects(LivingEntity victim,DamageSource source,float amount){
         if(STATES.isEmpty()||victim==null||victim.getWorld().isClient||!(victim instanceof ServerPlayerEntity p)||!frogOn(p))return false;
-        if(source==null||!Float.isFinite(amount)||amount<=0||source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)||source.isOf(FROG_DAMAGE)||source.isOf(FLY_DAMAGE))return false;
+        if(source==null||!Float.isFinite(amount)||amount<=0||source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)||source.isOf(FROG_DAMAGE)||source.isOf(FLY_DAMAGE)||source.isOf(GoldExperienceTree.TREE_HARM))return false;
         if(!(source.getAttacker() instanceof LivingEntity striker)||striker==p||!striker.isAlive())return false;
         REFLECTS.add(new Reflect(p,striker,reflected(amount)));
         return true;

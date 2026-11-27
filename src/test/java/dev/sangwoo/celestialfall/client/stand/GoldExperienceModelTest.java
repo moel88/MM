@@ -123,6 +123,18 @@ class GoldExperienceModelTest {
         for(int frame=0;frame<=60*12;frame++){float[] p=new float[6];root.add(p,frame/60.0,1);lo=Math.min(lo,p[4]);hi=Math.max(hi,p[4]);float[] s=new float[6];root.add(s,frame/60.0,0);for(float v:s)assertEquals(0,v);}
         assertEquals(2*GoldExperienceMotion.BOB,hi-lo,.15);
     }
+    /**
+     * (2.152.0) H's stance: down on its knee it lays its open palm on the ground ahead of it (the user's "스탠드가 땅을
+     * 만지고"); its knee and its planted foot are on the ground too, and nothing of it sinks into it.
+     */
+    @Test void downOnItsKneeItsPalmItsKneeAndItsFootAreOnTheGround()throws Exception{
+        var g=json("/assets/celestialfall/stands/gold_experience_fists.json").getAsJsonObject("ground");
+        for(var part:new String[]{"palm","knee","sole"}){double y=g.getAsJsonArray(part).get(1).getAsDouble();assertTrue(y>-.3&&y<.4,part+" at "+y+" units off the ground");}
+        assertTrue(g.getAsJsonArray("lowest").get(1).getAsDouble()>-.3,"nothing of it sinks into the ground");
+        assertTrue(g.getAsJsonArray("palm").get(2).getAsDouble()<-8,"its palm ahead of it");
+        // the right fist's point (where its light comes from: GoldTree) is on the palm, on the ground
+        assertTrue(GoldRush.FISTS[GoldExperienceStance.GROUND][1][2]<.1f,"the palm's point "+GoldRush.FISTS[GoldExperienceStance.GROUND][1][2]+" blocks up");
+    }
     @Test void aChangeOfStanceTurnsEveryBoneTheShortWayWithoutAJump()throws Exception{
         var poses=new GoldExperiencePoses();
         // (the overdrive punch's two stances are gone into and out of by GoldPunch alone, from the guard and back: GoldPunchTest)

@@ -209,4 +209,79 @@ public final class GoldExperienceRules {
     public static boolean swatWay(double ahead,double side,double up,double reach){
         return ahead>=.1&&ahead<=reach+SWAT_PAST&&Math.abs(side)<=SWAT_SIDE&&up>=-.6&&up<=2.6;
     }
+
+    // ---- H, the tree of life (2.152.0, user request: "이번에는 H스킬 나무를 소환해서 광역으로 주변에 데미지를 주고 높게
+    // 점프하는 스킬 ... 이것도 자료검색해서 만들어봐", then "그리고 적들이 나무를 때리면 그 데미지가 적에게 가게". Searched:
+    // in the source (Golden Wind's first episode, the manga's third chapter) Gold Experience turns the ground under Giorno
+    // into a tree that lifts him away, and Koichi's blow on the tree comes back on him; Roblox's A Universal Time has the
+    // stand bring a tree up under its user that strikes those round it and carries them up. Asked and answered: the stand
+    // touches the ground and the tree grows out of it ("내리치지 말고 스탠드가 땅을 만지고 나무가 자라나게 원작 같은 굵은
+    // 나무로"), 30 within 6 blocks, a cooldown of 45 s; whom it strikes is pushed out and a guard takes it; its user leaps
+    // about 8 blocks.)
+    // With the stand out, H on the ground: the stand kneels at its user's side and lays its palm on the ground (TREE_TOUCH);
+    // at TREE_BURST a thick tree bursts up out of the ground under its user, strikes everyone round it (TREE_DAMAGE within
+    // TREE_RADIUS, pushed out from the trunk; a guard takes it) and flings its user up (TREE_RISE blocks, TREE_AHEAD on the
+    // way they faced; no harm from that fall). It stands until TREE_WITHER, every blow on it coming back, all of it, on
+    // whoever struck it, and is back in the ground by TREE_END; the cooldown runs from then (2.44.0's rule).
+
+    /** H: ticks in the stand's palm is on the ground, the tree bursts up (its blow, its user's leap), it is grown, it begins to wither, and it is gone. */
+    public static final int TREE_TOUCH=7,TREE_BURST=10,TREE_GROWN=22,TREE_WITHER=130,TREE_END=146;
+    /** Its blow on everyone round it. */
+    public static final float TREE_DAMAGE=30;
+    /** How far round the trunk it strikes (blocks, to the near side of a body) and how far below and above its foot. */
+    public static final double TREE_RADIUS=6,TREE_BELOW=1.5,TREE_ABOVE=3.5;
+    /** How hard whom it strikes is pushed out (blocks a tick: out from the trunk, and up). */
+    public static final double TREE_PUSH=.62,TREE_PUSH_UP=.42;
+    /** Its user's leap: how high over where they stood (blocks, the top of the arc), and how far on the way they faced by the time they are down again. */
+    public static final double TREE_RISE=8,TREE_AHEAD=3;
+    /** Ticks from the tree's end until H is ready again (45 s). */
+    public static final int TREE_COOLDOWN=900;
+    /** The longest its user is spared the harm of the leap's fall (ticks), should they never come down. */
+    public static final int TREE_SPARED=200;
+    /** The game's own fall of a body in the air: what it loses of its speed upward and keeps of it, and keeps of its speed along the ground, every tick. */
+    public static final double GRAVITY=.08,DRAG=.98,AIR=.91;
+    /** The tick H is ready again after its tree ended at {@code end}. */
+    public static long treeReady(long end){return end+TREE_COOLDOWN;}
+    /** Whether a body {@code half} wide, {@code dx}, {@code dz} from the trunk and {@code dy} over its foot, is in the tree's blow. */
+    public static boolean treeArea(double dx,double dy,double dz,double half){return Math.hypot(dx,dz)-half<=TREE_RADIUS&&dy>=-TREE_BELOW&&dy<=TREE_ABOVE;}
+    /** The way out from the trunk (level, of length 1) for a body {@code dx}, {@code dz} from it; one right on it goes the way {@code yaw} faces. */
+    public static double[] treeOut(double dx,double dz,float yaw){
+        double d=Math.hypot(dx,dz);
+        if(d<1e-3){double r=Math.toRadians(yaw);return new double[]{-Math.sin(r),Math.cos(r)};}
+        return new double[]{dx/d,dz/d};
+    }
+    /** How high a body rising at {@code v} blocks a tick goes, the game's way: it moves by its speed, then loses GRAVITY and keeps DRAG of it, every tick. */
+    public static double apex(double v){
+        double y=0,top=0;
+        for(int k=0;k<400&&v>0;k++){y+=v;top=Math.max(top,y);v=(v-GRAVITY)*DRAG;}
+        return top;
+    }
+    /** The speed upward (blocks a tick) a body leaving the ground needs to rise {@code rise} blocks. */
+    public static double leapSpeed(double rise){
+        double lo=0,hi=6;
+        for(int k=0;k<60;k++){double m=(lo+hi)/2;if(apex(m)<rise)lo=m;else hi=m;}
+        return hi;
+    }
+    /** How many ticks a body that left the ground rising at {@code v} is in the air before it is back at that height. */
+    public static int airborne(double v){
+        double y=0;int k=0;
+        do{y+=v;v=(v-GRAVITY)*DRAG;k++;}while(y>0&&k<400);
+        return k;
+    }
+    /**
+     * How much of its speed along the ground a body keeps the tick it leaves the ground: it is still on it as it moves that
+     * tick, so the ground's grip takes it (a common block's slipperiness .6, times AIR) and the air's after.
+     */
+    public static final double GRIP=.6*AIR;
+    /**
+     * The speed along the ground (blocks a tick) that carries a body leaving the ground {@code ahead} blocks in {@code ticks}
+     * ticks: the first tick on the ground's grip (GRIP), then in the air (AIR of it kept a tick). (The first filming of
+     * 2.152.0 took the air's from the first tick and its user came down two blocks on, not three.)
+     */
+    public static double aheadSpeed(double ahead,int ticks){
+        double sum=0,f=1;for(int k=0;k<ticks;k++){sum+=f;f*=k==0?GRIP:AIR;}
+        return sum<=0?0:ahead/sum;
+    }
+    /** Its user's leap as {along the way they faced, up} (blocks a tick), the moment the tree flings them. */
+    public static double[] treeLeap(){double up=leapSpeed(TREE_RISE);return new double[]{aheadSpeed(TREE_AHEAD,airborne(up)),up};}
 }

@@ -173,6 +173,8 @@ public final class KagenoManager {
         if(skill==R||skill==H){
             double radius=skill==R?STOP_RADIUS:HIGHEST_RADIUS;
             for(var e:near(c.world,c.origin,radius,p,false)){
+                // (2.152.0) Gold Experience's tree is not one to hold (its blows on it come back all the same)
+                if(e instanceof GoldTreeEntity)continue;
                 c.targets.put(e,e.getPos());CombatManager.interrupt(e);if(e instanceof PlayerEntity target)cancelCaster(target);
             }
         }

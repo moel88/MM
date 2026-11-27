@@ -50,6 +50,8 @@ public final class GoldPresence {
     public static float[] state(UUID owner){var s=ALL.get(owner);return s==null?null:new float[]{(ticks-1-s.since)/20f,s.out?1:0};}
     /** Where this player's stand was drawn this frame (null if it was not): for its rush's light (GoldRushFx). */
     static StandPresence.Body body(UUID owner){var s=ALL.get(owner);return s==null||s.bodyFrame!=frames?null:s.body;}
+    /** For the capture tools: where this player's stand was last drawn (null if it was not), whatever the frame. */
+    public static StandPresence.Body lastDrawn(UUID owner){var s=ALL.get(owner);return s==null?null:s.body;}
     /** For the capture tools: where this player's stand was last drawn from them (blocks ahead of them and to their right, the way they face) and how many of its rush's arms' bodies it has. */
     public static String describe(PlayerEntity p,float delta){
         var s=ALL.get(p.getUuid());if(s==null||s.body==null)return "no stand drawn";
@@ -194,6 +196,8 @@ public final class GoldPresence {
         GoldBeatdown.Beat beat;
         /** Its user's giving life if it shows this frame (2.151.0). */
         GoldLife.Life life;
+        /** Its user's tree of life if it shows this frame (2.152.0). */
+        GoldTree.Tree tree;
 final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceStance.NAMES.size()];
         /** Its look, place and facing on the last frame drawn and that frame's moment: how it stands while its user is stopped in a time stop. */
         final GoldExperienceLook held=new GoldExperienceLook();Vec3d heldAt;float heldYaw,heldDelta=1;
@@ -261,6 +265,13 @@ final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceSt
                 if(front)shape.over(shape2);
                 front=true;
             }else life=null;
+            // (2.152.0) the tree of life: down on its knee at its user's front right, its palm on the ground, pinned where it
+            // touched it while the tree bursts up and flings them
+            tree=GoldTree.of(owner);
+            if(tree!=null&&out&&GoldTree.pose(tree,delta,look,front?shape2:shape,scratch)){
+                if(front)shape.over(shape2);
+                front=true;
+            }else tree=null;
             float calm=front?1-shape.engage:1;
             var v=prevVel.lerp(vel,delta);float y=MathHelper.lerpAngleDegrees(delta,prevYaw,yaw);
             double r=Math.toRadians(y),fx=-Math.sin(r),fz=Math.cos(r);
@@ -278,6 +289,8 @@ final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceSt
             if(beat!=null)look.glow=Math.max(look.glow,look.out*(1+GoldBeatdown.glow(beat,beat.age(delta))));
             // and as it gives life
             if(life!=null)look.glow=Math.max(look.glow,look.out*(1+.5f*GoldLife.glow(life,life.age(delta))));
+            // and as life goes into the ground for the tree
+            if(tree!=null)look.glow=Math.max(look.glow,look.out*(1+.7f*GoldTree.glow(tree,tree.age(delta))));
             put(p,delta,look,front?shape:null);
             return rush;
         }
@@ -289,6 +302,8 @@ final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceSt
          */
         void put(PlayerEntity p,float delta,GoldExperienceLook look,GoldRush.Shape shape){
             var home=p.getLerpedPos(delta);var at=prevPos.lerp(pos,delta);float y=MathHelper.lerpAngleDegrees(delta,prevYaw,yaw);
+            // (2.152.0) kneeling where it touched the ground for the tree, while its user is flung up off it
+            if(shape!=null&&shape.engage>0&&shape.pin>0)home=home.lerp(new Vec3d(shape.gx,shape.gy,shape.gz),Math.min(1,shape.pin)*Math.min(1,shape.engage*4));
             if(shape!=null&&shape.engage>0){
                 float e=shape.engage;
                 double r=Math.toRadians(shape.yaw),fx=-Math.sin(r),fz=Math.cos(r);

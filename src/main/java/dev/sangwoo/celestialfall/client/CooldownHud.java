@@ -199,9 +199,12 @@ public final class CooldownHud {
         if(beatdown!=beatdownSeen){show(BEATDOWN,gold?SEVEN_PAGES:beatdownName(),beatdown-time,beatdownLength,now);beatdownSeen=beatdown;}
         // its time stop (2.67.0): from when time moves again, or its call was cut short (the server's ready tick, told as it
         // ends; 2.73.0: from its ledger once the server has told it, as the beatdown's)
-        long timeStop=!star?0:ledger?LongCooldownsClient.ready(LongCooldowns.Skill.TIME_STOP):dev.sangwoo.celestialfall.client.stand.StandTimeStop.ready(p.getUuid());
-        int timeStopLength=ledger?LongCooldownsClient.length(LongCooldowns.Skill.TIME_STOP):dev.sangwoo.celestialfall.stand.StarPlatinumRules.TS_COOLDOWN;
-        if(timeStop!=timeStopSeen){show(TIME_STOP,timeStopName(),timeStop-time,timeStopLength,now);timeStopSeen=timeStop;}
+        // (2.152.0) the time stop's box is Gold Experience's tree of life's (H) too: from when the tree is back in the ground,
+        // or it was stopped short (its own name and length; not kept in the ledger)
+        if(!gold)dev.sangwoo.celestialfall.client.stand.GoldTree.forget(p.getUuid());
+        long timeStop=gold?dev.sangwoo.celestialfall.client.stand.GoldTree.ready(p.getUuid()):!star?0:ledger?LongCooldownsClient.ready(LongCooldowns.Skill.TIME_STOP):dev.sangwoo.celestialfall.client.stand.StandTimeStop.ready(p.getUuid());
+        int timeStopLength=gold?dev.sangwoo.celestialfall.stand.GoldExperienceRules.TREE_COOLDOWN:ledger?LongCooldownsClient.length(LongCooldowns.Skill.TIME_STOP):dev.sangwoo.celestialfall.stand.StarPlatinumRules.TS_COOLDOWN;
+        if(timeStop!=timeStopSeen){show(TIME_STOP,gold?TREE:timeStopName(),timeStop-time,timeStopLength,now);timeStopSeen=timeStop;}
         // Lee So-sang's attack (2.77.0): only its rest after a combo, as the others' (the server's ready tick, told with each hit's news)
         boolean isosang=shows(ISOSANG,stand);if(!isosang)dev.sangwoo.celestialfall.client.isosang.IsosangClient.forget(p.getUuid());
         long sword=isosang?dev.sangwoo.celestialfall.client.isosang.IsosangClient.ready(p.getUuid()):0;
@@ -295,7 +298,7 @@ public final class CooldownHud {
         // (2.112.0) X Chara's to theirs
         if(slot==XCHARA_G||slot==XCHARA||slot==XCHARA_E||slot==XCHARA_JAB||slot==XCHARA_CLONE||slot==XCHARA_WEAKEN||slot==XCHARA_PULL||slot==XCHARA_SLAM||slot==XCHARA_CUTTER||slot==XCHARA_SHOT||slot==XCHARA_KNIVES||slot==XCHARA_ERASE||slot==XCHARA_X||slot==XCHARA_Z)return "x_chara".equals(stand);
         // (2.147.0) the rush's box is Gold Experience's muda rush's too
-        if((slot==BARRAGE||slot==HEAVY||slot==INHALE||slot==BEATDOWN||slot==FINGER)&&"gold_experience".equals(stand))return true;
+        if((slot==BARRAGE||slot==HEAVY||slot==INHALE||slot==BEATDOWN||slot==FINGER||slot==TIME_STOP)&&"gold_experience".equals(stand))return true;
         return (slot<DASH?"kageno":"star_platinum").equals(stand);
     }
     /**
@@ -322,6 +325,8 @@ public final class CooldownHud {
     static final String SEVEN_PAGES="7페이지 무다";
     /** Gold Experience's giving life in the list (2.151.0): the Star Finger's box, named for its own. */
     static final String LIFE="생명 부여";
+    /** Gold Experience's tree of life in the list (2.152.0): the time stop's box, named for its own. */
+    static final String TREE="생명의 나무";
     /** Its heavy punch's name in the list (the user's word for it). */
     private static String heavyName(){return "강펀치";}
     /** Its Star Finger's name in the list (the user's word for it). */

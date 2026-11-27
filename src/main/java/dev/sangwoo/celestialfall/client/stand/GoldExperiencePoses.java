@@ -58,7 +58,8 @@ final class GoldExperiencePoses {
             double[] pick=StarPlatinumPoses.distance(e,near)<=StarPlatinumPoses.distance(other,near)?e:other;
             for(int i=0;i<3;i++)out[i]=(float)(near[i]+StarPlatinumPoses.wrap(pick[i]-near[i])-rest[i]);
         }
-        float calm=1-weights[GoldExperienceStance.STAND]-.75f*weights[GoldExperienceStance.SUMMON];
+        // (2.152.0) down on its knee with its palm on the ground, it does not float either
+        float calm=1-weights[GoldExperienceStance.STAND]-.75f*weights[GoldExperienceStance.SUMMON]-(weights.length>GoldExperienceStance.GROUND?weights[GoldExperienceStance.GROUND]:0);
         motions.computeIfAbsent(bone,GoldExperienceMotion::of).add(out,seconds,Math.max(0,Math.min(1,calm)));
     }
     /** The stances alone, without the bone's own movement. */

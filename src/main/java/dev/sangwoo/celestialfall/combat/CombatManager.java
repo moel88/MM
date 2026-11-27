@@ -153,6 +153,8 @@ public final class CombatManager {
             ||dev.sangwoo.celestialfall.xchara.XCharaUltimate.involved(p)||dev.sangwoo.celestialfall.samurai.SamuraiUltimate.involved(p))return true;
         // (2.138.0) X Chara's teleport on its way (the fifth of a second before it moves them): they may only walk
         if(dev.sangwoo.celestialfall.xchara.XCharaBlink.casting(p))return true;
+        // (2.152.0) Gold Experience's H, its palm on the ground until the tree bursts up: they stand held
+        if(dev.sangwoo.celestialfall.stand.GoldExperienceTree.holding(p))return true;
         // (2.109.0) glowing before a skill with a cutscene is cast (CutsceneGlow): they may only walk
         if(CutsceneGlow.glowing(p))return true;
         var e=STATES.get(p.getUuid());if(e==null)return false;
@@ -164,7 +166,8 @@ public final class CombatManager {
         if(p.isDead())return true;
         if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.isosang.IsosangAttack.busy(p)||dev.sangwoo.celestialfall.xchara.XCharaAttack.busy(p)||dev.sangwoo.celestialfall.xchara.XCharaHeal.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p)
             ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p)||dev.sangwoo.celestialfall.stand.GoldExperienceHeal.selfing(p)||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(p)
-            ||CutsceneGlow.glowing(p)||dev.sangwoo.celestialfall.xchara.XCharaUltimate.involved(p)||dev.sangwoo.celestialfall.samurai.SamuraiUltimate.involved(p))return true;
+            ||CutsceneGlow.glowing(p)||dev.sangwoo.celestialfall.xchara.XCharaUltimate.involved(p)||dev.sangwoo.celestialfall.samurai.SamuraiUltimate.involved(p)
+            ||dev.sangwoo.celestialfall.stand.GoldExperienceTree.holding(p))return true;
         var e=STATES.get(p.getUuid());return e!=null&&e.entityId==p.getId()&&e.dimension.equals(p.getWorld().getRegistryKey().getValue())&&e.state.locked(p.getWorld().getTime());
     }
     /**

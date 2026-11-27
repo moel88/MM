@@ -83,12 +83,23 @@ public final class GoldRush {
         float side,inward;
         /** (2.150.0) How far it leans as it stands there (degrees, forward: the beatdown's stand leans back under the one it drives up). */
         float lean;
-        void set(Shape o){engage=o.engage;yaw=o.yaw;ahead=o.ahead;raise=o.raise;side=o.side;inward=o.inward;lean=o.lean;}
-        void clear(){engage=0;side=0;inward=0;lean=0;}
+        /**
+         * (2.152.0) How far the place it stands round is pinned to a spot on the ground ({@code gx, gy, gz}) rather than
+         * its user's feet (0 their feet, 1 the spot): the tree's stand kneels where it touched the ground while its user is
+         * flung up.
+         */
+        float pin;double gx,gy,gz;
+        void pin(net.minecraft.util.math.Vec3d at,float k){pin=k;gx=at.x;gy=at.y;gz=at.z;}
+        void set(Shape o){engage=o.engage;yaw=o.yaw;ahead=o.ahead;raise=o.raise;side=o.side;inward=o.inward;lean=o.lean;pin=o.pin;gx=o.gx;gy=o.gy;gz=o.gz;}
+        void clear(){engage=0;side=0;inward=0;lean=0;pin=0;}
         /** This place gives way to {@code o}'s as far as {@code o} is engaged beside it (two skills never run together; one just after another, the later takes over from where the earlier had got to). */
         void over(Shape o){
             float sum=engage+o.engage,k=sum<1e-4f?1:o.engage/sum;
             yaw=MathHelper.lerpAngleDegrees(k,yaw,o.yaw);ahead+=(o.ahead-ahead)*k;raise+=(o.raise-raise)*k;side+=(o.side-side)*k;inward+=(o.inward-inward)*k;lean+=(o.lean-lean)*k;
+            // a spot on the ground goes with the place that has it (a place with none is its user's feet)
+            if(o.pin>0&&pin>0){gx+=(o.gx-gx)*k;gy+=(o.gy-gy)*k;gz+=(o.gz-gz)*k;pin+=(o.pin-pin)*k;}
+            else if(o.pin>0){gx=o.gx;gy=o.gy;gz=o.gz;pin=o.pin*k;}
+            else pin*=1-k;
             engage=Math.max(engage,o.engage);
         }
     }

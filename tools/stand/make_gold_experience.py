@@ -937,6 +937,31 @@ POSES['mend'] = {
     **FIST,
 }
 
+# H, the tree of life (2.152.0, user: "내리치지 말고 스탠드가 땅을 만지고 나무가 자라나게"; client/stand/GoldTree goes
+# idle -> ground -> idle): down on its left knee, sitting back on that heel with its right foot planted out before it and
+# that knee out to its side, it bows over and lays its open right palm flat on the ground ahead of it, fingers ahead and a
+# little in, its left arm thrown out behind it, its head bowed over the palm. The tree grows out of the ground where life
+# goes into it. The stance is laid out from where its joints go (the palm's wrist, the knee on the ground, the foot
+# planted: model units, soles at 0) and written as the aims that put them there: the palm, the knee and the planted foot
+# touch the ground (GoldExperienceModelTest), and with this model's long legs, short body and short arms only a knee
+# sat back on its heel brings the shoulder low enough for the palm.
+POSES['ground'] = {
+    'root': {'pos': (0, -15.2, 3.5)},
+    'hips': {'rot': (36, -8, 0)}, 'torso': {'rot': (14, -6, 0)}, 'chest': {'rot': (8, -4, 0)},
+    'neck': {'rot': (-12, 6, 0)}, 'head': {'rot': (-6, 6, 0)},
+    'right_arm': {'reach': ((-1.336, -.38, -7.307), (-1, .4, .2))},
+    'right_hand': {'aim': ((.173, -.08, -.982), (.982, 0, .173))},
+    'left_arm': {'reach': ((6.4, 9.0, 2.4), (1, .3, -.4))},
+    'left_leg': {'aim': ((1.231, -3.976, -8.761), (-.119, -.91, .396))},
+    'left_shin': {'aim': ((0, .07, .998), (0, -.998, .07))},
+    'left_foot': {'aim': ((0, 1, 0), (0, 0, 1))},
+    'right_leg': {'aim': ((-7.273, 4.137, -4.907), (-.012, .756, .655))},
+    'right_shin': {'aim': ((3.224, -8.314, -3.556), (-.782, -.037, -.622))},
+    'right_foot': {'aim': ((0, -1, 0), (-.407, 0, -.914))},
+    'right_wing': {'rot': (0, -10, 0)}, 'left_wing': {'rot': (0, 10, 0)},
+    'hide_0': {'rot': (-30, 0, 0)}, 'hide_1': {'rot': (-26, 0, 0)}, 'hide_2': {'rot': (-22, 0, 0)},
+}
+
 # a fist's knuckles as it is drawn (the end of the palm, the fingers folded): where the rush's light is (GoldRush)
 KNUCKLES = {'right': (ARM_X + .4, WRIST_Y - 2.4, 0.0), 'left': (-ARM_X - .4, WRIST_Y - 2.4, 0.0)}
 
@@ -957,6 +982,31 @@ def stance_points(spec, grips):
     return out
 
 
+def lowest(spec, grips, bones=None):
+    """The lowest corner of the named bones' cubes (all of them if none are named) in a stance (model units, soles at 0)."""
+    table = rig.pose_table(spec, grips)
+    world = {}
+    for name, b in rig.BONES.items():
+        world[name] = (world[b.parent] if b.parent else np.eye(4)) @ rig.bone_matrix(b, table.get(name, {}))
+    low = None
+    for c in rig.CUBES:
+        if bones is not None and c.bone not in bones:
+            continue
+        o, sz = np.array(c.origin, dtype=np.float64), np.array(c.size, dtype=np.float64)
+        for d in np.ndindex(2, 2, 2):
+            q = (world[c.bone] @ np.array([*(o + sz * np.array(d)), 1.0]))[:3]
+            if low is None or q[1] < low[1]:
+                low = q
+    return [round(float(v), 3) for v in low]
+
+
+def touches(spec, grips):
+    """(2.152.0) What of the stance touches the ground: the lowest of the palm, the knee down, the foot planted, and of it
+    all (GoldExperienceModelTest holds them to the ground)."""
+    return {'palm': lowest(spec, grips, {'right_hand', 'right_fingers'}), 'knee': lowest(spec, grips, {'left_shin'}),
+            'sole': lowest(spec, grips, {'right_foot'}), 'lowest': lowest(spec, grips)}
+
+
 def main():
     for b in rig.check_coplanar():
         print('coplanar overlap (would flicker):', b)
@@ -968,7 +1018,8 @@ def main():
     grips = {k: tuple(wide(v)) for k, v in GRIPS.items()}
     poses = json.dumps({k: rig.pose_table(reaching(v), grips) for k, v in POSES.items()}, indent=1)
     # where the fists are in the rush's stances, for its light (client/stand/GoldRush)
-    fists = json.dumps({k: stance_points(reaching(v), grips) for k, v in POSES.items() if k == 'guard' or k == 'mend' or k.startswith('rush_') or k.startswith('over_')}, indent=1)
+    fists = json.dumps({k: {**stance_points(reaching(v), grips), **(touches(reaching(v), grips) if k == 'ground' else {})}
+                        for k, v in POSES.items() if k == 'guard' or k == 'mend' or k == 'ground' or k.startswith('rush_') or k.startswith('over_')}, indent=1)
     top = max(c.origin[1] + c.size[1] for c in rig.CUBES if rig.BONES[c.bone].rot == [0, 0, 0])
     across = max(max(abs(c.origin[0]), abs(c.origin[0] + c.size[0])) for c in rig.CUBES if c.bone.endswith('_arm'))
     drawn()

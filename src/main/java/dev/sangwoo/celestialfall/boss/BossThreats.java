@@ -141,6 +141,13 @@ public final class BossThreats {
         long[] open=dev.sangwoo.celestialfall.stand.GoldExperienceBeatdown.coming(p);
         if(open!=null)out.add(new Threat(p,"gold_beatdown",open[0],open[1],open[1],Zone.lane(p.getPos(),Float.intBitsToFloat((int)open[2]),StarPlatinumRules.NEAR,StarPlatinumRules.REACH_BIG,StarPlatinumRules.HALF_WIDTH,StarPlatinumRules.LOW,StarPlatinumRules.HIGH),
             false,true,true,dev.sangwoo.celestialfall.stand.GoldExperienceRules.BEAT_DAMAGE,false,false));
+        // (2.152.0) its H: the ground bursts up round where its user stands, which a guard takes
+        long[] tree=dev.sangwoo.celestialfall.stand.GoldExperienceTree.coming(p);
+        if(tree!=null){
+            Vec3d spot=new Vec3d(Double.longBitsToDouble(tree[2]),Double.longBitsToDouble(tree[4]),Double.longBitsToDouble(tree[3]));
+            out.add(new Threat(p,"gold_tree",tree[0],tree[1],tree[1],Zone.ring(spot,dev.sangwoo.celestialfall.stand.GoldExperienceRules.TREE_RADIUS,-dev.sangwoo.celestialfall.stand.GoldExperienceRules.TREE_BELOW,dev.sangwoo.celestialfall.stand.GoldExperienceRules.TREE_ABOVE),
+                true,false,false,dev.sangwoo.celestialfall.stand.GoldExperienceRules.TREE_DAMAGE,false,false));
+        }
         long inhale=StarPlatinumInhale.startedAt(p);
         if(inhale!=Long.MIN_VALUE){
             long next=Math.max(now,inhale+StarPlatinumRules.INHALE_CATCH);

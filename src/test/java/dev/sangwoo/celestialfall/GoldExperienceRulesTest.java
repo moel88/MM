@@ -150,4 +150,27 @@ class GoldExperienceRulesTest {
         assertFalse(swatWay(-.3,0,1.2,3.15),"nor behind them");
         assertFalse(swatWay(1.2,0,2.8,3.15),"nor high over their head");
     }
+    /**
+     * (2.152.0) H, the tree of life: the stand's palm on the ground, then the tree bursting up under its user strikes 30
+     * round it out to 6 blocks and flings them about 8 blocks high; it stands, withers and is back in the ground; 45
+     * seconds from then (the user's numbers).
+     */
+    @Test void hBringsUpATreeThatStrikesRoundItAndFlingsItsUserHigh(){
+        assertTrue(TREE_TOUCH<TREE_BURST&&TREE_BURST<TREE_GROWN&&TREE_GROWN<TREE_WITHER&&TREE_WITHER<TREE_END);
+        assertEquals(30,TREE_DAMAGE,1e-6);assertEquals(6,TREE_RADIUS,1e-9);
+        assertEquals(900,TREE_COOLDOWN,"45 seconds");assertEquals(1000+900,treeReady(1000));
+        assertTrue(treeArea(5.9,0,0,0));assertTrue(treeArea(6.2,0,0,.3),"a body's side within it");assertFalse(treeArea(6.4,0,0,.3));
+        assertFalse(treeArea(1,-2,0,.3),"not far under its foot");assertFalse(treeArea(1,4,0,.3),"nor high over it");
+        // pushed straight out from the trunk; one right on it the way its user faced
+        double[] o=treeOut(3,4,0);assertEquals(.6,o[0],1e-9);assertEquals(.8,o[1],1e-9);
+        o=treeOut(0,0,90);assertEquals(-1,o[0],1e-6);assertEquals(0,o[1],1e-6);
+        // flung about 8 blocks high by the game's own gravity and drag ("약 8블록"), 3 on the way they faced as they come down
+        double[] leap=treeLeap();
+        assertEquals(TREE_RISE,apex(leap[1]),.02);
+        double x=0,y=0,vx=leap[0],vy=leap[1],top=0;int k=0;
+        // (the first tick still on the ground: its grip, then the air's)
+        do{x+=vx;y+=vy;top=Math.max(top,y);vx*=k==0?GRIP:AIR;vy=(vy-GRAVITY)*DRAG;k++;}while(y>0&&k<400);
+        assertEquals(TREE_RISE,top,.02);assertEquals(TREE_AHEAD,x,.05);
+        assertTrue(TREE_SPARED>=k,"spared the fall's harm at least as long as they are in the air ("+k+" ticks)");
+    }
 }

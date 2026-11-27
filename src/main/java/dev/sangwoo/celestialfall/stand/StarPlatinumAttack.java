@@ -352,7 +352,7 @@ public final class StarPlatinumAttack {
             if(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other))continue;
             // (the beatdown's blow passes by whoever is in a cutscene already, its own or another's)
             // (nor by whoever stands stopped in a time stop, 2.67.0)
-            if(beat&&(StarPlatinumBeatdown.involved(e)||StarPlatinumTimeStop.stopped(e)||e instanceof ServerPlayerEntity sp&&CombatManager.cinematic(sp)))continue;
+            if(beat&&(StarPlatinumBeatdown.involved(e)||StarPlatinumTimeStop.stopped(e)||e instanceof ServerPlayerEntity sp&&CombatManager.cinematic(sp)||e instanceof GoldTreeEntity))continue;
             way.add(e);
         }
         // the Star Finger's fingers end in the first body they meet: the nearest one in their way (to its near side); the

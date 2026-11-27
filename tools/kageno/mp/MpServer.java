@@ -130,6 +130,7 @@ public final class MpServer implements ModInitializer {
         if(GOLDHEAL_ONLY)goldHeal(server);
         if(GOLDBEAT_ONLY)goldBeat(server);
         if(GOLDLIFE_ONLY)goldLife(server);
+        if(GOLDTREE_ONLY)goldTree(server);
         called(server);
         if(COOLDOWNS_ONLY||SWAP_ONLY||FRESH_ONLY)cooldowns(server);
         if(STAGGER_ONLY||ISOSANG_ONLY)staggers(server);
@@ -158,7 +159,7 @@ public final class MpServer implements ModInitializer {
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}
             // (the beatdown's own check, 2.64.0: its damage is the point, so nobody is healed but by the script's HEAL)
-            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!VANILLA_ONLY&&!TIMESTOP_ONLY&&!RESIST_ONLY&&!ARROW_ONLY&&!ISOSANG_ONLY&&!XCHARA_ONLY&&!SAMURAI_ONLY&&!XCHARAX_ONLY&&!GOLDHEAL_ONLY&&!GOLDBEAT_ONLY&&!GOLDLIFE_ONLY&&(!BOSS_ONLY||caster(p)))p.setHealth(p.getMaxHealth());
+            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!VANILLA_ONLY&&!TIMESTOP_ONLY&&!RESIST_ONLY&&!ARROW_ONLY&&!ISOSANG_ONLY&&!XCHARA_ONLY&&!SAMURAI_ONLY&&!XCHARAX_ONLY&&!GOLDHEAL_ONLY&&!GOLDBEAT_ONLY&&!GOLDLIFE_ONLY&&!GOLDTREE_ONLY&&(!BOSS_ONLY||caster(p)))p.setHealth(p.getMaxHealth());
         }
         idle=!busy;
     }
@@ -452,6 +453,46 @@ public final class MpServer implements ModInitializer {
         if(lifeWatcher>=0&&Math.abs(w-lifeWatcher)>1e-3f)note(server,String.format(java.util.Locale.ROOT,"the watcher's health %.1f -> %.1f at tick %d (%.2f blocks from the caster)",lifeWatcher,w,now,watcher.distanceTo(caster)));
         if(down!=lifeHeld)note(server,String.format(java.util.Locale.ROOT,"the watcher incapacitated %s at tick %d (its walking speed %.4f)",down,now,watcher.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED)));
         lifeWatcher=w;lifeHeld=down;
+    }
+    /** Only Gold Experience's tree of life's script (2.152.0, MP_ONLY=goldtree). */
+    static final boolean GOLDTREE_ONLY="goldtree".equals(System.getProperty("botand.mp.only"));
+    private boolean treeHolding,treeStanding,treeSpared;private long treeReady=-1,treeBurstAt=-1;private float treeCaster=-1,treeWatcher=-1;private int treeEntity=-1;
+    /**
+     * Gold Experience's H as the server runs it (2.152.0, MP_ONLY=goldtree): the caster held with the stand's palm on the
+     * ground, the tree standing (its entity, where, how old, whether it still turns blows back), the caster flung (their
+     * height over where they stood and how far on, every 2 ticks for two seconds, whether their fall is spared), when it is
+     * ready again, every change of health of the caster and of the watcher (with the watcher's distance from the tree).
+     */
+    private void goldTree(MinecraftServer server){
+        ServerPlayerEntity caster=null,watcher=null;
+        for(var p:server.getPlayerManager().getPlayerList())if(caster(p))caster=p;else watcher=p;
+        if(caster==null)return;
+        long now=server.getOverworld().getTime();
+        boolean holding=dev.sangwoo.celestialfall.stand.GoldExperienceTree.holding(caster),standing=dev.sangwoo.celestialfall.stand.GoldExperienceTree.standing(caster);
+        long ready=dev.sangwoo.celestialfall.stand.GoldExperienceTree.ready(caster);boolean spared=dev.sangwoo.celestialfall.stand.GoldExperienceTree.spared(caster);
+        if(holding!=treeHolding)note(server,String.format(java.util.Locale.ROOT,"the caster %s at tick %d (at %.2f %.2f %.2f, on the ground %s)",holding?"held with the palm on the ground":"no longer held",now,caster.getX(),caster.getY(),caster.getZ(),caster.isOnGround()));
+        dev.sangwoo.celestialfall.stand.GoldTreeEntity tree=null;
+        for(var e:caster.getServerWorld().iterateEntities())if(e instanceof dev.sangwoo.celestialfall.stand.GoldTreeEntity t&&t.isAlive())tree=t;
+        if(standing!=treeStanding){
+            if(standing&&tree!=null){treeBurstAt=now;treeEntity=tree.getId();}
+            note(server,standing&&tree!=null?String.format(java.util.Locale.ROOT,"the tree burst up at tick %d: entity %d at %.2f %.2f %.2f facing %.1f, withers at %d, the watcher %.2f blocks from it",now,tree.getId(),tree.getX(),tree.getY(),tree.getZ(),tree.facing(),tree.witherAt(),watcher==null?-1:watcher.distanceTo(tree))
+                :String.format(java.util.Locale.ROOT,"the tree gone at tick %d",now));
+        }
+        if(tree!=null&&tree.age()%20==0)note(server,String.format(java.util.Locale.ROOT,"the tree at tick %d: %d ticks old, still turns blows back %s",now,tree.age(),tree.standing()));
+        if(spared!=treeSpared)note(server,String.format(java.util.Locale.ROOT,"the caster's fall %s at tick %d (fall distance %.2f, on the ground %s)",spared?"spared":"no longer spared",now,caster.fallDistance,caster.isOnGround()));
+        if(treeBurstAt>=0&&now-treeBurstAt<=40&&(now-treeBurstAt)%2==0){
+            note(server,String.format(java.util.Locale.ROOT,"the caster flung at tick %d (+%d): at %.2f %.2f %.2f, speed %.3f up, on the ground %s",now,now-treeBurstAt,caster.getX(),caster.getY(),caster.getZ(),caster.getVelocity().y,caster.isOnGround()));
+        }
+        if(ready!=treeReady)note(server,String.format(java.util.Locale.ROOT,"H ready again in %d ticks (told at tick %d)",ready-now,now));
+        treeHolding=holding;treeStanding=standing;treeReady=ready;treeSpared=spared;
+        float h=caster.getHealth();
+        if(treeCaster>=0&&Math.abs(h-treeCaster)>1e-3f)note(server,String.format(java.util.Locale.ROOT,"the caster's health %.1f -> %.1f at tick %d",treeCaster,h,now));
+        treeCaster=h;
+        if(watcher==null)return;
+        float w=watcher.getHealth();
+        var te=treeEntity>=0?caster.getServerWorld().getEntityById(treeEntity):null;
+        if(treeWatcher>=0&&Math.abs(w-treeWatcher)>1e-3f)note(server,String.format(java.util.Locale.ROOT,"the watcher's health %.1f -> %.1f at tick %d (%.2f blocks from the caster, %s from the tree)",treeWatcher,w,now,watcher.distanceTo(caster),te==null?"none":String.format(java.util.Locale.ROOT,"%.2f",watcher.distanceTo(te))));
+        treeWatcher=w;
     }
     /** Only Gold Experience's healing's script (2.149.0, MP_ONLY=goldheal). */
     static final boolean GOLDHEAL_ONLY="goldheal".equals(System.getProperty("botand.mp.only"));

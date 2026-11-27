@@ -48,6 +48,9 @@ public final class CelestialFallClient implements ClientModInitializer {
         // (2.151.0) its giving life (T): the frog, the punch, the fly
         dev.sangwoo.celestialfall.client.stand.GoldLife.initialize();
         net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(dev.sangwoo.celestialfall.stand.GoldExperienceLife.FLY,dev.sangwoo.celestialfall.client.stand.GoldFlyRenderer::new);
+        // (2.152.0) Gold Experience's H, the tree of life
+        dev.sangwoo.celestialfall.client.stand.GoldTree.initialize();
+        net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(dev.sangwoo.celestialfall.stand.GoldExperienceTree.TREE,dev.sangwoo.celestialfall.client.stand.GoldTreeRenderer::new);
         dev.sangwoo.celestialfall.client.stand.StandTimeStop.initialize();
         dev.sangwoo.celestialfall.client.stand.StandArrowClient.initialize();
         CutsceneFlash.initialize();

@@ -216,7 +216,7 @@ public final class XCharaUltimate {
      */
     static boolean fair(ServerPlayerEntity p,LivingEntity e){
         if(e==p||!e.isAlive()||e.isRemoved()||e.isSpectator()||!e.canHit()||e.getWorld()!=p.getWorld())return false;
-        if(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity||e instanceof dev.sangwoo.celestialfall.stand.GoldFlyEntity)return false;
+        if(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity||e instanceof dev.sangwoo.celestialfall.stand.GoldFlyEntity||e instanceof dev.sangwoo.celestialfall.stand.GoldTreeEntity)return false;
         if(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other))return false;
         Vec3d eye=p.getEyePos(),chest=e.getPos().add(0,e.getHeight()*.55,0);
         if(eye.squaredDistanceTo(chest)>(AIM_RANGE+1.5)*(AIM_RANGE+1.5))return false;

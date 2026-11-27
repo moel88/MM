@@ -181,7 +181,7 @@ public final class StarPlatinumInhale {
             Vec3d d=e.getPos().subtract(at);
             if(!inhaleLane(d.dotProduct(f),d.dotProduct(right),d.y,e.getWidth()*.5)||!p.canSee(e))continue;
             if(e instanceof PlayerEntity other&&(!p.shouldDamagePlayer(other)||other instanceof ServerPlayerEntity sp&&CombatManager.cinematic(sp)))continue;
-            if(held(e)||StarPlatinumTimeStop.stopped(e))continue;
+            if(held(e)||StarPlatinumTimeStop.stopped(e)||e instanceof GoldTreeEntity)continue;
             Long last=s.guards.get(e.getUuid());
             // a guard holds it off: heard and seen the first tick it does, seen again every so often while it goes on doing so
             if(CombatManager.guardTakes(e,at,last==null)){

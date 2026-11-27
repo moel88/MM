@@ -181,7 +181,7 @@ public final class GoldExperienceBeatdown {
             Vec3d d=e.getPos().subtract(at);double ahead=d.dotProduct(f),half=e.getWidth()*.5;
             if(!overLane(ahead,d.dotProduct(right),d.y,half)||!p.canSee(e))continue;
             if(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other))continue;
-            if(StarPlatinumBeatdown.involved(e)||StarPlatinumTimeStop.stopped(e)||e instanceof ServerPlayerEntity sp&&CombatManager.cinematic(sp))continue;
+            if(StarPlatinumBeatdown.involved(e)||StarPlatinumTimeStop.stopped(e)||e instanceof ServerPlayerEntity sp&&CombatManager.cinematic(sp)||e instanceof GoldTreeEntity)continue;
             if(ahead-half<best){best=ahead-half;first=e;}
         }
         return first;

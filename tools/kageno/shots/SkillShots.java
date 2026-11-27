@@ -357,7 +357,7 @@ public final class SkillShots implements ClientModInitializer {
     private boolean mapShot(){return "METEOR".equals(current)||"SHOP".equals(current);}
     private String overSeen,soulSeen;private boolean dummySoulless;
     private String healSeen;private float healthSeen=-1;
-    private String lifeSeen,handSeen;private boolean downSeen;
+    private String lifeSeen,handSeen,treeSeen;private boolean downSeen;
     private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "METEOR"->300;case "SHOP"->400;case "BASE"->150;case "HUD"->400;case "UI"->300;case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;case "GDUMMY"->560;case "STAND"->240;case "SUMMON"->300;default->DURATION[skill(name)]+20;};}
     private final Set<UUID> castsLogged=new HashSet<>();private long dashLogged=-1000;private List<String> listLogged=List.of();private int hitsLogged;private String glowLogged="";
     /** One row of motion.csv for this client tick, and for M1 the hits whose sound has just started (sound.csv). */
@@ -854,6 +854,27 @@ public final class SkillShots implements ClientModInitializer {
                     mc.player.getX(),mc.player.getY(),mc.player.getZ(),dummy.getX(),dummy.getY(),dummy.getZ()));
                 server(sp->{var sd=sp.getServerWorld().getEntityById(dummyId);log.append(String.format(Locale.ROOT,"  (the server: the player at %.2f %.2f %.2f yaw %.1f, the dummy at %s)%n",sp.getX(),sp.getY(),sp.getZ(),sp.getYaw(),sd==null?"none":String.format(Locale.ROOT,"%.2f %.2f %.2f",sd.getX(),sd.getY(),sd.getZ())));});}
             if(dummy!=null){boolean down=dev.sangwoo.celestialfall.client.stand.GoldLife.down(dummy);if(down!=downSeen)log.append(down?"  the dummy knocked down at ":"  the dummy up again at ").append(age).append('\n');downSeen=down;}
+        }
+        // (2.152.0) Gold Experience's H, the tree of life: its state as it changes, the player flung (their height over where
+        // they stood and how far on), the tree as the client grows it
+        {
+            var u=mc.player==null?null:mc.player.getUuid();
+            String tree=u==null?null:dev.sangwoo.celestialfall.client.stand.GoldTree.describe(u,0);
+            String key=null;if(tree!=null){String[] tv=tree.split(",");key=tv[1]+","+tv[2]+","+tv[3]+","+tv[4]+","+tv[5];}
+            if(key!=null&&!key.equals(treeSeen))log.append("  tree of life at ").append(age).append(": age,burst,stopped,tree,hits,turned ").append(tree)
+                .append(String.format(Locale.ROOT,", the player at %.2f %.2f %.2f on the ground %b, health %.1f, ready in %d%n",mc.player.getX(),mc.player.getY(),mc.player.getZ(),mc.player.isOnGround(),mc.player.getHealth(),dev.sangwoo.celestialfall.client.stand.GoldTree.ready(u)-mc.world.getTime()));
+            treeSeen=key;
+            var t=u==null?null:dev.sangwoo.celestialfall.client.stand.GoldTree.of(u);
+            if(t!=null&&t.burst()){float since=t.age(0)-dev.sangwoo.celestialfall.client.stand.GoldTree.BURST;
+                if(since>=0&&since<2.2f&&age%2==0){var f=net.minecraft.util.math.Vec3d.fromPolar(0,t.yaw);var d=mc.player.getPos().subtract(t.spot);
+                    log.append(String.format(Locale.ROOT,"  flung at %d: %.2f up over where they stood, %.2f on the way they faced, %.2f to the side, on the ground %b%n",age,d.y,d.x*f.x+d.z*f.z,-d.x*f.z+d.z*f.x,mc.player.isOnGround()));}}
+            if(mc.world!=null&&age%10==0)for(var e:mc.world.getEntities())if(e instanceof dev.sangwoo.celestialfall.stand.GoldTreeEntity g)
+                log.append(String.format(Locale.ROOT,"  tree at %d: age %.1f (the world's %d), standing %b, withers at %d, facing %.1f, trunk %.3f, twig %.3f%n",age,g.clientAge(0),g.age(),g.standing(),g.witherAt()-g.born(),g.facing(),
+                    dev.sangwoo.celestialfall.client.stand.GoldTreeGrowth.size(g.clientAge(0),g.witherAt()-g.born(),0,0),dev.sangwoo.celestialfall.client.stand.GoldTreeGrowth.size(g.clientAge(0),g.witherAt()-g.born(),3,5)));
+            var stand=u==null?null:dev.sangwoo.celestialfall.client.stand.GoldPresence.lastDrawn(u);
+            if(t!=null&&stand!=null&&age%4==0&&t.age(0)<1.6f){var palm=dev.sangwoo.celestialfall.client.stand.GoldTree.palmAt(stand);
+                log.append(String.format(Locale.ROOT,"  stand at %d: kneel %.2f, at %.2f %.2f %.2f (%.2f from where its user stood), palm %.2f over the ground%n",age,dev.sangwoo.celestialfall.client.stand.GoldTree.kneel(t,t.age(0)),stand.at().x,stand.at().y,stand.at().z,
+                    Math.hypot(stand.at().x-t.spot.x,stand.at().z-t.spot.z),palm.y-t.spot.y));}
         }
         if(dummy instanceof net.minecraft.entity.LivingEntity le&&Math.abs(le.getHealth()-dummyHealth)>.05f){
             if(dummyHealth>=0)log.append(String.format(Locale.ROOT,"  dummy health %.1f -> %.1f at %d%n",dummyHealth,le.getHealth(),age));
@@ -1852,6 +1873,13 @@ public final class SkillShots implements ClientModInitializer {
                     if(what.equals("SOULOUT")){if(age==at){server(p->dev.sangwoo.celestialfall.stand.GoldExperienceOverdrive.out(p,p.getWorld().getTime()));log.append("  soul put out at ").append(age).append('\n');}continue;}
                     if(what.equals("GAUGE")){if(age==at){server(p->dev.sangwoo.celestialfall.isosang.IsosangAttack.setGauge(p,dev.sangwoo.celestialfall.isosang.IsosangRules.GAUGE_FULL));log.append("  gauge full at ").append(age).append('\n');}continue;}
                     if(what.equals("DGO")){if(age==at)server(p->{if(p.getServerWorld().getEntityById(dummyId) instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity t){t.resetTraining();log.append("  dummy goes at ").append(age).append('\n');}});continue;}
+                    // "DTREE@n" (2.152.0): the dummy strikes Gold Experience's tree once (8, a bare-handed blow from it on the tree:
+                    // the server's GoldTreeEntity.damage, as a player's blow on it goes), to see the blow come back on it
+                    if(what.equals("DTREE")){if(age==at)server(p->{var w=p.getServerWorld();var d=w.getEntityById(dummyId);
+                        if(!(d instanceof net.minecraft.entity.LivingEntity dl)){log.append("  no dummy to strike the tree at ").append(age).append('\n');return;}
+                        for(var e:w.getEntitiesByClass(dev.sangwoo.celestialfall.stand.GoldTreeEntity.class,p.getBoundingBox().expand(24),t->true)){
+                            var src=new net.minecraft.entity.damage.DamageSource(w.getRegistryManager().get(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE).entryOf(dev.sangwoo.celestialfall.combat.CombatManager.UNARMED),dl);
+                            boolean landed=e.damage(src,8);log.append(String.format(Locale.ROOT,"  the dummy strikes the tree at %d (the blow lands on it: %b, the dummy's health %.1f)%n",age,landed,dl.getHealth()));break;}});continue;}
                     if(what.equals("DUMMYBACK")){if(age==at)server(p->{var d=p.getServerWorld().getEntityById(dummyId);if(d instanceof net.minecraft.entity.LivingEntity l){
                             var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);// (2.151.0) "dfw2"/"drt2": where it is brought back to, if not where it stood (an attacking dummy kept out of reach
                             // through the shot's lead, which it would spend striking the player, and brought in when wanted)

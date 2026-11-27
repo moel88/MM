@@ -160,7 +160,7 @@ public final class FxLib {
      * The floor round {@code o} heaving in a ring that runs out from it at {@code speed} blocks a second ({@code amp}
      * high, out to {@code radius}), still within {@code hole} blocks of the middle; each block tips away from the middle.
      */
-    static void heave(dev.sangwoo.celestialfall.client.vfx.FxSolids s,Vec3d o,float since,double radius,double amp,double speed,double width,double hole){
+    public static void heave(dev.sangwoo.celestialfall.client.vfx.FxSolids s,Vec3d o,float since,double radius,double amp,double speed,double width,double hole){
         double floor=s.groundY(o.add(0,.3,0));BlockPos base=BlockPos.ofFloored(o.x,floor-.5,o.z);int r=(int)Math.ceil(radius);
         for(int dx=-r;dx<=r;dx++)for(int dz=-r;dz<=r;dz++){
             BlockPos pos=base.add(dx,0,dz);double ox=pos.getX()+.5-o.x,oz=pos.getZ()+.5-o.z,dist=Math.hypot(ox,oz);if(dist>radius)continue;
