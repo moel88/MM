@@ -118,6 +118,8 @@ public final class TrainingDummyEntity extends PathAwareEntity implements Monste
         Vec3d toward=target.getPos().subtract(getPos()).multiply(1,0,1);
         if(!HitStun.inReach(this,target)||toward.lengthSquared()<1e-6
             ||Vec3d.fromPolar(0,getYaw()).dotProduct(toward.normalize())<.65)return;
+        // (2.151.0) Gold Experience's fly hovering in front of it: the blow meets the fly
+        if(dev.sangwoo.celestialfall.stand.GoldExperienceLife.swatsInstead(this,target))return;
         var source=new DamageSource(getWorld().getRegistryManager().get(RegistryKeys.DAMAGE_TYPE).entryOf(CombatManager.UNARMED),this);
         boolean damaged=CombatManager.damageWithoutKnockback(target,source,CombatState.DAMAGE[strike]);
         if(!damaged)return;

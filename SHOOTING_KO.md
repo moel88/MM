@@ -411,6 +411,17 @@
 - 볼 것: 샷이 영상의 때에 끊기는지(무다무다는 주먹마다), 가까운 샷이 잔상 팔에 덮이지 않는지, 'WRYYYY'에 스탠드가 대상 밑에서 젖혀 쳐올리는지, 마지막 한 방 뒤 대상이 날아가 떨어져 일어나는지, 레터박스가 닿는 순간 들어오고 끝나면 빠지는지.
 - 멀티플레이: `MP_ONLY=goldbeat python3 tools/kageno/mp/run_mp.py 폴더`(`MpClient.GOLDBEAT_SCRIPT`·`goldBeatWatch`, `MpServer.goldBeat`. 약 15분). 이 확인에서는 서버 도구가 체력을 채우지 않는다.
 
+### 골드 익스피리언스 생명 부여 (T, 2.151.0)
+- `B="SUMMON;stand=gold_experience;face=180;dummy=1;time=6000"`, 960x540 배율 16(약 15분). `SHOTS_LANG=ko_kr`. 촬영 도구는 모드의 컴파일된 클래스로 컴파일하므로 모드 코드를 고친 뒤에는 먼저 `./gradlew --offline compileJava`를 돌린다(안 그러면 새 메서드를 못 찾는다).
+- `held=ID`가 그 장면의 주로 쓰는 손에 그 아이템 하나를 쥐여 주고(`held=minecraft:diamond_sword`), `held=none`이 비운다.
+- 목록: 예열 `$B;held=minecraft:diamond_sword;dattack=1;dfw=6;len=40;slows=0:2;save=0-1;then=KEY_Q@4`(더미를 멀리: 아래 주의), 개구리(앞왼쪽 카메라, 더미는 왼쪽 2.1블록) `$B;held=minecraft:diamond_sword;dattack=1;dfw=0.3;drt=-2.1;dfresh=1;len=250;hud=1;healthlog=1;fov=50;orbit=4.6/1.6/0/200/0.4/-0.8/1.3;then=KEY_Q@2/KEY_T@10`, 가드에 막힌 주먹(팔이 파리, 20초 뒤 돌아감) `$B;held=none;dguard=1;dfw=3.0;dfresh=1;len=460;hud=1;fov=50;orbit=4.6/1.6/0/90/1.6/0/1.3;then=KEY_Q@2/KEY_T@10`, 주먹 → 걸어 들어가 더미가 제 파리를 침 `$B;held=none;dattack=1;dfw=3.2;dfresh=1;len=170;hud=1;cool=1;fov=50;orbit=4.8/1.6/0/95/1.8/0/1.3;then=KEY_Q@2/KEY_T@10/KEYDOWN_W@40/KEYUP_W@45`(`cool=1`은 마지막 장면에만: 50초 쿨타임).
+- **주의:** 공격 더미는 4타에 상대를 날린다. 개구리가 나오기 전에 더미가 플레이어를 치면 4타에 플레이어가 몇 블록 날아가 다음 장면까지 자리가 어긋난다(첫 시험에서 더미가 7블록 왼쪽에 선 것처럼 보였다). 예열에서는 더미를 닿지 않는 곳(6블록)에 두고, 개구리 장면은 `dfresh=1`(첫 콤보가 20틱 뒤)과 T@10으로 개구리가 먼저 나오게 한다. 또 개구리는 10.3초 사는데 장면이 바뀌어도 끝나지 않는다: 개구리 장면은 T 뒤 210틱보다 길게(다음 장면의 T가 거절된다).
+- 첫 장면에서 새로 생긴 더미는 자리가 어긋날 수 있다(4타에 날린 플레이어 때문이었다): 로그의 'the dummy … ahead … right of the player … at 12'와 서버 줄로 확인한다.
+- 개구리는 플레이어의 반대쪽(왼쪽) 어깨에 앉는다: 앞오른쪽 카메라에서는 머리에 가려 안 보인다(첫 시험). 앞왼쪽(200)이나 뒤에서 찍는다.
+- 로그: 'giving life at N: frog,age,early,reflected,landed,struck,guarded,part,fly,stopped …, ready in'(바뀔 때마다), 'main hand holds …'(아이템이 빠지고 돌아옴), 'frog drawn at N: hand …, seat …, at …, where, size'(몸의 모델 공간), 'fly of the dummy at N: age, part, … ahead … right … up, missing'(10틱마다), 'the dummy knocked down at / up again at', 'dummy health …'(반사·60), 'player health …'(개구리 동안 그대로).
+- 볼 것: 아이템을 든 손을 올리고 스탠드가 앞에서 주먹을 댐 → 금빛 속에 개구리가 손에서 나와 왼쪽 어깨로 뜀 → 더미의 타격마다 개구리가 돌아보며 금빛 줄기, 더미 체력만 줆 → 10초 뒤 손으로 돌아와 아이템이 됨. 주먹: 맞은 부분(무작위)이 날아가 파리가 되어 더미 얼굴 앞에서 알짱거림, 더미 몸에서 그 부분이 없음 → 더미가 치다가 제 파리를 맞힘: 60, 뒤로 넘어졌다 일어남. 가드: 팔 하나가 파리, 20초 뒤 그 자리로 돌아감.
+- 멀티플레이: `MP_ONLY=goldlife python3 tools/kageno/mp/run_mp.py 폴더`(`MpClient.GOLDLIFE_SCRIPT`·`goldLifeWatch`, `MpServer.goldLife`). 관찰자는 파일 `OUT/strike`가 있는 동안 12틱마다 시전자 쪽으로 공격 키를 누른다(제 파리를 치게). 이 확인에서는 서버 도구가 체력을 채우지 않는다.
+
 ### 골드 익스피리언스 감각폭주 (R, 2.148.0)
 - 목록(960x540): 예열 `SUMMON;stand=gold_experience;face=180;dummy=1;dfw=3;time=6000;len=60;slows=0:2;save=0-1;then=KEY_Q@4/KEY_R@20`, 시전자(옆 카메라, 강펀치 → 걸어가 러시: 숫자가 2씩 오름) `...;len=170;fov=55;hud=1;orbit=7.0/1.8/0/118/3.0/0/1.2;then=KEY_Q@6/KEY_R@40/KEYDOWN_W@60/KEYUP_W@73/KEYDOWN_E@78/KEYUP_E@150`, 맞은 사람(게임 카메라) `SUMMON;stand=gold_experience;face=180;dummy=1;dattack=1;dfw=1.6;time=6000;len=160;hud=1;pitch=14;dist=4.2;then=SOULOUT@20/KEYDOWN_S@26/KEYUP_S@44/KEYDOWN_D@48/KEYUP_D@58/ATTACKDOWN@62/ATTACKUP@63/...`. `SHOTS_LANG=ko_kr`.
 - `SOULOUT@n`은 서버가 플레이어의 영혼을 내보냅니다(`GoldExperienceOverdrive.out`: 싱글에는 감각폭주를 걸어 줄 상대가 없습니다). 이동 키(`KEYDOWN_W` 등)와 `ATTACKDOWN`이 영혼을 움직입니다.

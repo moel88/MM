@@ -62,6 +62,10 @@ public abstract class LivingCombatMixin {
             dev.sangwoo.celestialfall.combat.HitCounter.landed((LivingEntity)(Object)this,source);
             cir.setReturnValue(true);return;
         }
+        // Gold Experience's frog (2.151.0): a blow on its bearer does them nothing and comes back on its striker (only one
+        // that would land)
+        if((Object)this instanceof ServerPlayerEntity p&&Float.isFinite(amount)&&amount>0&&lands(p,source,amount)
+            &&dev.sangwoo.celestialfall.stand.GoldExperienceLife.reflects(p,source,amount)){cir.setReturnValue(false);return;}
         if((Object)this instanceof ServerPlayerEntity p && CombatManager.block(p,source,amount))cir.setReturnValue(false);
     }
     /** Whether vanilla would let this blow land ({@code LivingEntity.damage}): not within the moment after one that was greater, not fire on one fire cannot hurt. */

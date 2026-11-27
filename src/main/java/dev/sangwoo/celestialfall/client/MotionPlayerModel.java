@@ -15,12 +15,12 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
         // X Chara's double of this player (2.125.0): drawn a second time beside its user, in the double's own pose (their
         // own pose and its fades are left as they are: CloneClient.render)
         var doubled=dev.sangwoo.celestialfall.client.xchara.CloneClient.doublePose(player);
-        if(doubled!=null){articulated=true;MotionRig.apply(this,doubled,0,0);overlays();return;}
+        if(doubled!=null){articulated=true;MotionRig.apply(this,doubled,0,0);overlays();if(MapClient.enabled())dev.sangwoo.celestialfall.client.stand.GoldLife.hide(this,player);return;}
         // Stopped in Star Platinum's time stop (2.67.0): the body holds the pose it was drawn in as time stopped. Its
         // own clocks go on here (the world's time a flinch or a daze is timed by, a guard or a blow cut off as it was
         // stopped), its body does not; as time moves again the pose it takes fades in from this one.
         if(dev.sangwoo.celestialfall.client.stand.StandTimeStop.stopped(player)&&PoseBlend.hold(player.getUuid(),this,animationProgress)){
-            articulated=true;overlays();return;
+            articulated=true;overlays();if(MapClient.enabled())dev.sangwoo.celestialfall.client.stand.GoldLife.hide(this,player);return;
         }
         var vanillaBody=body.getTransform();var vanillaHead=head.getTransform();
         var vanillaRight=rightArm.getTransform();var vanillaLeft=leftArm.getTransform();
@@ -41,6 +41,8 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
         var flung=stab!=null||beat!=null?null:dev.sangwoo.celestialfall.client.xchara.CloneClient.struckPose(player,animationProgress-player.age);
         // The samurai's G (2.144.0): the one marked, cut and held
         if(stab==null&&beat==null&&flung==null)flung=dev.sangwoo.celestialfall.client.samurai.SamuraiClient.struckPose(player,animationProgress-player.age);
+        // (2.151.0) Gold Experience's T: one whose own fly was swatted falls on their back, lies a second and is up again
+        if(stab==null&&beat==null&&flung==null)flung=dev.sangwoo.celestialfall.client.stand.GoldLife.downPose(player,animationProgress-player.age);
         if(flung!=null)beat=flung;
         // The meteor pickaxe in both hands (2.49.1): after a stand's own motion, before its idle arms.
         boolean mining=stab==null&&atomic==null&&stand==null&&dev.sangwoo.celestialfall.client.meteor.MiningPose.active(player,animationProgress-player.age);
@@ -148,9 +150,13 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
             PoseBlend.apply(player.getUuid(),this,java.util.List.of(source,!mining&&using,arms),fade,animationProgress);
         }
         dev.sangwoo.celestialfall.client.integration.PlayerAnimatorBridge.apply(player,this,animationProgress-player.age);
+        // (2.151.0) Gold Experience's T: its user's arm holding up the item that becomes the frog (and takes it back)
+        dev.sangwoo.celestialfall.client.stand.GoldLife.arm(this,player,animationProgress-player.age);
         overlays();
         // Lee So-sang's G (the user's 2.87.0 preview): the sword-fingers hand over the clip's arms
         dev.sangwoo.celestialfall.client.isosang.GGesture.apply(this,player,animationProgress-player.age);
+        // (2.151.0) and the parts of the body that are flies now are not there (nor their outer layers)
+        if(MapClient.enabled())dev.sangwoo.celestialfall.client.stand.GoldLife.hide(this,player);
     }
     @Override public void render(MatrixStack matrices,net.minecraft.client.render.VertexConsumer vertices,int light,int overlay,float red,float green,float blue,float alpha) {
         super.render(matrices,vertices,light,overlay,red,green,blue,alpha);

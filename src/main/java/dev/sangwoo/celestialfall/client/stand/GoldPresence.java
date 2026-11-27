@@ -192,6 +192,8 @@ public final class GoldPresence {
         GoldHeal.Heal heal;
         /** Its user's beatdown if it shows this frame (2.150.0). */
         GoldBeatdown.Beat beat;
+        /** Its user's giving life if it shows this frame (2.151.0). */
+        GoldLife.Life life;
 final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceStance.NAMES.size()];
         /** Its look, place and facing on the last frame drawn and that frame's moment: how it stands while its user is stopped in a time stop. */
         final GoldExperienceLook held=new GoldExperienceLook();Vec3d heldAt;float heldYaw,heldDelta=1;
@@ -252,6 +254,13 @@ final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceSt
                 if(front)shape.over(shape2);
                 front=true;
             }else beat=null;
+            // (2.151.0) giving life: the frog's touch (turned to its user, its fist on the item they hold up before them)
+            // or the punch (in front of them, the way it goes)
+            life=GoldLife.of(owner);
+            if(life!=null&&out&&GoldLife.pose(life,delta,look,front?shape2:shape,scratch,p)){
+                if(front)shape.over(shape2);
+                front=true;
+            }else life=null;
             float calm=front?1-shape.engage:1;
             var v=prevVel.lerp(vel,delta);float y=MathHelper.lerpAngleDegrees(delta,prevYaw,yaw);
             double r=Math.toRadians(y),fx=-Math.sin(r),fz=Math.cos(r);
@@ -267,6 +276,8 @@ final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceSt
             if(heal!=null)look.glow=Math.max(look.glow,look.out*(1+.4f*GoldHeal.glow(heal,heal.age(delta))));
             // and through its beatdown
             if(beat!=null)look.glow=Math.max(look.glow,look.out*(1+GoldBeatdown.glow(beat,beat.age(delta))));
+            // and as it gives life
+            if(life!=null)look.glow=Math.max(look.glow,look.out*(1+.5f*GoldLife.glow(life,life.age(delta))));
             put(p,delta,look,front?shape:null);
             return rush;
         }

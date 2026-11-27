@@ -23,6 +23,9 @@ public abstract class StandHeldItemFeatureMixin {
         else if(dev.sangwoo.celestialfall.client.xchara.BossAura.silhouette())ci.cancel();
         // (2.138.0) nor as itself the frames X Chara's teleport has them a flat purple silhouette: the silhouette draws it purple
         else if(dev.sangwoo.celestialfall.client.xchara.BlinkClient.flat(entity))ci.cancel();
+        // (2.151.0) Gold Experience's T: a hand that is a fly holds nothing; the hand holding up the item that becomes the
+        // frog (and takes it back) holds just that one (GoldFrog draws it)
+        else if(dev.sangwoo.celestialfall.client.stand.GoldLife.handHides(entity,arm))ci.cancel();
     }
     @Inject(method="renderItem",at=@At(value="INVOKE",target="Lnet/minecraft/client/render/item/HeldItemRenderer;renderItem(Lnet/minecraft/entity/LivingEntity;Lnet/minecraft/item/ItemStack;Lnet/minecraft/client/render/model/json/ModelTransformationMode;ZLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V"))
     private void botand$thrustGrip(LivingEntity entity,ItemStack stack,net.minecraft.client.render.model.json.ModelTransformationMode mode,net.minecraft.util.Arm arm,net.minecraft.client.util.math.MatrixStack matrices,net.minecraft.client.render.VertexConsumerProvider vertices,int light,org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci){

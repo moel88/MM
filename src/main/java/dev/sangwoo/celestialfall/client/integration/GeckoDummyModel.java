@@ -35,6 +35,10 @@ public final class GeckoDummyModel extends GeoModel<TrainingDummyEntity> {
         copy("left_elbow",reference.leftArm.getChild("elbow"),0,4,0);
         copy("right_knee",reference.rightLeg.getChild("knee"),0,6,0);
         copy("left_knee",reference.leftLeg.getChild("knee"),0,6,0);
+        // (2.151.0) Gold Experience's T: the parts that are flies now are not there (a bone hidden hides what hangs from it)
+        int gone=dev.sangwoo.celestialfall.client.MapClient.enabled()?dev.sangwoo.celestialfall.client.stand.GoldLife.missing(d):0;
+        String[] parts={"head","right_arm","left_arm","right_leg","left_leg"};
+        for(int i=0;i<parts.length;i++){boolean hide=(gone&1<<i)!=0;getBone(parts[i]).ifPresent(b->{if(b.isHidden()!=hide)b.setHidden(hide);});}
         frames++;
     }
     private void copy(String name,ModelPart part,float x,float y,float z){

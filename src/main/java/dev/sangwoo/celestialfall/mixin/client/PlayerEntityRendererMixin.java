@@ -38,6 +38,8 @@ public abstract class PlayerEntityRendererMixin extends LivingEntityRenderer<Abs
         botand$mapFeatures.add(new dev.sangwoo.celestialfall.client.boss.BossOutfitFeature((net.minecraft.client.render.entity.PlayerEntityRenderer)(Object)this));
         // the stand arrow in the hands and the chest (2.70.0)
         botand$mapFeatures.add(new dev.sangwoo.celestialfall.client.stand.StandArrowFeature((net.minecraft.client.render.entity.PlayerEntityRenderer)(Object)this));
+        // Gold Experience's T (2.151.0): the frog on its user's shoulder (and the item held up that becomes it)
+        botand$mapFeatures.add(new dev.sangwoo.celestialfall.client.stand.GoldFrog((net.minecraft.client.render.entity.PlayerEntityRenderer)(Object)this,context.getPart(net.minecraft.client.render.entity.model.EntityModelLayers.FROG)));
     }
     /**
      * Lee So-sang's player holds their sword (2.76.0: drawn in the main hand whatever it holds, StandClient.sword): that

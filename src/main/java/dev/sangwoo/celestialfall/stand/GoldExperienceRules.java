@@ -157,4 +157,43 @@ public final class GoldExperienceRules {
     public static double beatHold(double ahead){return Math.max(BEAT_HOLD_MIN,Math.min(BEAT_HOLD_MAX,ahead+BEAT_BACK));}
     /** The tick G is ready again after it ended (its punch over, stopped short, or its cutscene) at {@code end}. */
     public static long beatReady(long end){return end+BEAT_COOLDOWN;}
+
+    // ---- T, giving life (2.151.0, user request: "T스킬을 만들자 t스킬은 활용도가 많아 아이템을 들고 t스킬을 쓰면 그
+    // 아이템이 개구리로 변하고 10초 동안 내 몸에 붙어 그동안 다른 적이 나를 때리면 데미지 반사 아이템 없이 맨손으로 쓰면
+    // 적에게 주먹을 꽂아 주먹에 맞은 적은 랜덤 신체 일부분이 날아가고 그 부분이 파리로 변하고 그 파리가 적을 따라다녀서
+    // 방해해(앞으로 알짱거리면서 파리 자기자신을 때리게 유도)적이 그 파리를 한 번 때리면 파리는 죽고 적 자신에게
+    // 60데미지가 박히고 1초 동안 쓰러져", then "개구리로 변한 아이템은 10초뒤에 다시 내 아이템으로 돌아옴"; asked and
+    // answered: one cooldown of 50 s for both, from the frog's end, or from the fly's popping or the end of its 20 s
+    // untouched; the frog reflects every blow for its ten seconds, its user taking none and the striker all of it; the
+    // punch deals 5, and a guard taking it turns one of the two guarding arms into the fly; the fly lives 20 s at most).
+    // With the stand out, T with an item in the main hand: the stand's fist touches it and it becomes a frog on its user's
+    // shoulder; T with the hand empty: the stand drives a fist into the first one in its way, and a part of them flies off
+    // and becomes a fly that hovers in front of them (stand/GoldFlyEntity, GoldFlyPath).
+
+    /** With an item: ticks in the stand's fist touches it and the frog is born (it reflects from then), how long it lives, and its end (the item back in its user's hand). */
+    public static final int FROG_BORN=6,FROG_LASTS=200,FROG_END=FROG_BORN+FROG_LASTS;
+    /** With the hand empty: ticks in the punch lands, how long it is, and its damage. */
+    public static final int FLY_CONTACT=8,FLY_PUNCH_LENGTH=22;
+    public static final float FLY_PUNCH_DAMAGE=5;
+    /** The part struck off: ticks it takes flying off to become the fly (it can be swatted from then), how long the fly lives, and how long it takes to fly back into the body once its time is up. */
+    public static final int FLY_FORMS=8,FLY_LASTS=400,FLY_RETURN=8;
+    /** Ticks from the blow until the fly is back in the body, its time up untouched. */
+    public static final int FLY_GONE=FLY_FORMS+FLY_LASTS+FLY_RETURN;
+    /** What the one it belongs to takes swatting it, and how long they lie knocked down (ticks: 1 s). */
+    public static final float FLY_SWAT=60;
+    public static final int FLY_DOWN=20;
+    /** Ticks from its end (the frog's, the fly's, or the punch's that made none) until T is ready again (50 s: one cooldown for both). */
+    public static final int LIFE_COOLDOWN=1000;
+    /** The parts a blow can strike off: the head, the arms, the legs (a guard taking it: an arm). */
+    public static final int HEAD=0,RIGHT_ARM=1,LEFT_ARM=2,RIGHT_LEG=3,LEFT_LEG=4,PARTS=5;
+    /** Whether a body is in reach of its fist (the overdrive punch's way). */
+    public static boolean lifeLane(double forward,double side,double height,double halfWidth){return overLane(forward,side,height,halfWidth);}
+    /** The tick T is ready again after its frog, its fly or its punch that made none ended at {@code end}. */
+    public static long lifeReady(long end){return end+LIFE_COOLDOWN;}
+    /** Whether the frog of a T begun at {@code start} reflects at {@code now}: from its birth to its end. */
+    public static boolean frogOn(long start,long now){return now-start>=FROG_BORN&&now-start<FROG_END;}
+    /** What the striker takes of a blow of {@code amount} on the frog's bearer (all of it: "나는 0, 적이 그대로 받음"). */
+    public static float reflected(float amount){return amount;}
+    /** Whether a fly struck off {@code age} ticks ago can be swatted now: once it has become the fly, until its time is up. */
+    public static boolean swattable(long age){return age>=FLY_FORMS&&age<FLY_FORMS+FLY_LASTS;}
 }

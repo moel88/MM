@@ -129,6 +129,7 @@ public final class MpServer implements ModInitializer {
         if(GOLDOVER_ONLY)goldOver(server);
         if(GOLDHEAL_ONLY)goldHeal(server);
         if(GOLDBEAT_ONLY)goldBeat(server);
+        if(GOLDLIFE_ONLY)goldLife(server);
         called(server);
         if(COOLDOWNS_ONLY||SWAP_ONLY||FRESH_ONLY)cooldowns(server);
         if(STAGGER_ONLY||ISOSANG_ONLY)staggers(server);
@@ -157,7 +158,7 @@ public final class MpServer implements ModInitializer {
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}
             // (the beatdown's own check, 2.64.0: its damage is the point, so nobody is healed but by the script's HEAL)
-            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!VANILLA_ONLY&&!TIMESTOP_ONLY&&!RESIST_ONLY&&!ARROW_ONLY&&!ISOSANG_ONLY&&!XCHARA_ONLY&&!SAMURAI_ONLY&&!XCHARAX_ONLY&&!GOLDHEAL_ONLY&&!GOLDBEAT_ONLY&&(!BOSS_ONLY||caster(p)))p.setHealth(p.getMaxHealth());
+            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!VANILLA_ONLY&&!TIMESTOP_ONLY&&!RESIST_ONLY&&!ARROW_ONLY&&!ISOSANG_ONLY&&!XCHARA_ONLY&&!SAMURAI_ONLY&&!XCHARAX_ONLY&&!GOLDHEAL_ONLY&&!GOLDBEAT_ONLY&&!GOLDLIFE_ONLY&&(!BOSS_ONLY||caster(p)))p.setHealth(p.getMaxHealth());
         }
         idle=!busy;
     }
@@ -404,6 +405,52 @@ public final class MpServer implements ModInitializer {
             }else note(server,String.format(java.util.Locale.ROOT,"the watcher's health %.1f -> %.1f at tick %d (%.2f blocks from the caster)",beatWatcher,w,now,watcher.distanceTo(caster)));
         }
         beatWatcher=w;
+    }
+    /** Only Gold Experience's giving life's script (2.151.0, MP_ONLY=goldlife). */
+    static final boolean GOLDLIFE_ONLY="goldlife".equals(System.getProperty("botand.mp.only"));
+    private boolean lifeFrog,lifePunching,lifeHeld;private long lifeReady=-1;private float lifeCaster=-1,lifeWatcher=-1;private String lifeHand;
+    private final java.util.Map<java.util.UUID,String> lifeFlies=new java.util.HashMap<>();
+    /**
+     * Gold Experience's T as the server runs it (2.151.0, MP_ONLY=goldlife): its frog on and off (what the caster's main
+     * hand holds then), its punch, when it is ready again, every change of health of the caster and of the watcher, each
+     * fly (whose, which part, where about its owner, whether it can be swatted) as it comes and goes and every second
+     * between, and whether the server has the watcher incapacitated (knocked down by its own fly).
+     */
+    private void goldLife(MinecraftServer server){
+        ServerPlayerEntity caster=null,watcher=null;
+        for(var p:server.getPlayerManager().getPlayerList())if(caster(p))caster=p;else watcher=p;
+        if(caster==null)return;
+        long now=server.getOverworld().getTime();
+        boolean frog=dev.sangwoo.celestialfall.stand.GoldExperienceLife.frogOn(caster),punching=dev.sangwoo.celestialfall.stand.GoldExperienceLife.punching(caster);
+        long ready=dev.sangwoo.celestialfall.stand.GoldExperienceLife.ready(caster);
+        var held=caster.getMainHandStack();String hand=held.isEmpty()?"nothing":net.minecraft.registry.Registries.ITEM.getId(held.getItem())+" x"+held.getCount();
+        if(frog!=lifeFrog)note(server,String.format(java.util.Locale.ROOT,"the frog %s at tick %d: the caster's main hand holds %s",frog?"is on":"is off",now,hand));
+        else if(!hand.equals(lifeHand))note(server,String.format(java.util.Locale.ROOT,"the caster's main hand holds %s at tick %d",hand,now));
+        if(punching!=lifePunching)note(server,String.format(java.util.Locale.ROOT,"the punch %s at tick %d",punching?"thrown":"over",now));
+        if(ready!=lifeReady)note(server,ready>Long.MAX_VALUE/8?String.format(java.util.Locale.ROOT,"T waits on its frog or its fly (tick %d)",now):String.format(java.util.Locale.ROOT,"T ready again in %d ticks (told at tick %d)",ready-now,now));
+        lifeFrog=frog;lifePunching=punching;lifeReady=ready;lifeHand=hand;
+        float h=caster.getHealth();
+        if(lifeCaster>=0&&Math.abs(h-lifeCaster)>1e-3f)note(server,String.format(java.util.Locale.ROOT,"the caster's health %.1f -> %.1f at tick %d (the frog %s)",lifeCaster,h,now,frog?"on":"off"));
+        lifeCaster=h;
+        java.util.Set<java.util.UUID> seen=new java.util.HashSet<>();
+        for(var e:caster.getServerWorld().iterateEntities()){
+            if(!(e instanceof dev.sangwoo.celestialfall.stand.GoldFlyEntity fly)||!fly.isAlive())continue;
+            seen.add(fly.getUuid());var o=fly.owner();
+            String what=String.format(java.util.Locale.ROOT,"whose %s, part %d, swattable %s",o==null?"nobody":o.getName().getString(),fly.part(),fly.swattable());
+            String was=lifeFlies.put(fly.getUuid(),what);
+            if(!what.equals(was)||fly.age()%20==0){
+                String where="";
+                if(o!=null){var f=net.minecraft.util.math.Vec3d.fromPolar(0,o.getHeadYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);var d=fly.getPos().add(0,fly.getHeight()/2,0).subtract(o.getPos());
+                    where=String.format(java.util.Locale.ROOT,", %.2f ahead %.2f right %.2f up of its owner",d.dotProduct(f),d.dotProduct(right),d.y);}
+                note(server,String.format(java.util.Locale.ROOT,"fly %s at tick %d, %d ticks old: %s%s",was==null?"born":"",now,fly.age(),what,where));
+            }
+        }
+        for(var it=lifeFlies.keySet().iterator();it.hasNext();){var id=it.next();if(!seen.contains(id)){it.remove();note(server,"a fly gone at tick "+now);}}
+        if(watcher==null)return;
+        float w=watcher.getHealth();boolean down=dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(watcher);
+        if(lifeWatcher>=0&&Math.abs(w-lifeWatcher)>1e-3f)note(server,String.format(java.util.Locale.ROOT,"the watcher's health %.1f -> %.1f at tick %d (%.2f blocks from the caster)",lifeWatcher,w,now,watcher.distanceTo(caster)));
+        if(down!=lifeHeld)note(server,String.format(java.util.Locale.ROOT,"the watcher incapacitated %s at tick %d (its walking speed %.4f)",down,now,watcher.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED)));
+        lifeWatcher=w;lifeHeld=down;
     }
     /** Only Gold Experience's healing's script (2.149.0, MP_ONLY=goldheal). */
     static final boolean GOLDHEAL_ONLY="goldheal".equals(System.getProperty("botand.mp.only"));

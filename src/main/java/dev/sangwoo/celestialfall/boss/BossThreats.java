@@ -133,6 +133,10 @@ public final class BossThreats {
         long[] over=dev.sangwoo.celestialfall.stand.GoldExperienceOverdrive.coming(p);
         if(over!=null)out.add(new Threat(p,"overdrive",over[0],over[1],over[1],Zone.lane(p.getPos(),Float.intBitsToFloat((int)over[2]),StarPlatinumRules.NEAR,StarPlatinumRules.REACH_BIG,StarPlatinumRules.HALF_WIDTH,StarPlatinumRules.LOW,StarPlatinumRules.HIGH),
             true,false,false,dev.sangwoo.celestialfall.stand.GoldExperienceRules.OVER_DAMAGE,false,false));
+        // (2.151.0) its T's punch: a guard takes its blow but not the fly it makes of an arm, so it is read as one to get out of the way of
+        long[] life=dev.sangwoo.celestialfall.stand.GoldExperienceLife.coming(p);
+        if(life!=null)out.add(new Threat(p,"gold_life",life[0],life[1],life[1],Zone.lane(p.getPos(),Float.intBitsToFloat((int)life[2]),StarPlatinumRules.NEAR,StarPlatinumRules.REACH_BIG,StarPlatinumRules.HALF_WIDTH,StarPlatinumRules.LOW,StarPlatinumRules.HIGH),
+            false,false,false,dev.sangwoo.celestialfall.stand.GoldExperienceRules.FLY_SWAT,false,false));
         // (2.150.0) its beatdown's opening punch: a guard up against it breaks, and no guard up it begins the cutscene
         long[] open=dev.sangwoo.celestialfall.stand.GoldExperienceBeatdown.coming(p);
         if(open!=null)out.add(new Threat(p,"gold_beatdown",open[0],open[1],open[1],Zone.lane(p.getPos(),Float.intBitsToFloat((int)open[2]),StarPlatinumRules.NEAR,StarPlatinumRules.REACH_BIG,StarPlatinumRules.HALF_WIDTH,StarPlatinumRules.LOW,StarPlatinumRules.HIGH),

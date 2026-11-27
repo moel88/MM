@@ -39,6 +39,8 @@ public final class TrainingDummyRenderer extends software.bernie.geckolib.render
         dev.sangwoo.celestialfall.client.samurai.SamuraiClient.turn(d,delta,yaw,matrices);
         // (2.125.0) X Chara's double: the double's turn and lean, and the one seized turning over in the air
         dev.sangwoo.celestialfall.client.xchara.CloneClient.turn(d,delta,yaw,matrices);
+        // (2.151.0) Gold Experience's T: its own fly swatted, it falls on its back
+        dev.sangwoo.celestialfall.client.stand.GoldLife.turn(d,delta,matrices);
     }
     @Override public boolean hasLabel(TrainingDummyEntity d){return dispatcher.getSquaredDistanceToCamera(d)<32*32;}
     @Override protected void renderLabelIfPresent(TrainingDummyEntity d,Text text,MatrixStack matrices,VertexConsumerProvider vertices,int light) {

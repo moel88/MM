@@ -124,6 +124,8 @@ public final class HitStun {
             dev.sangwoo.celestialfall.stand.GoldExperienceHeal.struck(p);
             // (2.150.0) and its beatdown's opening punch, before it lands
             dev.sangwoo.celestialfall.stand.GoldExperienceBeatdown.struck(p);
+            // (2.151.0) and its T's punch, before it lands
+            dev.sangwoo.celestialfall.stand.GoldExperienceLife.struck(p);
             // (2.119.0) and their E, before its press lands
             dev.sangwoo.celestialfall.xchara.XCharaHeal.struck(p);}
     }

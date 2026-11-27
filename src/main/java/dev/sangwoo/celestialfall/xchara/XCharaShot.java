@@ -67,7 +67,7 @@ public final class XCharaShot {
     private static double[] arr(Vec3d v){return new double[]{v.x,v.y,v.z};}
     /** Whom {@code p}'s knife may strike at all: alive, to be struck, no merchant, and (a player) one they may harm. */
     private static boolean foe(ServerPlayerEntity p,LivingEntity e){
-        return e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()&&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity)
+        return e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()&&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity)&&!dev.sangwoo.celestialfall.stand.GoldExperienceLife.passes(p,e)
             &&!(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other));
     }
     /** Where {@code p}'s look meets the world now: the first block or body within the knives' range of their eyes, or as far out as that. */

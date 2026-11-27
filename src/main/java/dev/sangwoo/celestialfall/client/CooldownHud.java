@@ -180,8 +180,11 @@ public final class CooldownHud {
         long heavy=star?dev.sangwoo.celestialfall.client.stand.StandAttack.heavyReady(p.getUuid()):gold?dev.sangwoo.celestialfall.client.stand.GoldPunch.ready(p.getUuid()):0;
         if(heavy!=heavySeen){show(HEAVY,gold?OVERDRIVE:heavyName(),heavy-time,gold?dev.sangwoo.celestialfall.stand.GoldExperienceRules.OVER_COOLDOWN:dev.sangwoo.celestialfall.stand.StarPlatinumRules.HEAVY_COOLDOWN,now);heavySeen=heavy;}
         // its Star Finger (2.60.0): the same, told with each of its punches' news
-        long finger=star?dev.sangwoo.celestialfall.client.stand.StandAttack.fingerReady(p.getUuid()):0;
-        if(finger!=fingerSeen){show(FINGER,fingerName(),finger-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.FINGER_COOLDOWN,now);fingerSeen=finger;}
+        // (2.151.0) the Star Finger's box is Gold Experience's giving life's (T) too: from when its frog is gone, its fly is
+        // gone (swatted or its time up), or its punch is over with no fly (its own name and length)
+        if(!gold)dev.sangwoo.celestialfall.client.stand.GoldLife.forget(p.getUuid());
+        long finger=star?dev.sangwoo.celestialfall.client.stand.StandAttack.fingerReady(p.getUuid()):gold?dev.sangwoo.celestialfall.client.stand.GoldLife.ready(p.getUuid()):0;
+        if(finger!=fingerSeen){show(FINGER,gold?LIFE:fingerName(),finger-time,gold?dev.sangwoo.celestialfall.stand.GoldExperienceRules.LIFE_COOLDOWN:dev.sangwoo.celestialfall.stand.StarPlatinumRules.FINGER_COOLDOWN,now);fingerSeen=finger;}
         // its inhale (2.61.0): from when it is over (the server's ready tick, told as it ends)
         // (2.149.0) Gold Experience's healing (Y) is in the inhale's box: from when either one is over
         if(!gold)dev.sangwoo.celestialfall.client.stand.GoldHeal.forget(p.getUuid());
@@ -292,7 +295,7 @@ public final class CooldownHud {
         // (2.112.0) X Chara's to theirs
         if(slot==XCHARA_G||slot==XCHARA||slot==XCHARA_E||slot==XCHARA_JAB||slot==XCHARA_CLONE||slot==XCHARA_WEAKEN||slot==XCHARA_PULL||slot==XCHARA_SLAM||slot==XCHARA_CUTTER||slot==XCHARA_SHOT||slot==XCHARA_KNIVES||slot==XCHARA_ERASE||slot==XCHARA_X||slot==XCHARA_Z)return "x_chara".equals(stand);
         // (2.147.0) the rush's box is Gold Experience's muda rush's too
-        if((slot==BARRAGE||slot==HEAVY||slot==INHALE||slot==BEATDOWN)&&"gold_experience".equals(stand))return true;
+        if((slot==BARRAGE||slot==HEAVY||slot==INHALE||slot==BEATDOWN||slot==FINGER)&&"gold_experience".equals(stand))return true;
         return (slot<DASH?"kageno":"star_platinum").equals(stand);
     }
     /**
@@ -317,6 +320,8 @@ public final class CooldownHud {
     static final String HEALING="치유";
     /** Gold Experience's beatdown in the list (2.150.0): the beatdown's box, named for its own (the user's word for it). */
     static final String SEVEN_PAGES="7페이지 무다";
+    /** Gold Experience's giving life in the list (2.151.0): the Star Finger's box, named for its own. */
+    static final String LIFE="생명 부여";
     /** Its heavy punch's name in the list (the user's word for it). */
     private static String heavyName(){return "강펀치";}
     /** Its Star Finger's name in the list (the user's word for it). */

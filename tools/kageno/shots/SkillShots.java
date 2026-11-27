@@ -357,6 +357,7 @@ public final class SkillShots implements ClientModInitializer {
     private boolean mapShot(){return "METEOR".equals(current)||"SHOP".equals(current);}
     private String overSeen,soulSeen;private boolean dummySoulless;
     private String healSeen;private float healthSeen=-1;
+    private String lifeSeen,handSeen;private boolean downSeen;
     private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "METEOR"->300;case "SHOP"->400;case "BASE"->150;case "HUD"->400;case "UI"->300;case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;case "GDUMMY"->560;case "STAND"->240;case "SUMMON"->300;default->DURATION[skill(name)]+20;};}
     private final Set<UUID> castsLogged=new HashSet<>();private long dashLogged=-1000;private List<String> listLogged=List.of();private int hitsLogged;private String glowLogged="";
     /** One row of motion.csv for this client tick, and for M1 the hits whose sound has just started (sound.csv). */
@@ -830,6 +831,29 @@ public final class SkillShots implements ClientModInitializer {
             if(healState!=null&&!healState.equals(healSeen)){healSeen=healState;log.append("  healing at ").append(age).append(": self,age,touched,whom,healed,blows,ended,stopped ").append(mending).append(String.format(Locale.ROOT,", health %.1f, speed %.3f, ready in %d%n",mc.player.getHealth(),mc.player.getMovementSpeed(),dev.sangwoo.celestialfall.client.stand.GoldHeal.ready(mc.player.getUuid())-mc.world.getTime()));}
             if(mc.player!=null&&mc.player.getHealth()!=healthSeen){if(healthSeen>=0&&opt("healthlog",0)>0)log.append(String.format(Locale.ROOT,"  health %.1f -> %.1f at %d%n",healthSeen,mc.player.getHealth(),age));healthSeen=mc.player.getHealth();}
         }
+        // (2.151.0) Gold Experience's T: its state as it changes, what the main hand holds, the fly about whom it belongs to,
+        // the parts of the dummy that are flies, the dummy knocked down
+        {
+            String life=mc.player==null?null:dev.sangwoo.celestialfall.client.stand.GoldLife.describe(mc.player.getUuid(),0);
+            String key=null;if(life!=null){String[] lv=life.split(",");key=lv[0];for(int i=2;i<lv.length;i++)key+=","+lv[i];}
+            if(key!=null&&!key.equals(lifeSeen)){log.append("  giving life at ").append(age).append(": frog,age,early,reflected,landed,struck,guarded,part,fly,stopped ").append(life)
+                .append(String.format(Locale.ROOT,", health %.1f, ready in %d%n",mc.player.getHealth(),dev.sangwoo.celestialfall.client.stand.GoldLife.ready(mc.player.getUuid())-mc.world.getTime()));}
+            lifeSeen=key;
+            if(mc.player!=null){var held=mc.player.getMainHandStack();String hand=held.isEmpty()?"nothing":net.minecraft.registry.Registries.ITEM.getId(held.getItem())+" x"+held.getCount();
+                if(!hand.equals(handSeen)){log.append("  main hand holds ").append(hand).append(" at ").append(age).append('\n');handSeen=hand;}}
+            if(mc.world!=null&&age%10==0)for(var e:mc.world.getEntities())if(e instanceof dev.sangwoo.celestialfall.stand.GoldFlyEntity fly){
+                var at=dev.sangwoo.celestialfall.client.stand.GoldLife.flyAt(fly,0);var o=mc.world.getEntityById(fly.ownerId());
+                if(at==null||o==null)continue;
+                var f=net.minecraft.util.math.Vec3d.fromPolar(0,o.getHeadYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);var d=at.subtract(o.getPos());
+                log.append(String.format(Locale.ROOT,"  fly of %s at %d: age %.1f, part %d, %.2f ahead %.2f right %.2f up, missing %d%n",o==dummy?"the dummy":o.getName().getString(),age,fly.clientAge(0),fly.part(),d.dotProduct(f),d.dotProduct(right),d.y,dev.sangwoo.celestialfall.client.stand.GoldLife.missing(o)));
+            }
+            if(mc.player!=null&&age%20==0&&dev.sangwoo.celestialfall.client.stand.GoldFrog.seen(mc.player.getUuid())!=null&&life!=null)log.append("  frog drawn at ").append(age).append(": ").append(dev.sangwoo.celestialfall.client.stand.GoldFrog.seen(mc.player.getUuid())).append('\n');
+            if(dummy!=null&&age==12&&mc.player!=null){var f=net.minecraft.util.math.Vec3d.fromPolar(0,mc.player.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);var d=dummy.getPos().subtract(mc.player.getPos());
+                log.append(String.format(Locale.ROOT,"  the dummy %.2f ahead %.2f right of the player (facing %.1f) at %d: the player at %.2f %.2f %.2f, the dummy at %.2f %.2f %.2f%n",d.dotProduct(f),d.dotProduct(right),mc.player.getYaw(),age,
+                    mc.player.getX(),mc.player.getY(),mc.player.getZ(),dummy.getX(),dummy.getY(),dummy.getZ()));
+                server(sp->{var sd=sp.getServerWorld().getEntityById(dummyId);log.append(String.format(Locale.ROOT,"  (the server: the player at %.2f %.2f %.2f yaw %.1f, the dummy at %s)%n",sp.getX(),sp.getY(),sp.getZ(),sp.getYaw(),sd==null?"none":String.format(Locale.ROOT,"%.2f %.2f %.2f",sd.getX(),sd.getY(),sd.getZ())));});}
+            if(dummy!=null){boolean down=dev.sangwoo.celestialfall.client.stand.GoldLife.down(dummy);if(down!=downSeen)log.append(down?"  the dummy knocked down at ":"  the dummy up again at ").append(age).append('\n');downSeen=down;}
+        }
         if(dummy instanceof net.minecraft.entity.LivingEntity le&&Math.abs(le.getHealth()-dummyHealth)>.05f){
             if(dummyHealth>=0)log.append(String.format(Locale.ROOT,"  dummy health %.1f -> %.1f at %d%n",dummyHealth,le.getHealth(),age));
             dummyHealth=le.getHealth();
@@ -1053,6 +1077,9 @@ public final class SkillShots implements ClientModInitializer {
         }else{y=(int)Math.floor(mapAt[1]);yaw=(float)mapAt[3];baseX=mapAt[0];baseZ=mapAt[2];}
         // "php=N" (2.119.0): the player starts the shot at N health (for X Chara's E, which heals them)
         if(opt("php",0)>0)p.setHealth((float)opt("php",0));
+        // "held=ID" (2.151.0): the player holds one of that item in the main hand ("held=none": nothing), for Gold
+        // Experience's T (an item held becomes the frog; the hand empty, the punch)
+        if(opts.containsKey("held")){String id=opts.get("held");p.getInventory().setStack(p.getInventory().selectedSlot,"none".equals(id)?net.minecraft.item.ItemStack.EMPTY:new net.minecraft.item.ItemStack(net.minecraft.registry.Registries.ITEM.get(new net.minecraft.util.Identifier(id))));}
         var d=p.getServerWorld().getEntityById(dummyId);
         // "dguard=1" (2.59.0): the training dummy that holds its guard up (for the heavy punch breaking it)
         // "dattack=1" (2.68.0): the training dummy that throws basic-attack combos at the player (its blows stagger them)
@@ -1816,7 +1843,9 @@ public final class SkillShots implements ClientModInitializer {
                     if(what.equals("SOULOUT")){if(age==at){server(p->dev.sangwoo.celestialfall.stand.GoldExperienceOverdrive.out(p,p.getWorld().getTime()));log.append("  soul put out at ").append(age).append('\n');}continue;}
                     if(what.equals("GAUGE")){if(age==at){server(p->dev.sangwoo.celestialfall.isosang.IsosangAttack.setGauge(p,dev.sangwoo.celestialfall.isosang.IsosangRules.GAUGE_FULL));log.append("  gauge full at ").append(age).append('\n');}continue;}
                     if(what.equals("DUMMYBACK")){if(age==at)server(p->{var d=p.getServerWorld().getEntityById(dummyId);if(d instanceof net.minecraft.entity.LivingEntity l){
-                            var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);var to=p.getPos().add(f.multiply(opt("dfw",3))).add(right.multiply(opt("drt",0)));
+                            var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);// (2.151.0) "dfw2"/"drt2": where it is brought back to, if not where it stood (an attacking dummy kept out of reach
+                            // through the shot's lead, which it would spend striking the player, and brought in when wanted)
+                            var to=p.getPos().add(f.multiply(opt(opts.containsKey("dfw2")?"dfw2":"dfw",3))).add(right.multiply(opt(opts.containsKey("drt2")?"drt2":"drt",0)));
                             l.setHealth(l.getMaxHealth());l.setVelocity(0,0,0);l.refreshPositionAndAngles(to.x,p.getY(),to.z,p.getYaw()+180,0);
                             // (2.68.0: an attacking dummy starts its first combo 20 ticks after it is back, not before)
                             if(l instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity t&&t.kind()==dev.sangwoo.celestialfall.training.DummyKind.ATTACK)t.resetTraining();

@@ -118,7 +118,7 @@ public final class GoldExperienceBeatdown {
     /** Whether the beatdown may be begun now. */
     private static boolean may(ServerPlayerEntity p){
         if(!GoldExperienceOverdrive.punches(p)||p.isSleeping()||p.hasVehicle()||CombatManager.busy(p)||CombatManager.cinematic(p))return false;
-        if(GoldExperienceHeal.active(p)||GoldExperienceOverdrive.punching(p)||involved(p))return false;
+        if(GoldExperienceHeal.active(p)||GoldExperienceOverdrive.punching(p)||GoldExperienceLife.punching(p)||involved(p))return false;
         var s=state(p);long now=p.getWorld().getTime();
         return !s.flying(now)&&(now>=s.ready||NoCooldownState.enabled(p));
     }

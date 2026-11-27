@@ -38,5 +38,7 @@ public abstract class KagenoStaggerMixin {
         dev.sangwoo.celestialfall.client.samurai.SamuraiClient.turn(entity,delta,net.minecraft.util.math.MathHelper.lerpAngleDegrees(delta,entity.prevBodyYaw,entity.bodyYaw),matrices);
         // X Chara's double (2.125.0): the double's own turn and lean, and the one seized turning over in the air
         dev.sangwoo.celestialfall.client.xchara.CloneClient.turn(entity,delta,net.minecraft.util.math.MathHelper.lerpAngleDegrees(delta,entity.prevBodyYaw,entity.bodyYaw),matrices);
+        // Gold Experience's T (2.151.0): one whose own fly was swatted falls on their back
+        dev.sangwoo.celestialfall.client.stand.GoldLife.turn(entity,delta,matrices);
     }
 }

@@ -116,4 +116,28 @@ class GoldExperienceRulesTest {
         assertTrue(java.nio.file.Files.size(ogg)>100_000,"the cutscene's sound");
         assertEquals(BEAT_CUT,BEAT_SOUND);
     }
+    @Test void tGivesLifeAFrogThatTurnsBlowsBackOrAFlyTheyMustNotSwat(){
+        // the frog: born at the stand's touch, on for ten seconds, the item given back as it is over
+        assertEquals(200,FROG_LASTS,"ten seconds");assertEquals(FROG_BORN+FROG_LASTS,FROG_END);
+        assertTrue(FROG_BORN>0&&FROG_BORN<=8,"the stand's touch, quick");
+        assertFalse(frogOn(1000,1000+FROG_BORN-1));assertTrue(frogOn(1000,1000+FROG_BORN));
+        assertTrue(frogOn(1000,1000+FROG_END-1));assertFalse(frogOn(1000,1000+FROG_END));
+        // every blow it takes goes back whole to whoever struck it ("나는 0, 적이 그대로 받음")
+        for(float a:new float[]{1,5,12.5f,60,200})assertEquals(a,reflected(a),1e-6);
+        // the punch: 5, quick, the overdrive punch's lane
+        assertEquals(5,FLY_PUNCH_DAMAGE,1e-6);assertTrue(FLY_CONTACT<OVER_CONTACT,"quicker than the overdrive punch");
+        assertTrue(FLY_PUNCH_LENGTH>FLY_CONTACT);
+        for(double[] p:new double[][]{{2,0,0},{4.4,0,0},{4.6,0,0},{2,1.6,0},{-.4,0,0},{1,0,3}})
+            assertEquals(overLane(p[0],p[1],p[2],.3),lifeLane(p[0],p[1],p[2],.3));
+        // the fly: twenty seconds at most, swatted it is 60 to whom it belongs to and a second down
+        assertEquals(400,FLY_LASTS,"twenty seconds");assertEquals(FLY_FORMS+FLY_LASTS+FLY_RETURN,FLY_GONE);
+        assertEquals(60,FLY_SWAT,1e-6);assertEquals(20,FLY_DOWN,"a second down");
+        assertFalse(swattable(0));assertFalse(swattable(FLY_FORMS-1),"not while it is still the part flying off");
+        assertTrue(swattable(FLY_FORMS));assertTrue(swattable(FLY_FORMS+FLY_LASTS-1));
+        assertFalse(swattable(FLY_FORMS+FLY_LASTS),"not as it flies back");
+        // the parts: the head, the arms, the legs
+        assertEquals(5,PARTS);assertEquals(0,HEAD);
+        // one cooldown of 50 seconds for both, from the end (of the frog, of the fly)
+        assertEquals(1000,LIFE_COOLDOWN);assertEquals(5000+1000,lifeReady(5000));
+    }
 }

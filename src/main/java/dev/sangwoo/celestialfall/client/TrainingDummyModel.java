@@ -20,6 +20,8 @@ public final class TrainingDummyModel extends BipedEntityModel<TrainingDummyEnti
         boolean flung=false;
         if(beat==null){beat=dev.sangwoo.celestialfall.client.xchara.CloneClient.struckPose(d,delta);flung=beat!=null;}
         if(beat==null){beat=dev.sangwoo.celestialfall.client.samurai.SamuraiClient.struckPose(d,delta);flung=beat!=null;}
+        // (2.151.0) Gold Experience's T: its own fly swatted, on its back a second
+        if(beat==null){beat=dev.sangwoo.celestialfall.client.stand.GoldLife.downPose(d,delta);flung=beat!=null;}
         if(beat!=null){
             MotionRig.apply(this,beat,0,0);hat.visible=false;
             if(delta>=0&&delta<=1.001f)PoseBlend.apply(d.getUuid(),this,flung?"double":"beatdown",3,animation);
