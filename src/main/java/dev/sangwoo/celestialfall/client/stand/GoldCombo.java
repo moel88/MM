@@ -114,6 +114,8 @@ public final class GoldCombo {
         final GoldSounds.Run sound;
         /** For the checks: how many blows were heard. */
         int blows;
+        /** The server's word that it landed came before this client's clock of it reached its contact: its blow waits for that. */
+        boolean blowDue;
         Punch(long start,long serverAge,long received,int combo,float yaw,float aim){
             this.start=start;this.serverAge=serverAge;this.received=received;this.combo=combo;this.yaw=yaw;this.aim=aim;sound=new GoldSounds.Run(cues(combo));
         }
@@ -162,13 +164,10 @@ public final class GoldCombo {
             case GoldExperienceAttack.LANDED->{
                 var p=find(user,start);if(p==null)return;
                 p.landedAt=(serverNow-start)/20f;p.struck=ids;p.struckAt=at;p.guarded=gids;p.guardedAt=gat;
-                // the blow on whom it struck, now (the word comes as the fist lands on the punch's clock)
-                if(ids.length>0&&!p.sound.wasCut()){
-                    var u=mc.world.getPlayerByUuid(id);boolean ours=mc.player!=null&&(mc.player.getUuid().equals(id));
-                    for(int e:ids)if(mc.player!=null&&mc.player.getId()==e)ours=true;
-                    Vec3d[] from=new Vec3d[at.length+1];System.arraycopy(at,0,from,0,at.length);from[at.length]=u==null?null:u.getPos();
-                    if(GoldSounds.play(mc,blow(p.combo),GoldSounds.volume(mc,ours,from),1)!=null)p.blows++;
-                }
+                // the blow on whom it struck: now, as the fist lands on the punch's clock; but if the word came before this
+                // client's clock of the punch is there (its start heard late, the first multiplayer check: the blow 0.1 s
+                // before the fist), when it is (tick)
+                if(ids.length>0&&!p.sound.wasCut()){if(p.age(0)+1e-4f>=HIT[p.combo])blow(mc,id,p);else p.blowDue=true;}
             }
             case GoldExperienceAttack.STOPPED->{
                 var p=find(user,start);if(p==null||!Float.isNaN(p.stopped))return;
@@ -180,6 +179,14 @@ public final class GoldCombo {
         }
     }
     private static Punch find(User u,long start){for(var p:u.punches)if(p.start==start)return p;return null;}
+    /** The blow of punch {@code p} of user {@code id} on whom it struck: loud for its user and them, from where they were. */
+    private static void blow(MinecraftClient mc,UUID id,Punch p){
+        p.blowDue=false;
+        var u=mc.world.getPlayerByUuid(id);boolean ours=mc.player!=null&&mc.player.getUuid().equals(id);
+        for(int e:p.struck)if(mc.player!=null&&mc.player.getId()==e)ours=true;
+        Vec3d[] from=new Vec3d[p.struckAt.length+1];System.arraycopy(p.struckAt,0,from,0,p.struckAt.length);from[p.struckAt.length]=u==null?null:u.getPos();
+        if(GoldSounds.play(mc,blow(p.combo),GoldSounds.volume(mc,ours,from),1)!=null)p.blows++;
+    }
     private static void tick(MinecraftClient mc){
         if(mc.world==null||!MapClient.enabled()){if(!USERS.isEmpty()||world!=null)clear(mc);return;}
         if(world!=mc.world){clear(mc);world=mc.world;}
@@ -189,6 +196,7 @@ public final class GoldCombo {
             boolean mine=mc.player!=null&&mc.player.getUuid().equals(e.getKey());
             for(var p:e.getValue().punches){
                 float t=p.age(0);if(t>length(p)+1)continue;
+                if(p.blowDue&&t+1e-4f>=HIT[p.combo]){if(p.sound.wasCut())p.blowDue=false;else blow(mc,e.getKey(),p);}
                 boolean ours=mine;for(int id:p.struck)if(mc.player!=null&&mc.player.getId()==id)ours=true;
                 p.sound.tick(mc,t,GoldSounds.volume(mc,ours,user==null?null:user.getPos()));
             }

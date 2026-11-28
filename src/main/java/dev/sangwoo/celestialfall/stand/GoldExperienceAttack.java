@@ -190,9 +190,10 @@ public final class GoldExperienceAttack {
                 Vec3d fly=f.multiply(M1_FLY).add(0,M1_FLY_UP,0);
                 // one stopped in a time stop is thrown as time moves again, with whatever else came to them
                 if(!StarPlatinumTimeStop.deferLaunch(e,fly)){
+                    // told to a struck player's client once, through the tracker (velocityModified), as Star Platinum's heavy punch
+                    // is: sent here as well (as its finisher does), a client that moved between the two was thrown twice (the
+                    // first multiplayer check: 8.9 blocks once, 14.3 the next time)
                     e.setVelocity(fly);e.velocityModified=true;
-                    // (as Star Platinum's finisher: the throw told to a struck player's client at once, a tick before the tracker would)
-                    if(e instanceof ServerPlayerEntity other)other.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket(other));
                 }
             }else HitStun.stagger(p,e,combo,Stagger.gold(combo,s.start,now));
             // the user's own hit feedback (the damage number and the blood), as Star Platinum's
