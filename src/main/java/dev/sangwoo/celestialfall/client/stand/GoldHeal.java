@@ -26,18 +26,20 @@ import static dev.sangwoo.celestialfall.stand.GoldExperienceStance.*;
 /**
  * Gold Experience's healing as it is drawn, and its key (2.149.0, Y: GoldExperienceRules has the user's words). The
  * server runs it (GoldExperienceHeal); here is what the stand does through it, on the healing's own clock. It is one
- * punch, the fist driven in and left in (user: "러시를 꽂으며 힐 해주는거 같은데 그렇게 말고 주먹을 한 번 꽂아서
- * 주먹을 박아넣고 힐 되게"), never a barrage:
+ * punch, the fist driven in (user: "러시를 꽂으며 힐 해주는거 같은데 그렇게 말고 주먹을 한 번 꽂아서 주먹을 박아넣고
+ * 힐 되게"), never a barrage:
  * <ul>
  * <li>Y tapped, another's healing: it comes round to the front of its user and from its guard drives its right fist
  * into whoever it is for (the generator's {@code mend}), faster and faster, in as the server heals them; it leaves the
  * fist in a moment, draws it out to its guard and goes back to its user's shoulder.</li>
  * <li>Y held, its user's own: it comes round to their front right, turns on them, and drives the same fist into them,
- * in as the server's first healing comes; the fist stays in them, pressing a little with each healing, until Y is let
- * go; then it draws it out and goes back.</li>
+ * in as the server heals them all at once (2.153.0: "자힐은 꾹 누르면 한꺼번에 힐 되게"; till 2.152.0 the fist stayed
+ * in, pressing with each healing, until Y was let go); then as the tap it draws it out and goes back.</li>
  * </ul>
+ * Their sounds are the user's recordings (2.153.0, GoldSounds): the tap's the first of the two ("Life Creation 1") as the
+ * fist goes in, the hold's the second as it goes into its user.
  * The key: Y down starts a count; let go within GoldExperienceRules.HEAL_HOLD ticks it is the tap, still down then it
- * is the hold, which lasts until Y comes up. Everything drawn is a function of the healing's clock.
+ * is the hold. Everything drawn is a function of the healing's clock.
  */
 public final class GoldHeal {
     /** Seconds on either's clock: the fist starts out, is in (the server's MEND_CONTACT, and SELF_FIRST: the same). */
@@ -54,23 +56,27 @@ public final class GoldHeal {
     static final float LOWER=.17f;
     /** How big its arm is through either. */
     static final float ARMS=1.08f;
-    /** Held: how far further in the fist presses with each healing (blocks), and how long a press takes to ease off (seconds). */
-    static final float PUSH=.035f,PUSH_OFF=.09f;
+    /**
+     * The sounds (2.153.0, the user's recordings, tools/stand/cut_gold_sounds.py): the tap's from the moment its fist goes
+     * in; the hold's two ticks before (its first sparkle comes 0.12 s into it, on the fist going in).
+     */
+    static final GoldSounds.Cue[] TAP_SOUND={new GoldSounds.Cue(TOUCH,"gold_experience_mend",1)},HOLD_SOUND={new GoldSounds.Cue(TOUCH-.1f,"gold_experience_self_heal",1)};
     /** A healing as heard. */
     public static final class Heal {
         public final boolean self;public final long start;final long serverAge,received;final float yaw,aim;final int seed;
-        /** Its clock (seconds) when it ended (the hold let go or run out; NaN: still on), when the tap was stopped short (NaN: not), and when its hand touched (NaN: not yet). */
+        /** Its clock (seconds) when it ended (NaN: still on), when it was stopped short (NaN: not), and when its fist went in (NaN: not yet). */
         float ended=Float.NaN,stopped=Float.NaN,touchedAt=Float.NaN;
-        /** Whom the hand touched (entity id, -1 no one), what it healed them, where they stood (their middle) and how tall and wide they are. */
+        /** Whom the fist went into (entity id, -1 no one: its user for their own), what it healed them, where they stood (their middle) and how tall and wide they are. */
         int whom=-1;float healed;Vec3d whomAt;float whomHeight=1.8f,whomWidth=.6f;
-        /** Held: how many blows have healed, and the clock of the last. */
-        int blows;float lastBlow=-9;
         long ready;
-        Heal(boolean self,long start,long serverAge,long received,float yaw,float aim,int seed){this.self=self;this.start=start;this.serverAge=serverAge;this.received=received;this.yaw=yaw;this.aim=aim;this.seed=seed;}
+        /** Its sound (2.153.0). */
+        final GoldSounds.Run sound;
+        Heal(boolean self,long start,long serverAge,long received,float yaw,float aim,int seed){
+            this.self=self;this.start=start;this.serverAge=serverAge;this.received=received;this.yaw=yaw;this.aim=aim;this.seed=seed;
+            sound=new GoldSounds.Run(self?HOLD_SOUND:TAP_SOUND);
+        }
         /** Seconds on its clock this frame. */
         public float age(float delta){return (serverAge+StandRush.ticks-received+Math.max(0,Math.min(1,delta)))/20f;}
-        /** Held: when its blows stop (seconds): when it was let go, or their end. */
-        public float ends(){return Float.isNaN(ended)?GoldExperienceRules.SELF_LENGTH/20f:ended;}
         public boolean touched(){return !Float.isNaN(touchedAt);}
         public int whom(){return whom;}
         public float healed(){return healed;}
@@ -114,20 +120,32 @@ public final class GoldHeal {
                 }
             }
             case GoldExperienceHeal.BLOW->{
+                // the fist in its user: healed all at once
                 if(h==null||h.start!=start||!h.self)return;
-                h.blows++;h.lastBlow=(serverNow-start)/20f;h.healed+=healed;
-                if(healed>.005f)HealNumbers.show(id,healed,mc.world.getTime());
+                h.touchedAt=(serverNow-start)/20f;h.healed=healed;h.whom=whom;
+                if(mc.world.getEntityById(whom) instanceof LivingEntity e){h.whomAt=e.getPos().add(0,e.getHeight()*.6,0);h.whomHeight=e.getHeight();h.whomWidth=e.getWidth();}
+                if(healed>.05f)HealNumbers.show(id,healed,mc.world.getTime());
             }
             case GoldExperienceHeal.END->{
                 if(h==null||h.start!=start)return;
                 h.ready=ready;
-                if(h.self){if(Float.isNaN(h.ended))h.ended=Math.max(0,Math.min(h.age(0),GoldExperienceRules.SELF_LENGTH/20f));}
-                else if(whom>=0&&Float.isNaN(h.stopped)&&!h.touched())h.stopped=Math.max(0,h.age(0));
+                float at=Math.max(0,h.age(0));
+                if(Float.isNaN(h.ended))h.ended=Math.min(at,LENGTH);
+                // stopped short: the tap before its fist is in, the hold at any moment of it (a blow on its user)
+                if(whom>=0&&Float.isNaN(h.stopped)&&(h.self||!h.touched()))h.stopped=at;
+                if(!Float.isNaN(h.stopped)&&!h.touched())h.sound.cut();
             }
             default->{}
         }
     }
     private static void tick(MinecraftClient mc){
+        // their sounds, on their clocks (the tap's and the hold's alike: loud for its user and whom it heals)
+        if(mc.world!=null&&!mc.isPaused())for(var e:HEALS.entrySet()){
+            var h=e.getValue();float t=h.age(0);if(t>LENGTH+2)continue;
+            var user=mc.world.getPlayerByUuid(e.getKey());
+            boolean ours=mc.player!=null&&(mc.player.getUuid().equals(e.getKey())||mc.player.getId()==h.whom);
+            h.sound.tick(mc,t,GoldSounds.volume(mc,ours,user==null?null:user.getPos(),h.whomAt));
+        }
         // Y still down HEAL_HOLD ticks on: it is the hold
         if(heldY&&!asked&&StandRush.ticks-downAt>=GoldExperienceRules.HEAL_HOLD){
             asked=true;
@@ -156,10 +174,10 @@ public final class GoldHeal {
     static float smooth(float v){v=v<0?0:v>1?1:v;return v*v*(3-2*v);}
     /** How far in the fist is {@code t} seconds in (0 in the guard, 1 driven in): faster and faster, fastest as it goes in, as the server heals. */
     static float reach(float t){float u=MathHelper.clamp((t-OUT_FROM)/(TOUCH-OUT_FROM),0,1);return (float)Math.pow(u,1.6);}
-    /** When healing {@code h} starts drawing its fist out (seconds on its clock): the tap after its moment in, or stopped short; the hold as Y is let go or it runs out. */
-    static float leaves(Heal h){return h.self?h.ends():Float.isNaN(h.stopped)?STAYS:Math.min(STAYS,h.stopped);}
+    /** When healing {@code h} starts drawing its fist out (seconds on its clock): after its moment in, or stopped short (the tap and, since 2.153.0, the hold alike). */
+    static float leaves(Heal h){return Float.isNaN(h.stopped)?STAYS:Math.min(STAYS,h.stopped);}
     /** How long it takes drawing it out to its guard. */
-    static float drawing(Heal h){return h.self||!Float.isNaN(h.stopped)?CUT:GUARDED-STAYS;}
+    static float drawing(Heal h){return !Float.isNaN(h.stopped)?CUT:GUARDED-STAYS;}
     /** When it is back in its guard. */
     static float guarded(Heal h){return leaves(h)+drawing(h);}
     /** How far back in its guard it is {@code t} seconds in (0 still in, 1 in its guard). */
@@ -178,12 +196,6 @@ public final class GoldHeal {
     static float fistReach(){return GoldRush.grown(MEND,1,ARMS)[0];}
     /** How far from its user it stands through the hold (blocks): its knuckles DEPTH from their middle, the fist well in them. */
     static float selfPlace(){return fistReach()+DEPTH;}
-    /** Held: how far further in the fist presses {@code t} seconds in (blocks): a little with each healing, eased off before the next. */
-    static float press(Heal h,float t){
-        float since=t-TOUCH;if(since<0||t>h.ends())return 0;
-        float every=GoldExperienceRules.SELF_EVERY/20f,u=since%every;
-        return PUSH*Math.min(1,u/.02f)*(1-smooth((u-.02f)/PUSH_OFF));
-    }
     /** How big its arm is {@code t} seconds into healing {@code h}. */
     static float arms(Heal h,float t){return 1+(ARMS-1)*smooth(t/StandRush.RISE)*(1-back(h,t));}
     /** Where its right fist's knuckles are {@code t} seconds in (blocks ahead, to its right and up from its feet, at its size 1). */
@@ -219,7 +231,7 @@ public final class GoldHeal {
         float size=arms(h,t);
         look.armL=look.armL*(1-in)+size*in;look.armR=look.armR*(1-in)+size*in;
         shape.engage=StandPunch.burst(t/StandRush.RISE)*(1-smooth((t-end-LINGER)/RETURN));shape.raise=GoldRush.RAISE;
-        if(h.self){shape.yaw=facing;shape.ahead=selfPlace()-press(h,t);shape.side=SIDE;shape.inward=1;shape.raise=GoldRush.RAISE-LOWER;}
+        if(h.self){shape.yaw=facing;shape.ahead=selfPlace();shape.side=SIDE;shape.inward=1;shape.raise=GoldRush.RAISE-LOWER;}
         else{shape.yaw=h.yaw;shape.ahead=place(h);shape.side=0;shape.inward=0;}
         return true;
     }
@@ -231,15 +243,17 @@ public final class GoldHeal {
     static Map<UUID,Heal> all(){return HEALS;}
     /** Whether this player's stand is healing them now (Y held): they walk slowly and do nothing else. */
     public static boolean selfing(UUID id){var h=HEALS.get(id);return h!=null&&h.self&&Float.isNaN(h.ended)&&h.age(0)<GoldExperienceRules.SELF_LENGTH/20f+.1f;}
+    /** For the checks: how many of this player's healing's sounds have played (-1 if none was heard). */
+    public static int sounds(UUID id){var h=HEALS.get(id);return h==null?-1:h.sound.heard();}
     public static boolean localSelfing(){var p=MinecraftClient.getInstance().player;return p!=null&&selfing(p.getUuid());}
     /** The world tick this player's Y is ready again (0 if none was used, or it is still on: its cooldown runs from its end). */
     public static long ready(UUID id){var h=HEALS.get(id);return h==null?0:h.ready;}
     /** This player's stand is not Gold Experience: its cooldown is gone, as the server forgets it. */
     public static void forget(UUID id){var h=HEALS.get(id);if(h!=null)h.ready=0;}
-    /** For the checks: this player's healing as "self,age,touched,whom,healed,blows,ended,stopped", or null. */
+    /** For the checks: this player's healing as "self,age,touched,whom,healed,sounds,ended,stopped", or null. */
     public static String describe(UUID id,float delta){
         var h=HEALS.get(id);if(h==null)return null;
-        return String.format(java.util.Locale.ROOT,"%d,%.2f,%d,%d,%.1f,%d,%d,%d",h.self?1:0,h.age(delta),h.touched()?1:0,h.whom,h.healed,h.blows,Float.isNaN(h.ended)?0:1,Float.isNaN(h.stopped)?0:1);
+        return String.format(java.util.Locale.ROOT,"%d,%.2f,%d,%d,%.1f,%d,%d,%d",h.self?1:0,h.age(delta),h.touched()?1:0,h.whom,h.healed,h.sound.heard(),Float.isNaN(h.ended)?0:1,Float.isNaN(h.stopped)?0:1);
     }
 
     /** Y for Gold Experience's user on the map: tapped, another's healing; held, their own. Returns whether it took the key. */
@@ -247,7 +261,7 @@ public final class GoldHeal {
         var mc=MinecraftClient.getInstance();if(key!=GLFW.GLFW_KEY_Y||window!=mc.getWindow().getHandle())return false;
         if(action==GLFW.GLFW_RELEASE){
             if(!heldY)return false;
-            // let go before the hold was asked for: the tap; after: the hold stops
+            // let go before the hold was asked for: the tap; after: said, though the hold goes on (2.153.0)
             if(asked)send(GoldExperienceHeal.RELEASE);
             else if(usable(mc))send(GoldExperienceHeal.TAP);
             heldY=asked=false;return true;

@@ -52,6 +52,12 @@ import static dev.sangwoo.celestialfall.stand.GoldExperienceStance.*;
  * </ul>
  * T is the key (Gold Experience's user's on the map, as Star Platinum's Star Finger is its user's); chat is on Enter for
  * them. Every moment is a function of the clocks.
+ * <p>
+ * Its sounds (2.153.0, laid together from recordings: tools/stand/make_gold_sounds.py) come on those moments (GoldSounds):
+ * the light gathering into the item, its pop and the frog's first croak, the hop up, a croak and a ting with every blow
+ * turned back, the hop back and the item's return (or a burst, ended early); the punch through the air and its landing
+ * (the part popping off), the swat and the fall of whom the fly belonged to. The fly's own (its buzz, as it becomes the
+ * fly and as it goes back) are GoldFlySounds'.
  */
 public final class GoldLife {
     /** The frog's moments (seconds on its clock): the hand is up, the item turns into the frog (the server's FROG_BORN), it has become the frog, its hop to the shoulder, the hand down. */
@@ -72,6 +78,19 @@ public final class GoldLife {
     static final double HAND_AHEAD=.7,HAND_SIDE=.33,HAND_UP=1.58;
     /** Swatted: whom the fly belonged to falls on their back, lies, and is up again (seconds). */
     static final float FALLEN=.22f,GETS_UP=.7f,DOWN=GoldExperienceRules.FLY_DOWN/20f;
+    /**
+     * The sounds' moments (seconds on the T's clock): the light gathering (it swells to the item's turning at BORN), the
+     * pop and the frog's croak (BORN: its croak in the file as the frog has grown, MORPHED), the hop up (its landing as the
+     * frog sits, HOP_TO), the hop back and the item's return (its pop at UNMORPH); the punch's rush through the air (at
+     * its loudest as the fist lands).
+     */
+    static final float GATHER_SOUND=.05f,PUNCH_SOUND=.25f;
+    static final GoldSounds.Cue[] FROG_SOUNDS={
+        new GoldSounds.Cue(GATHER_SOUND,"gold_life_gather",1),new GoldSounds.Cue(BORN,"gold_life_born",1),
+        new GoldSounds.Cue(HOP_FROM,"gold_life_hop",1),new GoldSounds.Cue(HOP_BACK,"gold_life_frog_back",1)};
+    static final GoldSounds.Cue[] PUNCH_SOUNDS={new GoldSounds.Cue(PUNCH_SOUND,"gold_life_punch",1)};
+    /** The least time between the croaks of blows turned back (seconds): a barrage's blows croak now and then, not each. */
+    static final float CROAKS=.2f;
 
     /** A T as heard. */
     public static final class Life {
@@ -83,9 +102,12 @@ public final class GoldLife {
         /** The punch: its clock when it was stopped short and when it landed (NaN: not), on whom, whether a guard took it, the part and its fly. */
         float stopped=Float.NaN,landedAt=Float.NaN;int struck=-1,part=-1,fly=-1;boolean guarded;
         long ready;
+        /** Its sounds (2.153.0): the frog's sheet or the punch's; and the frog's last croak (its clock). */
+        final GoldSounds.Run sound;float croaked=-9;
         Life(boolean frog,long start,long serverAge,long received,float yaw,float aim,int seed,ItemStack item){
             this.frog=frog;this.start=start;this.serverAge=serverAge;this.received=received;this.yaw=yaw;this.aim=aim;this.seed=seed;this.item=item;
             variant=Math.floorMod(seed,3);
+            sound=new GoldSounds.Run(frog?FROG_SOUNDS:PUNCH_SOUNDS);
         }
         /** Seconds on its clock this frame. */
         public float age(float delta){return (serverAge+StandRush.ticks-received+Math.max(0,Math.min(1,delta)))/20f;}
@@ -119,11 +141,11 @@ public final class GoldLife {
             if(!Float.isFinite(yaw))return;
             mc.execute(()->{
                 if(!MapClient.enabled()||mc.world==null||!mc.world.getRegistryKey().getValue().equals(dimension))return;
-                if(world!=mc.world){LIVES.clear();DOWNS.clear();MISSING.clear();world=mc.world;}
+                if(world!=mc.world){stopSounds(mc);LIVES.clear();DOWNS.clear();MISSING.clear();world=mc.world;}
                 event(mc,user,type,start,serverNow,yaw,aim,ready,whom,amount,flag,part,fly,item,where);
             });
         });
-        ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->mc.execute(()->{LIVES.clear();DOWNS.clear();MISSING.clear();world=null;heldT=false;}));
+        ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->mc.execute(()->{stopSounds(mc);LIVES.clear();DOWNS.clear();MISSING.clear();world=null;heldT=false;}));
         ClientTickEvents.END_CLIENT_TICK.register(GoldLife::tick);
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.START.register(c->frame++);
         // a fly is only there for whom it belongs to: nobody else's crosshair or drawn hits find it
@@ -133,6 +155,7 @@ public final class GoldLife {
         var l=LIVES.get(id);
         switch(type){
             case GoldExperienceLife.FROG,GoldExperienceLife.PUNCH->{
+                if(l!=null)l.sound.cut();
                 l=new Life(type==GoldExperienceLife.FROG,start,serverNow-start,StandRush.ticks,yaw,aim,(int)(start*31+id.getLeastSignificantBits()),item);
                 l.ready=ready;LIVES.put(id,l);
                 if(l.frog)GoldFrog.born(id);
@@ -140,30 +163,64 @@ public final class GoldLife {
             case GoldExperienceLife.FROG_GONE->{
                 if(l==null||!l.frog||l.start!=start)return;
                 l.ready=ready;
-                if(flag&&Float.isNaN(l.early))l.early=Math.max(0,(serverNow-start)/20f);
+                if(flag&&Float.isNaN(l.early)){
+                    l.early=Math.max(0,(serverNow-start)/20f);
+                    // ended early: what was to come is let go, and the frog bursts (if it had been born)
+                    l.sound.cut();
+                    if(l.early>=BORN)GoldSounds.play(mc,"gold_life_frog_burst",volume(mc,id,-1,null),1);
+                }
             }
             case GoldExperienceLife.REFLECTED->{
                 if(l==null||!l.frog||l.start!=start)return;
                 float at=(serverNow-start)/20f;
                 l.reflected.add(new Turned(at,whom,amount));
                 GoldFrog.croak(id,at);
+                // a croak and a ting going back (a barrage's blows now and then)
+                if(at-l.croaked>=CROAKS){
+                    l.croaked=at;float v=volume(mc,id,whom,null);
+                    GoldSounds.play(mc,"gold_life_croak",v,1);GoldSounds.play(mc,"gold_life_reflect",v*.8f,1);
+                }
             }
             case GoldExperienceLife.LANDED->{
                 if(l==null||l.frog||l.start!=start)return;
                 l.ready=ready;l.landedAt=(serverNow-start)/20f;l.struck=whom;l.guarded=flag;l.part=part;l.fly=fly;
+                // it lands: the blow and the part popping off
+                if(whom>=0)GoldSounds.play(mc,"gold_life_strike",volume(mc,id,whom,null),1);
             }
             case GoldExperienceLife.STOPPED->{
                 if(l==null||l.frog||l.start!=start)return;
                 l.ready=ready;if(Float.isNaN(l.stopped))l.stopped=Math.max(0,l.age(0));
+                if(!l.landed())l.sound.cut();
             }
-            case GoldExperienceLife.SWATTED->DOWNS.put(whom,new Down(StandRush.ticks,part,where));
+            case GoldExperienceLife.SWATTED->{
+                DOWNS.put(whom,new Down(StandRush.ticks,part,where));
+                // the swat where the fly was, and whom it belonged to coming down on their back (FALLEN on)
+                float v=volume(mc,id,whom,where);
+                GoldSounds.play(mc,"gold_life_swat",v,1);
+                if(v>.01f)mc.getSoundManager().play(new GoldSounds.Sound("gold_life_fall",v,1),Math.round(FALLEN*20));
+            }
             case GoldExperienceLife.FLY_GONE->{if(l!=null&&!l.frog)l.ready=ready;}
             default->{}
         }
     }
+    /**
+     * How loud T's sounds are here: all of it for its user and whom it is for ({@code whom}, an entity id, -1 none),
+     * fading out from where its user, they or {@code at} are.
+     */
+    static float volume(MinecraftClient mc,UUID user,int whom,Vec3d at){
+        if(mc.world==null||mc.player==null)return 0;
+        var u=mc.world.getPlayerByUuid(user);var w=whom>=0?mc.world.getEntityById(whom):null;
+        boolean ours=mc.player.getUuid().equals(user)||whom>=0&&mc.player.getId()==whom;
+        return GoldSounds.volume(mc,ours,u==null?null:u.getPos(),w==null?null:w.getPos(),at);
+    }
+    private static void stopSounds(MinecraftClient mc){for(var l:LIVES.values())l.sound.stop(mc);}
     private static void tick(MinecraftClient mc){
         MISSING.clear();
         if(mc.world==null)return;
+        if(!mc.isPaused())for(var e:LIVES.entrySet()){
+            var l=e.getValue();float t=l.age(0);if(t>(l.frog?LOWERED_AGAIN+1:3))continue;
+            l.sound.tick(mc,t,volume(mc,e.getKey(),l.frog?-1:l.struck,null));
+        }
         for(var e:mc.world.getEntities())if(e instanceof GoldFlyEntity f&&f.isAlive())MISSING.merge(f.ownerId(),1<<Math.max(0,Math.min(4,f.part())),(a,b)->a|b);
         DOWNS.values().removeIf(d->d.age(0)>DOWN+.5f);
         // (a punch's kept while its fly lives: the fly's end brings its cooldown)

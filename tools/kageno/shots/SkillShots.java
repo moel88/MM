@@ -218,6 +218,9 @@ public final class SkillShots implements ClientModInitializer {
     private final List<Future<?>> jobs=new ArrayList<>();
     private MinecraftClient mc;private int phase,age,shotIndex;private long started=System.nanoTime();
     private final Deque<String> queue=new ArrayDeque<>(Arrays.asList(System.getProperty("botand.shots.list","F,M1,E,R,T,RUSH,Y,Q,H,G").split(",")));
+    // (2.153.0) what hurts the player on the server, as it comes (its damage type, who struck and with what, how much):
+    // to see what cuts a skill short
+    private static final java.util.concurrent.ConcurrentLinkedQueue<String> HURTS=new java.util.concurrent.ConcurrentLinkedQueue<>();
     private String current,folder;private Map<String,String> opts=new HashMap<>();private long castTick;private int dummyId=-1;private final StringBuilder log=new StringBuilder();
     private final Map<String,Integer> repeats=new HashMap<>();
     private boolean slowed,listening;
@@ -800,6 +803,7 @@ public final class SkillShots implements ClientModInitializer {
             boolean still=v[4].equals("1");
             if(still!=stillLogged){log.append("  screen ").append(still?"held still":"moving again").append(" at ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[0]));stillLogged=still;}
         }
+        for(String hurt;(hurt=HURTS.poll())!=null;)log.append("  player hurt on the server by ").append(hurt).append(" at ").append(age).append('\n');
         if(Math.abs(mc.player.getHealth()-playerHealth)>.05f){
             if(playerHealth>=0)log.append(String.format(Locale.ROOT,"  player health %.1f -> %.1f at %d%n",playerHealth,mc.player.getHealth(),age));
             playerHealth=mc.player.getHealth();
@@ -828,7 +832,7 @@ public final class SkillShots implements ClientModInitializer {
         {
             String mending=mc.player==null?null:dev.sangwoo.celestialfall.client.stand.GoldHeal.describe(mc.player.getUuid(),0);
             String healState=null;if(mending!=null){String[] hv=mending.split(",");healState=hv[0]+","+hv[2]+","+hv[3]+","+hv[6]+","+hv[7]+","+(Integer.parseInt(hv[5])/10);}
-            if(healState!=null&&!healState.equals(healSeen)){healSeen=healState;log.append("  healing at ").append(age).append(": self,age,touched,whom,healed,blows,ended,stopped ").append(mending).append(String.format(Locale.ROOT,", health %.1f, speed %.3f, ready in %d%n",mc.player.getHealth(),mc.player.getMovementSpeed(),dev.sangwoo.celestialfall.client.stand.GoldHeal.ready(mc.player.getUuid())-mc.world.getTime()));}
+            if(healState!=null&&!healState.equals(healSeen)){healSeen=healState;log.append("  healing at ").append(age).append(": self,age,touched,whom,healed,sounds,ended,stopped ").append(mending).append(String.format(Locale.ROOT,", health %.1f, speed %.3f, ready in %d%n",mc.player.getHealth(),mc.player.getMovementSpeed(),dev.sangwoo.celestialfall.client.stand.GoldHeal.ready(mc.player.getUuid())-mc.world.getTime()));}
             if(mc.player!=null&&mc.player.getHealth()!=healthSeen){if(healthSeen>=0&&opt("healthlog",0)>0)log.append(String.format(Locale.ROOT,"  health %.1f -> %.1f at %d%n",healthSeen,mc.player.getHealth(),age));healthSeen=mc.player.getHealth();}
         }
         // (2.151.0) Gold Experience's T: its state as it changes, what the main hand holds, the fly about whom it belongs to,
@@ -1110,6 +1114,10 @@ public final class SkillShots implements ClientModInitializer {
         if(!(d instanceof net.minecraft.entity.LivingEntity)||!d.isAlive()){
             var dummy=TrainingDummies.TYPES.get(kind).create(p.getServerWorld());dummy.refreshPositionAndAngles(baseX,y,baseZ+3,180,0);p.getServerWorld().spawnEntity(dummy);dummyId=dummy.getId();d=dummy;
         }
+        // (2.153.0) no wild monster about as a shot begins: the flat world's slime chunks bred slimes before setup put the
+        // spawning off, and one came over striking the player through a run of shots (cutting their H short)
+        for(var m:p.getServerWorld().getEntitiesByClass(net.minecraft.entity.mob.MobEntity.class,p.getBoundingBox().expand(160),
+            m->m instanceof net.minecraft.entity.mob.SlimeEntity||m instanceof net.minecraft.entity.mob.HostileEntity))m.discard();
         actors(p.getServerWorld(),y);
         // "xdummy=FW_RT/FW_RT..." (2.133.0): more training dummies standing still at those points from where the player stands
         // (for X Chara's terrain delete, whose grounds go under the ones near); gone with the next shot
@@ -1296,6 +1304,11 @@ public final class SkillShots implements ClientModInitializer {
             net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.afterRender(screen).register((s,d,x,y,delta)->pointer(d));
         });
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server->{try{actorTick(server);}catch(Throwable t){if(mc!=null)mc.execute(()->fail(t));}});
+        net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.ALLOW_DAMAGE.register((e,src,amount)->{
+            if(e instanceof ServerPlayerEntity&&current!=null)HURTS.add(String.format(Locale.ROOT,"%s, struck by %s with %s: %.1f",src.getTypeRegistryEntry().getKey().map(k->k.getValue().toString()).orElse("?"),
+                src.getAttacker()==null?"nothing":net.minecraft.entity.EntityType.getId(src.getAttacker().getType())+" "+src.getAttacker().getId(),
+                src.getSource()==null?"nothing":net.minecraft.entity.EntityType.getId(src.getSource().getType())+" "+src.getSource().getId(),amount));
+            return true;});
         // every sound the game starts, with the shot's clock and the time (to lay the recording under the film)
         if(AUDIO)ClientTickEvents.START_CLIENT_TICK.register(client->{if(client.getSoundManager()!=null&&!listening){listening=true;client.getSoundManager().registerListener((sound,set)->{
             if(phase==4)soundRows.append(String.format(Locale.ROOT,"%.3f,%d,%s%n",clock(),System.nanoTime(),sound.getId()));});}});

@@ -900,12 +900,13 @@ public final class MpClient implements ClientModInitializer {
         "390 Q","410 R",
         "430 NOCDOFF","440 END"};
     /**
-     * Gold Experience's healing (2.149.0, MP_ONLY=goldheal): the caster takes Gold Experience, its cooldowns on, the
-     * watcher 2.5 blocks in front and hurt. Y tapped with the stand in: nothing. Q, then Y tapped: the hand is on the
-     * watcher 6 ticks on: 60 healed. Y tapped again: refused (its 45 s). The cooldowns off, the caster hurt: Y held 60
-     * ticks: a blow of 1 every 2 ticks from 3 ticks in, the caster a tenth as fast, until Y is let go. Y held and the
-     * caster struck ("HITME"): stopped. The watcher out of reach ("AWAY"): Y tapped: nothing. Y tapped through the
-     * rush: nothing. Q (the stand back): Y held: nothing.
+     * Gold Experience's healing (2.149.0, 2.153.0; MP_ONLY=goldheal): the caster takes Gold Experience, its cooldowns on,
+     * the watcher 2.5 blocks in front and hurt. Y tapped with the stand in: nothing. Q, then Y tapped: the fist is in the
+     * watcher 6 ticks on: 30 healed. Y tapped again: refused (its 45 s). The cooldowns off, the caster hurt: Y held 60
+     * ticks: 8 ticks on it begins, one fist into the caster 6 ticks after: 30 at once, over 18 ticks in (Y still held),
+     * the caster a tenth as fast meanwhile. Y held and the caster struck after the fist is in ("HITME"): healed, then
+     * stopped there; struck again before the fist is in: stopped, no healing. The watcher out of reach ("AWAY"): Y
+     * tapped: nothing. Y tapped through the rush: nothing. Q (the stand back): Y held: nothing.
      */
     private static final String[] GOLDHEAL_SCRIPT={
         "5 GOLD","8 NOCDOFF","30 HOME","35 HURT",
@@ -914,10 +915,11 @@ public final class MpClient implements ClientModInitializer {
         "120 NOCDON","130 CHURT",
         "145 Y+","205 Y-",
         "225 Y+","245 HITME","265 Y-",
-        "285 AWAY","295 Y",
-        "310 HOME","320 E+","326 Y","340 E-",
-        "360 Q","380 Y+","400 Y-",
-        "410 NOCDOFF","420 END"};
+        "275 Y+","286 HITME","300 Y-",
+        "310 AWAY","320 Y",
+        "335 HOME","345 E+","351 Y","365 E-",
+        "385 Q","405 Y+","425 Y-",
+        "435 NOCDOFF","445 END"};
     /**
      * Gold Experience's T, giving life (2.151.0, MP_ONLY=goldlife): the caster takes Gold Experience, its cooldowns on,
      * the watcher 2.5 blocks in front. T with the stand in: nothing. Q, then T with a diamond sword in the main hand
@@ -1494,7 +1496,7 @@ public final class MpClient implements ClientModInitializer {
         for(var p:mc.world.getPlayers()){
             String heal=dev.sangwoo.celestialfall.client.stand.GoldHeal.describe(p.getUuid(),0);if(heal==null)continue;
             String[] v=heal.split(",");String shape=v[0]+","+v[2]+","+v[3]+","+v[4]+","+v[6]+","+v[7]+(v[0].equals("1")?","+(Integer.parseInt(v[5])/5):"");
-            if(!shape.equals(healsSeen.put(p.getUuid(),shape)))note((p==mc.player?"my":name(p.getUuid())+"'s")+" healing (self,age,touched,whom,healed,blows,ended,stopped): "+heal+", ready in "+(dev.sangwoo.celestialfall.client.stand.GoldHeal.ready(p.getUuid())-mc.world.getTime())
+            if(!shape.equals(healsSeen.put(p.getUuid(),shape)))note((p==mc.player?"my":name(p.getUuid())+"'s")+" healing (self,age,touched,whom,healed,sounds,ended,stopped): "+heal+", ready in "+(dev.sangwoo.celestialfall.client.stand.GoldHeal.ready(p.getUuid())-mc.world.getTime())
                 +String.format(Locale.ROOT,", my speed %.4f",mc.player.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED)));
         }
         float h=mc.player.getHealth();

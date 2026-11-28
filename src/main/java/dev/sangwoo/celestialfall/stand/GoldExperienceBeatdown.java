@@ -144,8 +144,11 @@ public final class GoldExperienceBeatdown {
         stop(p,s,now);
     }
     private static void stop(ServerPlayerEntity p,Open s,long now){
-        s.start=Long.MIN_VALUE/4;s.landed=true;s.ready=NoCooldownState.enabled(p)?now:beatReady(now);
+        s.landed=true;s.ready=NoCooldownState.enabled(p)?now:beatReady(now);
+        // (2.153.0) told with the start the clients know the punch by, then forgotten: told after, they took it for the glow
+        // cut short and dropped the punch at once (where it was to go back to its guard)
         send(p,s,STOPPED,null,false);
+        s.start=Long.MIN_VALUE/4;
     }
 
     private static void tick(MinecraftServer server){

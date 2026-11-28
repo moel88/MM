@@ -9,6 +9,7 @@ import dev.sangwoo.celestialfall.stand.StandManager;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
@@ -29,6 +30,9 @@ import static dev.sangwoo.celestialfall.stand.GoldExperienceStance.*;
  * behind it, landing as the server's blow does; it stops dead there at full stretch, holds, and goes back to its guard
  * and to its user's shoulder. Stopped short it turns back to the guard at once. Everything is a function of that clock.
  * R is the key (Gold Experience's user's on the map, as Star Platinum's heavy punch is its user's).
+ * <p>
+ * Its sound (2.153.0) is the user's recording, the stand's shout "mu-DA!" (tools/stand/cut_gold_sounds.py), its second
+ * syllable on the frame the fist lands (SOUND_AT), whether it lands on anyone or not; stopped short before, it fades out.
  */
 public final class GoldPunch {
     /** Seconds on the punch's clock: wound up, loaded until, the blow lands (the server's OVER_CONTACT), held out until, back in the guard, over. */
@@ -41,6 +45,9 @@ public final class GoldPunch {
     static final float RAISE=GoldRush.RAISE,ARMS=1.12f;
     /** How far in front of its user it stands with no one in its way, and no nearer or further than (blocks); how deep its fist goes into whom it meets. */
     static final float AHEAD=1.05f,NEAR=.75f,FAR=2.1f,BITE=.15f;
+    /** Where the shout's second syllable is in its file (seconds: tools/stand/cut_gold_sounds.py's DA_AT), so when it is played: that syllable as the fist lands. */
+    static final float DA_AT=.2f,SOUND_AT=CONTACT-DA_AT;
+    static final GoldSounds.Cue[] SOUND={new GoldSounds.Cue(SOUND_AT,"gold_experience_overdrive",1)};
     /** A punch as heard. */
     public static final class Punch {
         public final long start;final long serverAge,received;final float yaw,aim;final int seed;
@@ -50,6 +57,8 @@ public final class GoldPunch {
         int struck=-1;boolean guarded,hit;Vec3d struckAt;
         /** The world tick it is ready again. */
         long ready;
+        /** Its shout (2.153.0). */
+        final GoldSounds.Run sound=new GoldSounds.Run(SOUND);
         Punch(long start,long serverAge,long received,float yaw,float aim,int seed){this.start=start;this.serverAge=serverAge;this.received=received;this.yaw=yaw;this.aim=aim;this.seed=seed;}
         /** Seconds on its clock this frame. */
         public float age(float delta){return (serverAge+StandRush.ticks-received+Math.max(0,Math.min(1,delta)))/20f;}
@@ -85,7 +94,18 @@ public final class GoldPunch {
                 event(mc,user,type,start,serverNow,yaw,aim,ready,struck,guarded,until);
             });
         });
-        ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->mc.execute(()->{PUNCHES.clear();world=null;heldR=false;}));
+        ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->mc.execute(()->{for(var p:PUNCHES.values())p.sound.stop(mc);PUNCHES.clear();world=null;heldR=false;}));
+        ClientTickEvents.END_CLIENT_TICK.register(GoldPunch::tick);
+    }
+    /** The shouts, on their punches' clocks: loud for its user and whom it lands on. */
+    private static void tick(MinecraftClient mc){
+        if(mc.world==null||mc.isPaused())return;
+        for(var e:PUNCHES.entrySet()){
+            var p=e.getValue();float t=p.age(0);if(t>LENGTH+2)continue;
+            var user=mc.world.getPlayerByUuid(e.getKey());
+            boolean ours=mc.player!=null&&(mc.player.getUuid().equals(e.getKey())||mc.player.getId()==p.struck);
+            p.sound.tick(mc,t,GoldSounds.volume(mc,ours,user==null?null:user.getPos(),p.struckAt));
+        }
     }
     private static void event(MinecraftClient mc,UUID id,int type,long start,long serverNow,float yaw,float aim,long ready,int struck,boolean guarded,long until){
         var p=PUNCHES.get(id);
@@ -102,6 +122,7 @@ public final class GoldPunch {
             case GoldExperienceOverdrive.STOPPED->{
                 if(p==null)return;
                 p.ready=ready;if(Float.isNaN(p.stopped))p.stopped=Math.max(0,p.age(0));
+                if(!p.landed())p.sound.cut();
             }
             default->{}
         }
@@ -186,10 +207,10 @@ public final class GoldPunch {
     public static long ready(UUID id){var p=PUNCHES.get(id);return p==null?0:p.ready;}
     /** This player's stand is not Gold Experience: its cooldown is gone, as the server forgets it. */
     public static void forget(UUID id){var p=PUNCHES.get(id);if(p!=null)p.ready=0;}
-    /** For the checks: this player's punch as "age,landed,struck,guarded,hit,stopped", or null. */
+    /** For the checks: this player's punch as "age,landed,struck,guarded,hit,stopped,sounds", or null. */
     public static String describe(UUID id,float delta){
         var p=PUNCHES.get(id);if(p==null)return null;
-        return String.format(java.util.Locale.ROOT,"%.2f,%d,%d,%d,%d,%d",p.age(delta),p.landed()?1:0,p.struck,p.guarded?1:0,p.hit?1:0,Float.isNaN(p.stopped)?0:1);
+        return String.format(java.util.Locale.ROOT,"%.2f,%d,%d,%d,%d,%d,%d",p.age(delta),p.landed()?1:0,p.struck,p.guarded?1:0,p.hit?1:0,Float.isNaN(p.stopped)?0:1,p.sound.heard());
     }
 
     /** R for Gold Experience's user on the map: the overdrive punch, if the stand is out. Returns whether it took the key. */

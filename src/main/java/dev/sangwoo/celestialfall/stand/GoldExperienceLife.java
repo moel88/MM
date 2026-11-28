@@ -199,8 +199,10 @@ public final class GoldExperienceLife {
         inv.offerOrDrop(item);
     }
     private static void stop(ServerPlayerEntity p,State s,long now){
-        s.punchStart=Long.MIN_VALUE/4;s.landed=true;s.ready=NoCooldownState.enabled(p)?now:lifeReady(now);
+        s.landed=true;s.ready=NoCooldownState.enabled(p)?now:lifeReady(now);
+        // (2.153.0) told with the start the clients know it by, then forgotten (told after, they passed it by)
         send(p,s,STOPPED,now,null,0,false,-1,-1);
+        s.punchStart=Long.MIN_VALUE/4;
     }
     /** A blow landed on this player: their stand's punch not yet landed is stopped short, its cooldown running from now (HitStun.attackerDamaged, as the overdrive's). */
     public static void struck(ServerPlayerEntity p){

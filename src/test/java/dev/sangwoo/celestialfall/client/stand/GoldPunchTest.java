@@ -108,6 +108,13 @@ class GoldPunchTest {
         if(feet.x+x>5-SoulClient.HALF)x=Math.max(0,5-SoulClient.HALF-feet.x);
         return new Vec3d(x,y,z);
     }
+    @Test void itsShoutsSecondSyllableComesAsTheFistLands(){
+        // the user's recording "mu-DA!", cut with its second syllable DA_AT into the file (tools/stand/cut_gold_sounds.py)
+        assertEquals(GoldPunch.CONTACT,GoldPunch.SOUND_AT+GoldPunch.DA_AT,1e-6);
+        assertEquals(0,Math.round(GoldPunch.SOUND_AT*20)-GoldPunch.SOUND_AT*20,1e-4,"on a tick");
+        assertTrue(GoldPunch.SOUND_AT>GoldPunch.WOUND,"as it is thrown, not as it winds up");
+        assertEquals("gold_experience_overdrive",GoldPunch.SOUND[0].sound());
+    }
     @Test void aSoulWalksTwiceAsFastAsABody(){
         assertEquals(2,GoldExperienceRules.SOUL_SPEED,1e-6);
         // a body's steady walk is 0.2159 blocks a tick (4.317 a second)

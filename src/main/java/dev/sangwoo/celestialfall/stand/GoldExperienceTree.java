@@ -169,8 +169,11 @@ public final class GoldExperienceTree {
         stop(p,s,now);
     }
     private static void stop(ServerPlayerEntity p,State s,long now){
-        s.burst=true;s.start=Long.MIN_VALUE/4;s.ready=NoCooldownState.enabled(p)?now:treeReady(now);
+        s.burst=true;s.ready=NoCooldownState.enabled(p)?now:treeReady(now);
+        // (2.153.0) told with the start the clients know it by, and only then forgotten: told after, the clients took it for
+        // another's and drew (and sounded) the tree on as if it had burst
         send(p,s,STOPPED,now,null,null,0,false);
+        s.start=Long.MIN_VALUE/4;
     }
 
     private static void tick(MinecraftServer server){

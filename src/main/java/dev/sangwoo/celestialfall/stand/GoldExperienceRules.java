@@ -77,33 +77,29 @@ public final class GoldExperienceRules {
     /** What harm of {@code amount} comes to for a body whose soul is out of it. */
     public static float overHarm(float amount,boolean out){return out?amount*OVER_TAKEN:amount;}
     // ---- Y, the healing (2.149.0, user request: "이번에는 Y스킬 만들자 힐 스킬이고 꾹 누르면 스탠드가 나와 나를 때리면서
-    // 자기자신을 힐 히고 그냥 톡 누르면 스탠드가 나와서 상대 힐 해주는 스킬"; asked and answered: held, 10 a second for
-    // five seconds at most; tapped, 60 at once; one cooldown of 45 s for both; held, they walk slowly and a blow on them
-    // stops it. Then, of the first make, which healed with a barrage: "나나 상대한테 러시를 꽂으며 힐 해주는거 같은데
-    // 그렇게 말고 주먹을 한 번 꽂아서 주먹을 박아넣고 힐 되게": one punch, the fist driven in and left in, and the
-    // healing comes through it). With the stand out, Y tapped (let go within HEAL_HOLD ticks) makes it come round to the
-    // front and drive one fist into the first one in its way, who is healed MEND as it goes in; Y held makes it come
-    // round to its user and drive one fist into them and leave it there, healing them SELF_EACH every SELF_EVERY ticks
-    // through it, until Y is let go or the healing has run out.
+    // 자기자신을 힐 히고 그냥 톡 누르면 스탠드가 나와서 상대 힐 해주는 스킬"; asked and answered: one cooldown of 45 s for
+    // both; held, they walk slowly and a blow on them stops it. Then, of the first make, which healed with a barrage:
+    // "나나 상대한테 러시를 꽂으며 힐 해주는거 같은데 그렇게 말고 주먹을 한 번 꽂아서 주먹을 박아넣고 힐 되게": one punch,
+    // the fist driven in, and the healing comes through it. 2.153.0: "자힐은 꾹 누르면 한꺼번에 힐 되게 바꾸고 힐량을
+    // 상대와 나에게 주는 힐량 모두 30으로 너프": the hold heals all at once, and both heal 30. Till 2.152.0 the tap healed
+    // 60 and the hold 1 every 2 ticks through the fist left in, 50 at most, until Y was let go.)
+    // With the stand out, Y tapped (let go within HEAL_HOLD ticks) makes it come round to the front and drive one fist
+    // into the first one in its way, who is healed MEND as it goes in; Y held makes it come round to its user and drive
+    // one fist into them, who are healed SELF as it goes in. Either is over a moment later (the hold whether Y is still
+    // held or not: it is the hold that asks for it, not its length).
 
     /** Y held this many ticks is the hold (the user's own healing); let go sooner it is the tap (Lee So-sang's R's and Kageno's T's threshold). */
     public static final int HEAL_HOLD=8;
     /** Tapped: ticks in its fist goes into whoever it is for, how long it is, and what it heals them. */
     public static final int MEND_CONTACT=6,MEND_LENGTH=18;
-    public static final float MEND=60;
-    /** Held: ticks in its fist goes into its user and the first healing comes, ticks from one healing to the next, how many there are and what each heals: ten a second for five seconds. */
-    public static final int SELF_FIRST=6,SELF_EVERY=2,SELF_BLOWS=50;
-    public static final float SELF_EACH=1,SELF_TOTAL=SELF_EACH*SELF_BLOWS;
-    /** The last healing, and its end if Y is held all the way. */
-    public static final int SELF_LAST=SELF_FIRST+SELF_EVERY*(SELF_BLOWS-1),SELF_LENGTH=SELF_LAST+3;
+    public static final float MEND=30;
+    /** Held: ticks in its fist goes into its user (healing them all at once), how long it is (the tap's), and what it heals them. */
+    public static final int SELF_FIRST=MEND_CONTACT,SELF_LENGTH=MEND_LENGTH;
+    public static final float SELF=30;
     /** How much of their speed its user loses while it heals them (the rush's). */
     public static final double SELF_SLOW=StarPlatinumRules.RUSH_SLOW;
     /** Ticks from either one's end until Y is ready again (45 s: one cooldown for both). */
     public static final int HEAL_COOLDOWN=900;
-    /** Whether a healing comes to its user {@code age} ticks into it. */
-    public static boolean selfBlow(long age){return age>=SELF_FIRST&&age<=SELF_LAST&&(age-SELF_FIRST)%SELF_EVERY==0;}
-    /** How many healings have come {@code age} ticks into it. */
-    public static int selfBlows(long age){return age<SELF_FIRST?0:(int)Math.min(SELF_BLOWS,(age-SELF_FIRST)/SELF_EVERY+1);}
     /** Whether a body is in reach of its fist (the overdrive punch's way). */
     public static boolean mendLane(double forward,double side,double height,double halfWidth){return overLane(forward,side,height,halfWidth);}
     /** The tick Y is ready again after either ended (over, let go or stopped short) at {@code end}. */

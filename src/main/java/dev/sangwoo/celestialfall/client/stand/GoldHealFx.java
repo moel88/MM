@@ -25,10 +25,10 @@ import static dev.sangwoo.celestialfall.client.stand.StandPunchFx.way;
  * <ul>
  * <li>The fist glows as it is drawn and driven; as it goes in, light blooms round it with two rings opening along the
  * arm's line. While it is in, beads of light run down the arm into it and the place it is in glows.</li>
- * <li>Tapped: two rings rise round the healed body from its feet to over its head, a ring runs out along the ground
- * under it, and leaves and motes of light wind up about it.</li>
- * <li>Held: with each healing a small ring opens off the fist; while it lasts leaves rise turning about its user, a
- * ring opens at their feet twice a second and a soft light sits on them.</li>
+ * <li>Healed (the one tapped for, or since 2.153.0 its user, healed all at once by the hold): two rings rise round the
+ * healed body from its feet to over its head, a ring runs out along the ground under it, and leaves and motes of light
+ * wind up about it. (Till 2.152.0 the hold healed blow by blow: a small ring off the fist with each, leaves rising about
+ * its user all the while, a ring at their feet twice a second.)</li>
  * </ul>
  * None of it over the whole screen. Every effect is a function of the healing's clock.
  */
@@ -37,10 +37,10 @@ final class GoldHealFx {
     static final int LEAF_INK=0x0f3a16,LEAF_DEEP=0x2fae4a,LEAF=0x7df06a,LEAF_PALE=0xe2ffc8;
     /** Seconds the bloom on a healed body lasts, its rings take to rise, and the leaves about it last. */
     static final float BLOOM=.45f,RISE=.7f,LEAVES=1.1f;
-    /** How many leaves and motes wind up about a body the hand healed; how many rise at a time about one being healed blow by blow. */
-    static final int LEAVES_N=14,MOTES_N=9,SELF_LEAVES=10;
-    /** Seconds a healing's ring off the fist lasts (held), and how many beads run down the arm. */
-    static final float PULSE=.24f;static final int BEADS=4;
+    /** How many leaves and motes wind up about a body the fist healed. */
+    static final int LEAVES_N=14,MOTES_N=9;
+    /** How many beads run down the arm while the fist is in. */
+    static final int BEADS=4;
     record Shown(GoldHeal.Heal heal,float t,StandPresence.Body body,Vec3d user,float userHeight){}
     private static final List<Shown> FRAME=new ArrayList<>();
     private GoldHealFx(){}
@@ -54,8 +54,8 @@ final class GoldHealFx {
             if(user==null||user.getPos().squaredDistanceTo(camera)>96*96)continue;
             float t=h.age(tickDelta);
             if(t<0||t>GoldHeal.guarded(h)+LEAVES+.4f)continue;
-            // (the tap's healed body is where it stood as the hand touched it, moved with it if it is still there)
-            if(!h.self&&h.touched()&&mc.world.getEntityById(h.whom) instanceof LivingEntity w&&w.isAlive())h.whomAt=w.getLerpedPos(tickDelta).add(0,w.getHeight()*.6,0);
+            // (the healed body is where it stood as the fist went in, moved with it if it is still there: its user, for the hold)
+            if(h.touched()&&mc.world.getEntityById(h.whom) instanceof LivingEntity w&&w.isAlive())h.whomAt=w.getLerpedPos(tickDelta).add(0,w.getHeight()*.6,0);
             FRAME.add(new Shown(h,t,GoldPresence.body(e.getKey()),user.getLerpedPos(tickDelta),user.getHeight()));
         }
         return !FRAME.isEmpty();
@@ -99,15 +99,6 @@ final class GoldHealFx {
             leaf(m,p,l,.2+.08*Ease.hash(seed+k*7),(float)l[4]*alpha*clear(m,p),ink);
         }
     }
-    /** The leaves that rise about one healed blow by blow: each over and over, {@code clock} seconds on. */
-    private static void risingLeaves(EffectMesh m,Vec3d feet,double height,int seed,float clock,float alpha,boolean ink){
-        for(int k=0;k<SELF_LEAVES;k++){
-            double period=.95+.35*Ease.hash(seed+k*11),at=clock/period+Ease.hash(seed+k*19);
-            int round=(int)Math.floor(at);float u=(float)(at-round);
-            var l=leaf(k,seed+round*53,u,.5);Vec3d p=leafAt(l,feet,height);
-            leaf(m,p,l,.17+.07*Ease.hash(seed+k*7),(float)l[4]*alpha*clear(m,p),ink);
-        }
-    }
 
     // ───────────────────────────── the passes ─────────────────────────────
 
@@ -115,11 +106,6 @@ final class GoldHealFx {
     static void alpha(EffectMesh m){
         for(var s:FRAME){
             var h=s.heal;
-            if(h.self){
-                float on=selfOn(s);if(on<=0)continue;
-                risingLeaves(m,s.user,s.userHeight,h.seed,s.t,on,true);risingLeaves(m,s.user,s.userHeight,h.seed,s.t,on,false);
-                continue;
-            }
             if(!h.touched()||h.whomAt==null||h.whom<0)continue;
             float u=(s.t-h.touchedAt)/LEAVES;if(u<0||u>=1)continue;
             leaves(m,feet(h),h.whomHeight,h.whomWidth*.5+.3,LEAVES_N,h.seed,u,1,true);
@@ -127,16 +113,9 @@ final class GoldHealFx {
         }
     }
     static void additive(EffectMesh m){
-        for(var s:FRAME){
-            if(s.heal.self)self(m,s);else mend(m,s);
-        }
+        for(var s:FRAME)mend(m,s);
     }
     static Vec3d feet(GoldHeal.Heal h){return h.whomAt.subtract(0,h.whomHeight*.6,0);}
-    /** How much the light about one being healed through the fist is on: from the fist going in, and a moment after it is drawn out. */
-    static float selfOn(Shown s){
-        var h=s.heal;float end=h.ends();
-        return Ease.smooth(s.t,GoldHeal.TOUCH-.02f,GoldHeal.TOUCH+.1f)*(1-Ease.smooth(s.t,end,end+.5f));
-    }
     /** The fist: its glow as it is drawn and driven, the bloom as it goes in, and while it is in the beads of light running down the arm into it. */
     static void fist(EffectMesh m,Shown s){
         var h=s.heal;float t=s.t;if(s.body==null)return;
@@ -170,7 +149,7 @@ final class GoldHealFx {
             m.softDisc(q,.1,k%2==0?LEAF_DEEP:AMBER,.4f*a);m.star(q,.06,k%2==0?LEAF_PALE:PALE,.9f*a);
         }
     }
-    /** Tapped: what blooms on whom the fist went into. */
+    /** What blooms on whom the fist went into (another, or its user). */
     static void mend(EffectMesh m,Shown s){
         var h=s.heal;float t=s.t;
         fist(m,s);
@@ -198,45 +177,11 @@ final class GoldHealFx {
             m.softDisc(q,.09,k%3==0?LEAF_DEEP:AMBER,.35f*a);m.star(q,.05+.03*Ease.hash(k*3),k%3==0?LEAF_PALE:PALE,.9f*a);
         }
     }
-    /** Held: a small ring off the fist with each healing, a ring opening at their feet twice a second, a soft light on them. */
-    static void self(EffectMesh m,Shown s){
-        var h=s.heal;float t=s.t;
-        fist(m,s);
-        float on=selfOn(s);if(on<=0)return;
-        Vec3d chest=s.user.add(0,s.userHeight*.6,0);float near=clear(m,chest);
-        float beat=.5f+.5f*(float)Math.sin(t*Math.PI*2*2.5f);
-        m.softDisc(chest,1.05+.08*beat,LEAF_DEEP,.13f*on*near);m.softDisc(chest,.7,GOLD,.1f*on*near);
-        // each healing: a small ring opens off the fist where it is in them
-        if(s.body!=null){
-            float every=dev.sangwoo.celestialfall.stand.GoldExperienceRules.SELF_EVERY/20f,since=Math.min(t,h.ends())-GoldHeal.TOUCH;
-            Vec3d fist=on(GoldHeal.fist(h,t),s.body),w=way(s.body.yaw()),r=right(w);
-            if(since>=0)for(int j=0;j<3;j++){
-                int k=(int)Math.floor(since/every)-j;if(k<0)continue;
-                float u=(t-GoldHeal.TOUCH-k*every)/PULSE;if(u<0||u>=1)continue;
-                float a=(float)Math.pow(1-u,.8)*on*clear(m,fist);double grow=Ease.out(u,0,1);
-                FxLib.ringPlane(m,fist.subtract(w.multiply(.12)),r,new Vec3d(0,1,0),.1+.42*grow,.035,k%2==0?LEAF:GOLD,.6f*a);
-            }
-        }
-        // a ring opens at their feet twice a second
-        for(int k=0;k<2;k++){
-            double u=(t*2+k*.5)%1;
-            FxLib.ring(m,s.user.add(0,.04,0),.35+.85*u,.06*(1-.6*u),k==0?LEAF_DEEP:GOLD,(float)(.5*(1-u)*Math.min(1,u/.15))*on);
-        }
-        // motes rise off them
-        for(int k=0;k<8;k++){
-            double period=.8+.4*Ease.hash(h.seed+k*7),at=t/period+Ease.hash(h.seed+k*13);double u=at-Math.floor(at);
-            double ang=Ease.hash(h.seed+k*5+(int)Math.floor(at)*3)*Math.PI*2;
-            Vec3d q=s.user.add(Math.cos(ang)*.42,.2+(s.userHeight+.3)*u,Math.sin(ang)*.42);
-            float a=(float)Math.sin(u*Math.PI)*on*clear(m,q);
-            m.star(q,.045,k%2==0?LEAF_PALE:PALE,.8f*a);
-        }
-    }
     /** The effect layer: the fist's glow and the healed body's bloom light the world about them, green-gold. */
     static void frame(FxFrame f,Vec3d camera){
         for(var s:FRAME){
             var h=s.heal;
             if(s.body!=null){float g=GoldHeal.glow(h,s.t);if(g>0)f.light(on(GoldHeal.fist(h,s.t),s.body),0xdcffb4,4,.9f*g);}
-            if(h.self){float on=selfOn(s);if(on>0)f.light(s.user.add(0,s.userHeight*.6,0),0xd4ffb0,5,.9f*on);continue;}
             if(h.touched()&&h.whom>=0&&h.whomAt!=null){
                 float u=(s.t-h.touchedAt)/(BLOOM+.3f);
                 if(u>=0&&u<1)f.light(h.whomAt,0xdcffb4,7,1.8f*(1-u));

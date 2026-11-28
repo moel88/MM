@@ -395,11 +395,11 @@
 - 자힐(꾹): 옆 카메라 `$B;dfw=7;hp=150;len=200;fov=55;hud=1;healthlog=1;orbit=4.4/1.7/0/240/0.4/0.3/1.2;then=KEY_Q@6/SETHP@20/KEYDOWN_Y@40/KEYUP_Y@170`(끝까지 50), 게임 카메라 `$B;dfw=7;hp=150;len=160;hud=1;cool=1;pitch=14;dist=4.2;then=KEY_Q@6/SETHP@20/KEYDOWN_Y@40/KEYDOWN_W@70/KEYUP_W@100/KEYUP_Y@110`(느리게 걷다가 뗌, 쿨타임 목록 '치유').
 - `KEY_Y@n`은 같은 틱에 누르고 떼므로 톡이고, `KEYDOWN_Y`/`KEYUP_Y`가 꾹이다(누르고 8틱 뒤 자힐이 시작된다). `SETHP@n`은 플레이어 체력을 `hp`(100)로, 더미 체력을 `dhp`(주면)로 맞춘다. `healthlog=1`은 플레이어 체력이 바뀔 때마다 로그에 남긴다.
 - **쿨타임에 주의:** `cool=1`로 Y를 쓴 장면 뒤의 장면은 45초 쿨타임에 걸려 Y가 나가지 않는다(2.149.0 첫 본 촬영에서 자힐 두 장면이 그랬다). `cool=1`은 목록의 마지막 장면에만 쓰거나, 상대 힐과 자힐을 따로 돌린다. 옆 카메라 각도 60은 서 있는 스탠드가 플레이어를 가린다(240이 플레이어의 앞 왼쪽이다).
-- 로그: 'healing at N: self,age,touched,whom,healed,blows,ended,stopped …, health, speed, ready in'. 상대 힐은 'dummy health 90.0 -> 150.0', 자힐은 체력이 2틱마다 1씩 오르고 speed 0.010.
-- 볼 것: 스탠드가 주먹을 한 번 꽂아 박아 둔다(연타하지 않는다). 상대 힐은 초록 숫자 60과 올라가는 고리·잎, 자힐은 박힌 주먹에서 열리는 고리와 팔을 타고 흐르는 빛, 쌓여 올라가는 초록 숫자.
+- 로그: 'healing at N: self,age,touched,whom,healed,sounds,ended,stopped …, health, speed, ready in'(2.153.0부터 sounds는 그 치유가 낸 소리의 수). 상대 힐은 'dummy health 90.0 -> 120.0', 자힐은 주먹이 들어가는 틱에 'player health 150.0 -> 180.0'(2.153.0: 한 번에 30)이고 speed 0.010, 0.9초에 끝난다(Y를 일찍 떼든 오래 누르든).
+- 볼 것: 스탠드가 주먹을 한 번 꽂아 박아 둔다(연타하지 않는다). 둘 다 초록 숫자 30과 올라가는 고리·잎(2.153.0: 자힐도 상대 힐과 같은 피어남).
 - 멀티플레이: `MP_ONLY=goldheal python3 tools/kageno/mp/run_mp.py 폴더`(`MpClient.GOLDHEAL_SCRIPT`·`goldHealWatch`, `MpServer.goldHeal`). 이 확인에서는 서버 도구가 플레이어 체력을 매 틱 채우지 않는다(채우면 회복량이 0으로 찍힌다).
 - 2.149.0의 영상: 상대 힐 1.75~4.05초, 자힐 옆 1.8~9.0초, 자힐 게임 카메라 1.8~7.6초를 `FILM_WIDTH=960 FILM_FPS=30 FILM_SKILL=UI FILM_CAPTION=below FILM_CLOCK="Y 누른 뒤" FILM_CLOCK_ZERO=2.0 FILM_NOTES="a-b:글|…" film.py`로 만들어 이었다(반복 프레임 0, 소리 없음). `FILM_NOTES`의 a-b는 편집한 영상의 초가 아니라 촬영 장면의 초다.
-- 소리: 없다(녹음을 받으면 넣는다).
+- 소리: 2.153.0부터 있다(아래 '골드 익스피리언스 소리').
 
 ### 골드 익스피리언스 비트다운 (G, 2.150.0)
 - `B="SUMMON;stand=gold_experience;face=180;dummy=1;dfw=3;time=6000"`, 960x540 배율 10(약 40분: 컷씬이 31.85초라 길다). `SHOTS_LANG=ko_kr`.
@@ -431,6 +431,14 @@
 - 게임 카메라 장면에서는 사용자가 나무 3블록 앞에 내려서 나무가 카메라와 사용자 사이에 선다: 나무가 반투명(28%)한지 본다(첫 촬영은 줄기가 화면 가운데를 막았다).
 - 볼 것: 스탠드가 앞 오른쪽에 무릎을 꿇고 손바닥으로 땅을 짚음(손바닥에서 발로 금빛 줄기) → 0.5초에 발밑에서 나무가 터져 오르며 금빛 고리·금 간 땅·흙덩이, 더미가 30을 맞고 밀려남 → 사용자가 8블록 떠 보던 쪽으로 3블록 앞에 내려옴(떨어지는 피해 없음) → 가지가 줄기에서 잔가지까지 차례로 자라 살랑임 → 더미가 나무를 치면 나무가 흔들리고 금빛 줄기가 더미로, 더미만 다침 → H 19.7초부터 잔가지부터 시들어 20.5초(솟고 20초)에 땅으로 사라지고, 쿨타임을 켠 장면이면 그때 쿨타임 목록에 '생명의 나무'(1분 30초). 가드를 올린 더미는 피해도 밀림도 없다(파란 별).
 - 멀티플레이: `MP_ONLY=goldtree python3 tools/kageno/mp/run_mp.py 폴더`(`MpClient.GOLDTREE_SCRIPT`·`goldTreeWatch`, `MpServer.goldTree`). 관찰자가 `TREEFRONT`로 나무 앞에 서서 `STRIKE+`로 12틱마다 나무를 친다(진짜 플레이어의 타격). 이 확인에서는 서버 도구가 체력을 채우지 않는다. 서버는 'the caster held …', 'the tree burst up at tick …', 'the caster flung at tick …'(높이), 'the caster's fall spared …', 'the watcher's health … (… from the tree)', 'H ready again in …'을 남긴다. 나무가 20초라 차례가 길다(약 1045틱): 나무가 있는 동안의 H(거절), 나무가 사라진 뒤의 H(쿨타임으로 거절), 앞 나무가 사라진 뒤의 가드 시험과 끊김 시험.
+
+### 골드 익스피리언스 소리 (R·Y·T·H, 2.153.0)
+- 영상 촬영과 소리 촬영을 같은 목록으로 두 번 돌린다(스크립트 하나에 `video`·`audio`): `B="SUMMON;stand=gold_experience;face=180;dummy=1;time=6000"`, 예열 `$B;dfw=6;len=60;slows=0:2;save=0-1;then=KEY_Q@4/KEY_R@20`(소리 촬영은 `slows`·`save` 없이), 개구리(위 T의 개구리 장면 그대로, 영상은 `slows=0:16/104:1/222:16/262:1;save=24-104/222-262`: 돌아오는 끝도 찍는다), 가드에 막힌 주먹(위 T, 영상은 `slows=0:16/64:1/404:16/446:1;save=0-64/404-446`: 파리가 돌아가는 끝도), 주먹 → 파리를 침(위 T에서 `cool=1`만 뺌), 감각폭주 `$B;dfw=3;len=80;fov=55;hud=1;orbit=7.0/1.8/0/118/3.0/0/1.2;then=KEY_Q@6/KEY_R@30`, 상대 힐 `$B;dfw=3;dhp=90;len=80;fov=55;hud=1;orbit=6.0/1.8/0/118/2.0/0/1.2;then=KEY_Q@6/SETHP@10/KEY_Y@25`, 자힐 `$B;dfw=7;hp=150;len=90;fov=55;hud=1;healthlog=1;orbit=4.4/1.7/0/240/0.4/0.3/1.2;then=KEY_Q@6/SETHP@10/KEYDOWN_Y@25/KEYUP_Y@50`, 나무(위 H의 게임 카메라 장면, 영상은 `slows=0:16/202:1/418:16;save=34-200/420-476`). 영상은 960x540 배율 16(약 40분), 소리는 `SHOTS_RECORD=1`로 320x180 배율 1(실시간, 약 3분).
+- 소리 넣기: `python3 -I tools/stand/shots/mux_gold.py 소리폴더 촬영폴더 장면 시작초 끝초 편집.mp4 결과.mp4 종류`(mux_heavy의 방법: 그 종류의 소리를 녹음에서 파형으로 찾아, 촬영 로그에서 스킬이 시작한 틱(그 줄의 틱 − 나이×20)+그 소리의 틱에 놓는다). 종류: `over`(감각폭주의 외침, 8틱), `mend`(상대 힐, 6틱), `self`(자힐, 4틱), `frog`(개구리가 날 때, 6틱), `punch`(T의 주먹, 5틱), `tree`(나무가 솟을 때, 10틱). 같은 장면의 뒷부분(개구리·파리가 돌아감, 나무가 시듦)도 같은 종류로 놓는다: 그 토막의 시작초를 준다.
+- **촬영 월드의 슬라임:** 평지 월드는 높이 -60이라 슬라임 청크에서 슬라임이 난다(도구가 몹 스폰을 끄기 전에 난 것). 2.153.0의 첫 소리 촬영에서 한 마리가 장면을 건너 다니며 플레이어를 쳐(3씩) 나무 장면의 H가 끊겼다. 2.153.0부터 도구가 장면마다 플레이어 둘레 160블록의 슬라임과 적대 몹을 치운다. 'player hurt on the server by 피해 종류, struck by 누구 with 무엇: 양 at N'이 서버에서 플레이어가 맞을 때마다 남는다(무적 시간에 막힌 것도): 스킬이 까닭 없이 끊기면 이것을 본다.
+- 소리 로그: 장면 폴더의 `sounds.csv`(시계, 나노초, 소리 id). 볼 것: 감각폭주 `gold_experience_overdrive` 하나, 상대 힐 `gold_experience_mend`, 자힐 `gold_experience_self_heal`, 개구리 `gold_life_gather`·`born`·`hop`, 되돌린 타격마다 `croak`·`reflect`, 끝에 `frog_back`, 주먹 `punch`·`strike`·`fly_born`·`fly_buzz`(하나: 되풀이), 파리가 돌아가면 `fly_back`, 치면 `swat`·`fall`, 나무 `gold_tree_touch`·`burst`, 타격마다 `knock`, 끝에 `wither`.
+- 볼 것(들을 것): 외침의 '다'가 주먹이 닿을 때, 힐 소리의 첫 반짝임이 주먹이 들어갈 때, 개구리가 날 때 '퐁'과 울음, 되돌릴 때 울음과 '팅', 주먹이 닿을 때 타격, 파리의 윙윙거림이 파리를 따라감, 나무가 솟을 때 쿵과 나무가 찢기는 소리.
+- 멀티플레이: `MP_ONLY=goldheal`(2.153.0: 자힐이 한 번에 30, 뗌을 받아도 0.9초까지 감).
 
 ### 골드 익스피리언스 감각폭주 (R, 2.148.0)
 - 목록(960x540): 예열 `SUMMON;stand=gold_experience;face=180;dummy=1;dfw=3;time=6000;len=60;slows=0:2;save=0-1;then=KEY_Q@4/KEY_R@20`, 시전자(옆 카메라, 강펀치 → 걸어가 러시: 숫자가 2씩 오름) `...;len=170;fov=55;hud=1;orbit=7.0/1.8/0/118/3.0/0/1.2;then=KEY_Q@6/KEY_R@40/KEYDOWN_W@60/KEYUP_W@73/KEYDOWN_E@78/KEYUP_E@150`, 맞은 사람(게임 카메라) `SUMMON;stand=gold_experience;face=180;dummy=1;dattack=1;dfw=1.6;time=6000;len=160;hud=1;pitch=14;dist=4.2;then=SOULOUT@20/KEYDOWN_S@26/KEYUP_S@44/KEYDOWN_D@48/KEYUP_D@58/ATTACKDOWN@62/ATTACKUP@63/...`. `SHOTS_LANG=ko_kr`.
@@ -592,9 +600,11 @@
     - `python3 tools/gacha/shots/mux_audio.py 소리폴더 영상로그 항목 시작초 끝초 영상.mp4 결과.mp4`로 붙입니다.
   - 이소상 평타(2.77.0):
     - `python3 -I tools/isosang/shots/mux_m1.py 소리폴더 영상폴더 항목 시작초 끝초 영상.mp4 결과.mp4`
+  - 골드 익스피리언스 R·Y·T·H(2.153.0): `python3 -I tools/stand/shots/mux_gold.py 소리폴더 영상폴더 항목 시작초 끝초 영상.mp4 결과.mp4 종류`(종류: over·mend·self·frog·punch·tree, 위 '골드 익스피리언스 소리').
   - 그 밖의 인자 순서는 모두 `소리폴더 영상폴더 항목 시작초 끝초 영상.mp4 결과.mp4`입니다.
 - 소리 파일 만들기와 자르기 도구는 아래와 같습니다(녹음 원본은 고치지 않고 자르기만 합니다).
-  - 녹음 자르기: `tools/stand/cut_summon.py`, `cut_ora.py`, `cut_rush.py`, `cut_heavy.py`, `cut_finger.py`, `cut_beatdown.py`, `cut_timestop.py`, `cut_arrow_sounds.py`, `tools/meteor/user_fall_sound.py`.
+  - 녹음 자르기: `tools/stand/cut_summon.py`, `cut_ora.py`, `cut_rush.py`, `cut_heavy.py`, `cut_finger.py`, `cut_beatdown.py`, `cut_timestop.py`, `cut_arrow_sounds.py`, `tools/meteor/user_fall_sound.py`, `tools/stand/cut_gold_sounds.py`(2.153.0: 골드 익스피리언스 R의 외침과 Y의 두 힐 소리, `R영상.mp4 힐영상.mp4`).
+  - 내려받은 녹음 겹치기(합성 없음): `tools/stand/make_gold_sounds.py 녹음폴더 [폴더] [이름…]`(2.153.0: 골드 익스피리언스 T·H의 소리 22개. 녹음폴더에 BigSoundBank의 CC0 녹음 35개를 `bsb_번호.wav`로: `https://bigsoundbank.com/UPLOAD/bwf-en/번호.wav`, 출처와 쓴 구간은 `third_party/gold-experience-sounds/SOURCES.md`. 이름을 주면 그 소리만 만든다).
   - 소리 합성: `tools/stand/make_inhale_sounds.py`, `tools/gacha/make_sounds.py`, `tools/meteor/make_sounds.py`.
   - 이소상 평타(2.77.2부터 사용자가 보낸 네 영상의 소리): `python3 -I tools/isosang/cut_m1_sounds.py 1타.mp4 2타.mp4 3타.mp4 4타.mp4`(영상의 소리가 화면보다 0.35초 늦어 그만큼 늦게 자릅니다).
   - 이소상 H(2.82.0): `python3 -I tools/isosang/cut_h_sounds.py H영상.mp4`(영상의 0.40초가 H의 시작, 소리는 화면보다 0.35초 늦다: 시전 소리 4.2초와 끝 소리 1.4초).

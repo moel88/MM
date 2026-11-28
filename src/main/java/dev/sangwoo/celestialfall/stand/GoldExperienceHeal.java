@@ -28,20 +28,20 @@ import net.minecraft.util.math.Vec3d;
 import static dev.sangwoo.celestialfall.stand.GoldExperienceRules.*;
 
 /**
- * Gold Experience's Y, its healing (2.149.0; GoldExperienceRules has the user's words and the numbers). The user's
- * client says which it is (gold_heal_v1, one byte: TAP, Y tapped; HOLD, Y held past the threshold; RELEASE, Y let go)
- * and the server decides.
- * It is one punch with the fist left in (the user: "주먹을 한 번 꽂아서 주먹을 박아넣고 힐 되게"), never a barrage.
+ * Gold Experience's Y, its healing (2.149.0, 2.153.0; GoldExperienceRules has the user's words and the numbers). The
+ * user's client says which it is (gold_heal_v1, one byte: TAP, Y tapped; HOLD, Y held past the threshold; RELEASE, Y
+ * let go: nothing since 2.153.0, the hold healing all at once whatever comes after) and the server decides.
+ * It is one punch (the user: "주먹을 한 번 꽂아서 주먹을 박아넣고 힐 되게"), never a barrage.
  * <ul>
  * <li>Tapped: the stand comes round to the front and drives one fist into the first one in its way, the way its user
  * faced as it began, MEND_CONTACT ticks on: whoever that is (anyone alive: friend or foe, a boss, a dummy, a mob) is
  * healed MEND (no harm, no cry). With no one in its way as Y is tapped nothing happens, and nothing is spent. Its user
  * walks freely through it; struck, staggered or incapacitated before the fist is in, or the stand gone in, stops it
  * short.</li>
- * <li>Held: the stand comes round to its user and drives one fist into them, SELF_FIRST ticks on, and leaves it in:
- * from then they are healed SELF_EACH every SELF_EVERY ticks, SELF_BLOWS times in all, until Y is let go. Its user
- * walks at a tenth of their speed (the rush's slow walk) and can do nothing else; a blow on them, a stagger, anything
- * that holds them or the stand gone in stops it.</li>
+ * <li>Held: the stand comes round to its user and drives one fist into them, SELF_FIRST ticks on: they are healed
+ * SELF all at once ("자힐은 꾹 누르면 한꺼번에 힐 되게"), and it is over SELF_LENGTH ticks in, Y still held or not. Its
+ * user walks at a tenth of their speed (the rush's slow walk) and can do nothing else through it; a blow on them, a
+ * stagger, anything that holds them or the stand gone in stops it (before the fist is in: no healing).</li>
  * </ul>
  * One cooldown for both (HEAL_COOLDOWN), running once either is over or from where it was stopped. Neither starts while
  * the rush or the overdrive punch is on, nor those while either of these is. Every viewer within 128 blocks is told
@@ -51,14 +51,14 @@ public final class GoldExperienceHeal {
     public static final Identifier INPUT=CelestialFall.id("gold_heal_v1"),EVENT=CelestialFall.id("gold_heal_event_v1");
     /** What the client says: Y let go; Y tapped (the other's healing); Y held (their own). */
     public static final int RELEASE=0,TAP=1,HOLD=2;
-    /** The event's kinds: the hand goes out; it touched (whom, what it healed); the user's own healing begins; a blow healed them (how much); either ended (whether stopped short). */
+    /** The event's kinds: the hand goes out; it touched (whom, what it healed); the user's own healing begins; the fist in them healed them (how much); either ended (whether stopped short). */
     public static final int MENDING=0,MENDED=1,SELFING=2,BLOW=3,END=4;
     /** Its user's slow walk while it heals them (the client keeps its lens still while it is on, StandClient.skillSlowed). */
     public static final UUID SLOW=UUID.fromString("5b0e7a34-91c2-4d6f-b3a8-2e4f6c8d1a57");
     private static final int RATE=20;
     private static final class State {
         final ServerWorld world;State(ServerPlayerEntity p){world=p.getServerWorld();}
-        /** What is on (0 nothing, TAP, HOLD), since when, the way the hand goes, whether it has touched, and the tick Y is ready again. */
+        /** What is on (0 nothing, TAP, HOLD), since when, the way the hand goes, whether its fist has gone in, and the tick Y is ready again. */
         int on;long start=Long.MIN_VALUE/4,ready;float yaw;boolean touched;
         int window,presses;
     }
@@ -72,7 +72,7 @@ public final class GoldExperienceHeal {
             server.execute(()->{
                 var s=state(player);int second=server.getTicks()/20;
                 if(s.window!=second){s.window=second;s.presses=0;}
-                // a release is always heard (their healing must never run on for want of one)
+                // (a release is not counted: it asks for nothing since 2.153.0)
                 if(what!=RELEASE&&++s.presses>RATE)return;
                 if(what==TAP)mend(player);else if(what==HOLD)self(player);else if(what==RELEASE)release(player);
             });
@@ -115,18 +115,21 @@ public final class GoldExperienceHeal {
         send(p,s,MENDING,e,0);
         return true;
     }
-    /** Y held: the stand turns on its user and heals them blow by blow. Returns whether it began. */
+    /** Y held: the stand turns on its user and heals them with one punch. Returns whether it began. */
     public static boolean self(ServerPlayerEntity p){
         var s=state(p);long now=p.getWorld().getTime();
         if(!may(p,s,now))return false;
-        s.on=HOLD;s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.ready=0;
+        s.on=HOLD;s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.ready=0;s.touched=false;
         p.setSprinting(false);p.clearActiveItem();slow(p,true);
         send(p,s,SELFING,null,0);
         return true;
     }
-    /** Y let go: their own healing stops at once (the hand's, once out, goes on). */
-    public static void release(ServerPlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null&&s.on==HOLD)end(p,s,p.getWorld().getTime(),false);}
-    /** A blow landed on this player (HitStun.attackerDamaged), or something took hold of them: their own healing stops, and the hand not yet laid on is stopped short. */
+    /**
+     * Y let go (2.153.0): nothing. The hold heals all at once, as it asked for it; letting go after does not take it back
+     * (till 2.152.0, healing blow by blow, it stopped there).
+     */
+    public static void release(ServerPlayerEntity p){}
+    /** A blow landed on this player (HitStun.attackerDamaged), or something took hold of them: their own healing stops (healing nothing if its fist is not in yet), and the hand not yet laid on is stopped short. */
     public static void struck(ServerPlayerEntity p){
         var s=STATES.get(p.getUuid());if(s==null||s.world!=p.getServerWorld())return;
         if(s.on==HOLD||s.on==TAP&&!s.touched)end(p,s,p.getWorld().getTime(),true);
@@ -145,8 +148,10 @@ public final class GoldExperienceHeal {
             }
             if(!heals(p)||HitStun.stunned(p)||CombatManager.incapacitated(p)||p.isSleeping()||p.hasVehicle()||CombatManager.cinematic(p)||KagenoManager.frozen(p)){end(p,s,now,true);continue;}
             p.setSprinting(false);
-            if(selfBlow(age)){
-                float before=p.getHealth();p.heal(SELF_EACH);
+            if(!s.touched&&age>=SELF_FIRST){
+                // the fist goes in: all of it at once
+                s.touched=true;
+                float before=p.getHealth();p.heal(SELF);
                 send(p,s,BLOW,p,p.getHealth()-before);
             }
             if(age>=SELF_LENGTH)end(p,s,now,false);
@@ -191,8 +196,8 @@ public final class GoldExperienceHeal {
     }
     /**
      * Tells every player near the user (and the user, and whoever the hand is for) of the event: {@code whom} the one
-     * the hand goes to or touched (with how far off their near side stands as it goes out), the user for a blow, or
-     * non-null for an end stopped short; {@code healed} what was healed.
+     * the hand goes to or touched (with how far off their near side stands as it goes out), the user for their own
+     * healing, or non-null for an end stopped short; {@code healed} what was healed.
      */
     private static void send(ServerPlayerEntity p,State s,int type,LivingEntity whom,float healed){
         var world=p.getServerWorld();long now=world.getTime();

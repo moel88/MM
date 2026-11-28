@@ -32,6 +32,10 @@ import static dev.sangwoo.celestialfall.stand.GoldExperienceStance.*;
  * bursts up under its user and flings them up, then gets up and goes back to them in the air. The tree itself is the
  * server's entity (GoldTreeEntity, drawn by GoldTreeRenderer, grown by GoldTreeModel); its light is GoldTreeFx's.
  * H is the key (Gold Experience's user's on the map). Every moment is a function of the clocks.
+ * <p>
+ * Its sounds (2.153.0, laid together from recordings: tools/stand/make_gold_sounds.py; GoldSounds) come on its moments:
+ * the palm laid on the ground and the light swelling to the burst, the burst (the ground, the wood tearing as it grows,
+ * twigs, leaves, the rush of its user flung up), a thud on wood with every blow it turns back, and its withering.
  */
 public final class GoldTree {
     /** The stand's moments (seconds on its clock from the press): its palm on the ground (the server's TREE_TOUCH), the tree bursting up (TREE_BURST). */
@@ -40,6 +44,14 @@ public final class GoldTree {
     static final float COME=.3f,TAKE=.1f,RISE_FROM=BURST+.22f,RISE=.6f,LEAVE=.15f,RETURN=.5f,CUT=.3f;
     /** Where it kneels: degrees round to the right of the way its user faced, how far from their feet (blocks), turned on them. */
     static final float SIDE=62f,AHEAD=1.45f;
+    /**
+     * The sounds' moments (seconds from the press): the touch's file comes in as the palm goes down, its pat at .25 s on
+     * the palm laid on the ground (TOUCH) and its light swelling to the burst; the burst; the withering (the server's
+     * TREE_WITHER: early, it comes when it is told).
+     */
+    static final float TOUCH_SOUND=.1f,WITHER=GoldExperienceRules.TREE_WITHER/20f;
+    static final GoldSounds.Cue[] SOUNDS={new GoldSounds.Cue(TOUCH_SOUND,"gold_tree_touch",1),new GoldSounds.Cue(BURST,"gold_tree_burst",1),
+        new GoldSounds.Cue(WITHER,"gold_tree_wither",1)};
 
     /** An H as heard. */
     public static final class Tree {
@@ -49,6 +61,8 @@ public final class GoldTree {
         /** Whom the burst struck (and whose guard took it), and the blows the tree turned back. */
         final List<Hit> hits=new ArrayList<>();final List<Turned> turned=new ArrayList<>();
         long ready;
+        /** Its sounds (2.153.0). */
+        final GoldSounds.Run sound=new GoldSounds.Run(SOUNDS);
         Tree(long start,long serverAge,long received,float yaw,Vec3d spot){this.start=start;this.serverAge=serverAge;this.received=received;this.yaw=yaw;this.spot=spot;}
         /** Seconds on its clock this frame. */
         public float age(float delta){return (serverAge+StandRush.ticks-received+Math.max(0,Math.min(1,delta)))/20f;}
@@ -76,35 +90,65 @@ public final class GoldTree {
             if(!Float.isFinite(yaw)||!Double.isFinite(at.x+at.y+at.z))return;
             mc.execute(()->{
                 if(!MapClient.enabled()||mc.world==null||!mc.world.getRegistryKey().getValue().equals(dimension))return;
-                if(world!=mc.world){TREES.clear();JOLTS.clear();world=mc.world;}
-                event(maker,type,start,serverNow,yaw,at,ready,tree,hits,whom,amount,flag);
+                if(world!=mc.world){stopSounds(mc);TREES.clear();JOLTS.clear();world=mc.world;}
+                event(mc,maker,type,start,serverNow,yaw,at,ready,tree,hits,whom,amount,flag);
             });
         });
-        ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->mc.execute(()->{TREES.clear();JOLTS.clear();world=null;heldH=false;}));
+        ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->mc.execute(()->{stopSounds(mc);TREES.clear();JOLTS.clear();world=null;heldH=false;}));
         ClientTickEvents.END_CLIENT_TICK.register(GoldTree::tick);
         // its maker's crosshair passes through their own tree (they cannot strike it to any end)
         GoldTreeEntity.clientHits=t->{var p=MinecraftClient.getInstance().player;return p==null||!t.ownedBy(p);};
     }
-    private static void event(UUID maker,int type,long start,long serverNow,float yaw,Vec3d at,long ready,int tree,List<Hit> hits,int whom,float amount,boolean flag){
+    private static void event(MinecraftClient mc,UUID maker,int type,long start,long serverNow,float yaw,Vec3d at,long ready,int tree,List<Hit> hits,int whom,float amount,boolean flag){
         var t=TREES.get(maker);
         switch(type){
-            case GoldExperienceTree.TOUCH->{t=new Tree(start,serverNow-start,StandRush.ticks,yaw,at);t.ready=ready;TREES.put(maker,t);}
+            case GoldExperienceTree.TOUCH->{if(t!=null)t.sound.cut();t=new Tree(start,serverNow-start,StandRush.ticks,yaw,at);t.ready=ready;TREES.put(maker,t);}
             case GoldExperienceTree.BURST->{
                 // (one who came near it only now hears the burst alone)
-                if(t==null||t.start!=start){t=new Tree(start,serverNow-start,StandRush.ticks,yaw,at);TREES.put(maker,t);}
+                if(t==null||t.start!=start){if(t!=null)t.sound.cut();t=new Tree(start,serverNow-start,StandRush.ticks,yaw,at);TREES.put(maker,t);}
                 t.burst=(serverNow-start)/20f;t.tree=tree;t.spot=at;t.ready=ready;t.hits.clear();t.hits.addAll(hits);
             }
-            case GoldExperienceTree.STOPPED->{if(t==null||t.start!=start)return;t.ready=ready;if(Float.isNaN(t.stopped))t.stopped=Math.max(0,t.age(0));}
+            case GoldExperienceTree.STOPPED->{
+                if(t==null||t.start!=start)return;t.ready=ready;if(Float.isNaN(t.stopped))t.stopped=Math.max(0,t.age(0));
+                if(!t.burst())t.sound.cut();
+            }
             case GoldExperienceTree.REFLECTED->{
                 JOLTS.put(tree,StandRush.ticks);
                 if(t!=null&&t.start==start)t.turned.add(new Turned((serverNow-start)/20f,tree,whom,amount,flag));
+                // a thud on wood, and its leaves
+                boolean ours=mc.player!=null&&(mc.player.getUuid().equals(maker)||mc.player.getId()==whom);
+                var e=mc.world.getEntityById(tree);
+                GoldSounds.play(mc,"gold_tree_knock",GoldSounds.volume(mc,ours,e!=null?e.getPos():at),1);
             }
-            case GoldExperienceTree.WITHERED->{if(t==null||t.start!=start)return;t.ready=ready;if(Float.isNaN(t.withered))t.withered=(serverNow-start)/20f;}
+            case GoldExperienceTree.WITHERED->{
+                if(t==null||t.start!=start)return;t.ready=ready;
+                if(Float.isNaN(t.withered)){
+                    t.withered=(serverNow-start)/20f;
+                    // withering early: now, not on its moment (what is still sounding of the burst goes on)
+                    if(t.withered<WITHER-.1f){
+                        t.sound.played.set(t.sound.cues.length-1);
+                        GoldSounds.play(mc,"gold_tree_wither",volume(mc,maker,t),1);
+                    }
+                }
+            }
             default->{}
         }
     }
+    /** How loud the tree's sounds are here: all of it for its maker and whom the burst struck, fading out from them and where it stands. */
+    static float volume(MinecraftClient mc,UUID maker,Tree t){
+        if(mc.world==null||mc.player==null)return 0;
+        boolean ours=mc.player.getUuid().equals(maker);
+        for(var h:t.hits)ours|=h.entity()==mc.player.getId();
+        var m=mc.world.getPlayerByUuid(maker);
+        return GoldSounds.volume(mc,ours,m==null?null:m.getPos(),t.spot);
+    }
+    private static void stopSounds(MinecraftClient mc){for(var t:TREES.values())t.sound.stop(mc);}
     private static void tick(MinecraftClient mc){
         if(mc.world==null)return;
+        if(!mc.isPaused())for(var e:TREES.entrySet()){
+            var t=e.getValue();float age=t.age(0);if(age>GoldExperienceRules.TREE_END/20f+2)continue;
+            t.sound.tick(mc,age,volume(mc,e.getKey(),t));
+        }
         JOLTS.values().removeIf(at->StandRush.ticks-at>40);
         TREES.values().removeIf(t->t.age(0)>GoldExperienceRules.TREE_END/20f+2&&t.ready<=mc.world.getTime());
     }

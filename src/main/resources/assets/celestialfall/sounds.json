@@ -708,6 +708,216 @@
       }
     ]
   },
+  "gold_experience_overdrive": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_experience_overdrive",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_experience_mend": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_experience_mend",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_experience_self_heal": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_experience_self_heal",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_life_gather": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_life_gather",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_life_born": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_life_born",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_life_hop": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_life_hop",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_life_croak": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_life_croak_1",
+        "stream": false,
+        "preload": true
+      },
+      {
+        "name": "celestialfall:gold_life_croak_2",
+        "stream": false,
+        "preload": true
+      },
+      {
+        "name": "celestialfall:gold_life_croak_3",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_life_reflect": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_life_reflect",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_life_frog_back": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_life_frog_back",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_life_frog_burst": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_life_frog_burst",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_life_punch": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_life_punch",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_life_strike": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_life_strike",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_life_fly_born": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_life_fly_born",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_life_fly_buzz": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_life_fly_buzz",
+        "stream": false,
+        "preload": true,
+        "attenuation_distance": 12
+      }
+    ]
+  },
+  "gold_life_fly_back": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_life_fly_back",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_life_swat": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_life_swat",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_life_fall": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_life_fall",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_tree_touch": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_tree_touch",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_tree_burst": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_tree_burst",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_tree_knock": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_tree_knock_1",
+        "stream": false,
+        "preload": true
+      },
+      {
+        "name": "celestialfall:gold_tree_knock_2",
+        "stream": false,
+        "preload": true
+      },
+      {
+        "name": "celestialfall:gold_tree_knock_3",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_tree_wither": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_tree_wither",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
   "star_platinum_heavy": {
     "sounds": [
       {
