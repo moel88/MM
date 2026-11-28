@@ -373,15 +373,19 @@
 - 배율은 20입니다. 가까이서 착지를 찍는 장면은 30입니다.
 - 근접 장면은 `time=`을 꼭 적습니다. 적지 않으면 앞 항목의 밤이 이어집니다.
 
-### 골드 익스피리언스 (모델, 2.145.0~2.145.2)
+### 골드 익스피리언스 (모델, 2.145.0~2.145.2, 2.155.0: 사용자가 보낸 GLB의 몸)
 - 모델링이라 영상은 찍지 않고 실제 게임 화면 사진만 보냅니다.
 - `python3 tools/kageno/shots/run_shots.py OUT "STAND;figure=gold;stance=idle|hero|stand;len=16;time=6000;fov=50;orbit=R/UP/0/START/3/0/CY" 1280x720 8`
   - 몸 전체: `orbit=3.0/1.25/0/0/3/0/1.2`(앞), `3.0/1.5/0/35/3/0/1.2`(비스듬히), `3.0/1.5/0/180/3/0/1.2`(뒤). 얼굴 가까이: `fov=40;orbit=1.5/1.9/0/12/3/0/1.85`. 원화 자세: `stance=hero;orbit=3.0/1.4/0/-20/3/0/1.25`와 `…/150/…`.
   - 한 실행에 여섯 항목을 넣으면 약 6분입니다. 항목마다 마지막에서 둘째 프레임을 씁니다(자세가 다 든 뒤).
   - `then=STANCE_HERO@n`으로 자세를 바꿉니다(스타플래티나와 같은 단계 이름).
-- 모양을 고치는 동안에는 `python3 tools/stand/make_gold_experience.py 폴더` 뒤 `python3 -I tools/stand/preview_geo.py 폴더/geo/entity/gold_experience.geo.json 폴더/textures/entity/gold_experience.png 출력.png "0,2,20,112;30,5,20,112;180,2,20,112" 420x760 폴더/stands/gold_experience_poses.json:stand`로 봅니다(생성 약 30초). 게임 화면이 아니므로 검증 결과로 보내지 않고, 시안으로 보일 때는 그 점을 밝힙니다.
+- 몸(2.155.0부터)은 사용자가 보낸 GLB에서 꺼낸다: `python3 -I tools/stand/import_gold_experience.py 모델.glb 폴더`(뼈대·몸·텍스처, 약 10초) 뒤 `python3 tools/stand/make_gold_experience.py 폴더`(자세·주먹 자리, 약 20초). 내려받은 파일이라 GLB는 저장소 밖의 빈 폴더에 두고 `-I`로 돌린다. 폴더를 주면 게임 파일을 건드리지 않는다.
+- 모양·자세를 고치는 동안에는 `python3 tools/stand/preview_mesh.py 출력.png 자세 "0,35,180" 폴더`로 본다(폴더를 빼면 게임 파일)(몸을 그 자세로 스키닝한 정사영 그림, 몇 초). 게임 화면이 아니므로 검증 결과로 보내지 않고, 시안으로 보일 때는 그 점을 밝힌다. 상자 모델용 `preview_geo.py`는 이 몸을 그리지 않는다.
+- 바뀐 몸을 게임에서 처음 볼 때는 `STAND;figure=gold;stance=stand;len=16;time=6000;fov=50;orbit=3.0/1.25/0/0/3/0/1.2` 하나를 960x540 8로 찍는다(약 2분). 주먹과 손가락 마디는 러시(`SUMMON;stand=gold_experience;…;then=KEY_Q@6/KEYDOWN_E@50`)나 가드에서 본다. 무릎 꿇은 자세(H)는 `then=KEY_Q@6/KEY_H@40`의 44~50틱이다.
+- 2.155.0 사진 묶음(1280x720 8, 열둘에 약 11분): 위 몸 전체 셋·얼굴·원화 자세 둘, 스타플래티나 옆, 플레이어 옆 `SUMMON;stand=gold_experience;face=180;time=6000;dummy=0;len=70;hud=0;fov=50;orbit=5.0/1.5/0/160/0/0/1.1;save=6-10/66-68;then=KEY_Q@6`, 1인칭 러시 `…;dummy=1;dfw=3;len=90;hud=1;dist=0.5;save=74-78;then=KEY_Q@6/KEYDOWN_E@50`, 3인칭 러시 `…;dummy=1;dfw=3;len=110;fov=50;orbit=4.0/1.5/0/115/1.6/0/1.2;save=72-78;then=KEYUP_E@2/KEY_Q@6/KEYDOWN_E@50/KEYUP_E@100`, 감각폭주 `…;len=70;orbit=4.0/1.5/0/115/1.6/0/1.2;save=46-56;then=KEY_Q@6/KEY_R@40`(49틱 장전, 52틱 닿음), 생명의 나무 `…;dfw=6;len=70;orbit=5.0/1.6/0/70/1.2/0/0.8;save=44-50;then=KEY_Q@6/KEY_H@40`(47틱 손바닥).
+  - 한 실행 안에서 앞 항목이 E(`KEYDOWN_E`)를 누른 채 끝나면 다음 항목의 `KEYDOWN_E`는 새 누름이 아니라 러시가 나가지 않는다(2.155.0 첫 촬영). 앞에 누른 채 끝난 항목이 있으면 `KEYUP_E@2`를 먼저 넣는다.
 - 스타플래티나와 크기를 견줄 때(2.146.1): `STAND;figure=both;stance=idle;len=16;time=6000;fov=50;orbit=4.8/1.3/0/0/3/0/1.2`가 둘을 나란히(사이 `gap` 2.4블록, 골드 익스피리언스가 화면 왼쪽) 세웁니다. 플레이어 옆에서는 `SUMMON;face=180;dummy=0;len=70;hud=0;time=6000;fov=50;orbit=5.0/1.5/0/160/0/0/1.1;then=KEY_Q@6`을 `stand=gold_experience`를 붙여 한 번, 빼고 한 번 찍습니다.
-- 굵기 시안(2.146.1 뒤): `goldfit=몸배율/머리배율`(예: `goldfit=1.25/1.08`)이 그 항목 동안 골드 익스피리언스의 몸을 옆·앞뒤로 늘리고 머리를 키워 그립니다(`GoldExperienceModel.tuned`). 뼈를 늘리는 것이라 `stance=stand`(회전 없는 자세)로 찍어야 일그러지지 않고, 무늬도 같이 늘어납니다. 고른 뒤에는 생성기의 치수를 고칩니다.
+- 굵기 시안(2.146.1 뒤, 상자 모델 때 만든 것: 2.155.0의 몸도 같은 뼈를 늘려 그린다): `goldfit=몸배율/머리배율`(예: `goldfit=1.25/1.08`)이 그 항목 동안 골드 익스피리언스의 몸을 옆·앞뒤로 늘리고 머리를 키워 그립니다(`GoldExperienceModel.tuned`). 뼈를 늘리는 것이라 `stance=stand`(회전 없는 자세)로 찍어야 일그러지지 않고, 무늬도 같이 늘어납니다. 고른 뒤에는 생성기의 치수를 고칩니다.
 - 비율을 볼 때는 원작 설정화 옆에 같은 높이로 나란히 놓습니다. 미리보기의 색은 게임보다 어둡고 칙칙하게 나옵니다(게임에서는 밝은 크림 금색).
 
 ### 골드 익스피리언스 스탠드 (Q 소환, 2.146.0)

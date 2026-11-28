@@ -40,6 +40,12 @@ public final class GoldBeatdownCamera {
         return shot==1?1000+fists(t):shot;
     }
 
+    /**
+     * The stand's face, the top of its head and its chest (blocks up from its feet): the body the user sent (2.155.0),
+     * its head from 1.73 to 2.0 and its eyes at 1.84; the box-built one had them at 1.72, 1.95 and 1.35.
+     */
+    static final double FACE=1.8,CROWN=1.97,CHEST=1.48;
+
     /** The shot at {@code t} on the beatdown's clock (before any blow's jolt). */
     public static Shot at(Beat b,float t){
         Vec3d o=b.from,f=b.f,r=b.r;
@@ -54,7 +60,7 @@ public final class GoldBeatdownCamera {
             return new Shot(b.at(o,from*.6,.8,-2.3+.2*k),b.at(o,from*.6+.4,1.3,0),52+6*k,-5,false,1);
         }
         // the stand where it floats: its face, the top of its head and its chest
-        Vec3d face=standPoint(b,t,.42,1.72),crown=standPoint(b,t,.2,1.95),sc=standPoint(b,t,.25,1.35);
+        Vec3d face=standPoint(b,t,.42,FACE),crown=standPoint(b,t,.2,CROWN),sc=standPoint(b,t,.25,CHEST);
         if(t<C3){
             // muda muda: a cut with every fist, between the face they strike and the stand throwing them
             float k=u(t,C1,C3);
@@ -71,7 +77,7 @@ public final class GoldBeatdownCamera {
         if(t<C4B){
             // their chest, from over the stand's right shoulder
             float k=u(t,C4,C4B);
-            return new Shot(standPoint(b,t,.3,1.8).add(r.multiply(.72-.08*k)),vc,42-4*k,7,false,1.5f);
+            return new Shot(standPoint(b,t,.3,FACE+.08).add(r.multiply(.72-.08*k)),vc,42-4*k,7,false,1.5f);
         }
         if(t<C5){
             // their face, close from beside the stand's fists
@@ -112,17 +118,18 @@ public final class GoldBeatdownCamera {
         if(t<C8C){
             // close on its face over its drawn fist, from in front of it to its left
             float k=u(t,C8B,C8C);
-            return new Shot(standPoint(b,t,1.15,1.35).add(r.multiply(-1.05+.1*k)),face,44-5*k,12+4*k,false,1);
+            return new Shot(standPoint(b,t,1.15,CHEST).add(r.multiply(-1.05+.1*k)),face,44-5*k,12+4*k,false,1);
         }
         if(t<C9){
             // its fist into the lens: from the one struck's eyes (looking where its face was before it dashed in: the
-            // dash would swing the view)
-            return new Shot(vh.add(f.multiply(.14)).add(0,.02,0),standPoint(b,Math.min(t,FINAL-.03f),.42,1.72).add(0,-.15,0),70,-6,true,2.4f);
+            // dash would swing the view; 2.155.0: from the back of their head, as this body stands a little nearer
+            // them for its shorter arms)
+            return new Shot(vh.add(f.multiply(.26)).add(0,.02,0),standPoint(b,Math.min(t,FINAL-.03f),.42,FACE).add(0,-.15,0),70,-6,true,2.4f);
         }
         if(t<C9B){
             // sent flying: from behind the stand on its left, after them
             Vec3d fly=flight(b,t).feet().add(0,.9,0);
-            return new Shot(standPoint(b,t,-1.3,1.3).add(r.multiply(-1.5)),sc.lerp(fly,.35+.5*u(t,C9,C9B)),64,6,false,1);
+            return new Shot(standPoint(b,t,-1.3,CHEST-.05).add(r.multiply(-1.5)),sc.lerp(fly,.35+.5*u(t,C9,C9B)),64,6,false,1);
         }
         // their flight and fall: off to their left, the eye travelling half as far as they fly and a moment behind them,
         // looking at them no lower than a little over the ground

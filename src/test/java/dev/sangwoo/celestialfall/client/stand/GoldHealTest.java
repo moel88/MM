@@ -81,7 +81,8 @@ class GoldHealTest {
         }
         // the fist is out at a body's chest, and it stands so that the fist is well into the first one in its way
         float[] out=GoldHeal.fist(h,GoldHeal.TOUCH);
-        assertTrue(out[0]>1.2f,"out: "+out[0]);assertTrue(out[2]>1.0f&&out[2]<1.7f,"at a body's chest: "+out[2]);
+        // (2.155.0: the body the user sent has shorter arms than the box-built one, which had 1.2)
+        assertTrue(out[0]>1.05f,"out: "+out[0]);assertTrue(out[2]>1.0f&&out[2]<1.7f,"at a body's chest: "+out[2]);
         assertEquals(GoldHeal.fistReach(),out[0],1e-4);
         for(float aim:new float[]{2.0f,2.8f,3.6f}){
             float place=GoldHeal.place(tap(aim));

@@ -8,9 +8,9 @@ import software.bernie.geckolib.core.animation.AnimationState;
 import software.bernie.geckolib.model.GeoModel;
 
 /**
- * Gold Experience's GeckoLib model (2.145.0). Each frame every bone takes the pose the figure's stance asks for
- * (crossfaded when it changes) from the poses file that tools/stand/make_gold_experience.py writes with the model, and
- * its own movement on top ({@link GoldExperienceMotion}).
+ * Gold Experience's GeckoLib model (2.145.0; 2.155.0: its skeleton, under the body the user sent, GoldExperienceMesh).
+ * Each frame every bone takes the pose the figure's stance asks for (crossfaded when it changes) from the poses file that
+ * tools/stand/make_gold_experience.py writes for the skeleton, and its own movement on top ({@link GoldExperienceMotion}).
  */
 public final class GoldExperienceModel extends GeoModel<GoldExperienceEntity> {
     static final Identifier MODEL=CelestialFall.id("geo/entity/gold_experience.geo.json"),
@@ -18,8 +18,6 @@ public final class GoldExperienceModel extends GeoModel<GoldExperienceEntity> {
         ANIMATION=CelestialFall.id("animations/entity/gold_experience.animation.json");
     private final GoldExperiencePoses poses=new GoldExperiencePoses();
     private final float[] pose=new float[6];
-    /** The arms' bones: all an afterimage of the rush's arms shows (2.147.0). */
-    private static final java.util.Set<String> ARMS=java.util.Set.of("left_arm","left_forearm","left_hand","left_fingers","right_arm","right_forearm","right_hand","right_fingers");
     /**
      * For trying a build before it goes into the generator (the filming tool's "goldfit=BULK/HEAD"): the body drawn
      * BULK times as wide and deep, the head HEAD times its size. Null but while a trial is filmed.
@@ -36,10 +34,9 @@ public final class GoldExperienceModel extends GeoModel<GoldExperienceEntity> {
         for(CoreGeoBone bone:getAnimationProcessor().getRegisteredBones()){
             var rest=bone.getInitialSnapshot();if(rest==null)continue;
             var look=e.look(delta);
-            // set every frame: the bones are the model's, shared by every body it draws; a hidden bone hides only its own
-            // cubes (GeckoLib's setHidden hides the children too: the arms hang from the chest)
+            // set every frame: the bones are the model's, shared by every body it draws (an afterimage of the rush's arms
+            // draws its arms alone: GoldExperienceMesh)
             String name=bone.getName();
-            bone.setHidden(look!=null&&look.armsOnly&&!ARMS.contains(name));bone.setChildrenHidden(false);
             // (2.146.0) a stand beside its user goes by its look; the figure by its stance
             if(look!=null)poses.blend(bone.getName(),look.weights,t,pose);else poses.pose(bone.getName(),e.previousStance(),e.stance(),k,t,pose);
             // the poses are written the way Blockbench writes a turn; GeckoLib keeps x and y turned the other way

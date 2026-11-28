@@ -44,7 +44,7 @@ public final class GoldPunch {
     /** How much higher than at its user's shoulder it floats in front (the rush's: its fist lands on a body's chest), and how big its arms are through it. */
     static final float RAISE=GoldRush.RAISE,ARMS=1.12f;
     /** How far in front of its user it stands with no one in its way, and no nearer or further than (blocks); how deep its fist goes into whom it meets. */
-    static final float AHEAD=1.05f,NEAR=.75f,FAR=2.1f,BITE=.15f;
+    static final float AHEAD=1.05f,NEAR=.75f,FAR=2.2f,BITE=.15f;
     /** Where the shout's second syllable is in its file (seconds: tools/stand/cut_gold_sounds.py's DA_AT), so when it is played: that syllable as the fist lands. */
     static final float DA_AT=.2f,SOUND_AT=CONTACT-DA_AT;
     static final GoldSounds.Cue[] SOUND={new GoldSounds.Cue(SOUND_AT,"gold_experience_overdrive",1)};

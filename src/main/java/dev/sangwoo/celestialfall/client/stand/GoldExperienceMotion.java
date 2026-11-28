@@ -7,6 +7,9 @@ package dev.sangwoo.celestialfall.client.stand;
  * above, the wings stir, the rings hanging from its belt swing and the hide behind its hips sways, each strip out of
  * step with the next and its end after its top. Standing to be looked at ({@code calm} 0) only the breath and the
  * hanging things move. Every movement is a sine of the clock in seconds, so each frame between ticks has its own pose.
+ * (2.155.0: the body the user sent has no wing, ring or hide bones, its pads, hooks and hide going with its shoulders,
+ * hips and legs as its own skin moves them; those kinds stay for the box-built model, which a skeleton with them would
+ * bring back.)
  */
 record GoldExperienceMotion(int kind,float index,int segment) {
     static final int STILL=0,ROOT=1,HIPS=2,TORSO=3,CHEST=4,NECK=5,HEAD=6,ARM=7,FOREARM=8,HAND=9,LEG=10,SHIN=11,FOOT=12,WING=13,BLADE=14,RING=15,HIDE=16,SIDE=17;

@@ -73,7 +73,7 @@ public final class GoldLife {
     /** The punch (seconds): wound up, loaded until, lands (the server's FLY_CONTACT), held out until, back in the guard; stopped short, back in it. */
     static final float WOUND=.2f,LOAD=.27f,CONTACT=GoldExperienceRules.FLY_CONTACT/20f,HELD=.62f,PUNCH_GUARDED=.86f,CUT=.15f;
     /** How deep the punch's wind-up goes (of the overdrive's), how big its arms are, how far in front its user it stands with no one known and no nearer or further, and how deep its fist goes in. */
-    static final float WIND_DEPTH=.6f,ARMS=1.08f,AHEAD=1.05f,NEAR=.75f,FAR=2.1f,BITE=.15f;
+    static final float WIND_DEPTH=.6f,ARMS=1.08f,AHEAD=1.05f,NEAR=.75f,FAR=2.2f,BITE=.15f;
     /** Where the raised hand holds the item (blocks: ahead, to the side of the hand, up, for a body 1.8 tall). */
     static final double HAND_AHEAD=.7,HAND_SIDE=.33,HAND_UP=1.58;
     /** Swatted: whom the fly belonged to falls on their back, lies, and is up again (seconds). */
