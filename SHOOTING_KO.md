@@ -441,6 +441,12 @@
 - 볼 것(들을 것): 외침의 '다'가 주먹이 닿을 때, 힐 소리의 첫 반짝임이 주먹이 들어갈 때, 개구리가 날 때 '퐁'과 울음, 되돌릴 때 울음과 '팅', 주먹이 닿을 때 타격, 파리의 윙윙거림이 파리를 따라감, 나무가 솟을 때 쿵과 나무가 찢기는 소리.
 - 멀티플레이는 릴리스 jar(`build/libs/botand-버전.jar`)로 돈다: 버전을 올리고 `./gradlew --offline build`를 먼저 돌린다(2.153.0의 첫 확인은 2.152.0 jar로 돌아 옛 규칙이 찍혔다). `MP_ONLY=goldheal`(2.153.0: 톡 30, 꾹은 6틱에 한 번에 30이고 Y를 누르고 있어도 18틱에 끝, 주먹이 들어간 뒤 맞으면 거기서 끝(회복은 됨), 들어가기 전에 맞으면 회복 없이 끝), `goldtree`·`goldlife`·`goldbeat`(2.153.0: 끊김이 두 접속자에게 'stopped 1'로 보이는지. T와 비트다운 스크립트에 끊김 시험을 넣었다: T는 맨손 주먹 3틱 뒤 `HITME`, 비트다운은 빛이 끝나고 여는 주먹이 날아가는 동안 `HITME`(앞의 여는 주먹이 1.5초 동안 남아 있으니 그 뒤에 G)).
 
+### 골드 익스피리언스 평타 (주먹 4타, 2.154.0)
+- 목록(스크립트 하나에 `video`·`audio`, 2.153.0의 소리 촬영과 같은 방법): `B="SUMMON;stand=gold_experience;face=180;dummy=1;time=6000"`, 예열 `$B;dfw=6;len=60;slows=0:2;save=0-1;then=KEY_Q@4/ATTACKDOWN@20/ATTACKUP@24`(멀리 선 더미에 주먹을 휘둘러 주먹 소리를 미리 불러 둔다), 옆 카메라의 연타 `$B;dfw=2.4;len=130;fov=55;hud=1;orbit=5.5/1.7/0/100/1.2/0/1.1;then=KEY_Q@6/ATTACKDOWN@40/ATTACKUP@84`(공격 키를 누르고 있으면 가장 빠른 때에 넷이 나간다: 41·47·54·68틱에 시작, 45·52·65·80틱에 맞힘, 더미 200 → 179, 4타에 더미가 날아감. 영상은 `slows=0:4/34:24/110:16;save=34-130`: 0.5배속 다시보기를 만들 프레임), 게임 카메라의 연타(`orbit` 없이 `hud=1`), 가드하는 더미 `dguard=1`(1~3타는 가드에 막히고 막은 피해가 가드를 깎아 셋째에 가드가 깨짐, 4타는 뚫고 8, 날아감). 옆 카메라 `orbit=5.5/1.7/0/100/1.2/0/1.1`은 사용자(왼쪽)·스탠드(가운데)·더미(오른쪽)가 한 화면에 나란히 선다(처음 쓴 `6.0/1.8/0/118/2.0/0/1.2`는 앞에서 비스듬해 스탠드가 사용자와 겹쳐 보였다).
+- 로그: 'gold punch at N: combo,age,landed,struck,guarded,stopped,sounds,blows …, dummy 체력 at 자리, ready in'(새 주먹, 맞힘, 끊김, 소리마다 한 줄), 'hits N', 'dummy health'.
+- 소리 넣기: `python3 -I tools/stand/shots/mux_gold.py 소리폴더 촬영폴더 장면 시작초 끝초 편집.mp4 결과.mp4 m1`(첫 주먹의 휙 소리 `gold_punch_swing_1`을 녹음에서 파형으로 찾아 그 주먹이 시작한 틱+3틱에 놓는다: 그 주먹의 로그 줄 'gold punch at N: … 1,나이,'). 0.5배속 다시보기는 소리 없이 둔다.
+- 멀티플레이: `MP_ONLY=goldm1`(스탠드가 들어가 있으면 맨손 평타, Q 뒤 누르고 있으면 넷이 7·7·14틱 간격으로 4·4·5·8, 가드에 1~3타 막힘과 4타 뚫음, 첫 주먹 뒤 맞으면(`HITME`) 끊김, 누르는 중의 E·R이 주먹을 끊고 시작함, 두 접속자 모두 주먹마다 같은 줄과 소리·타격음 수).
+
 ### 골드 익스피리언스 감각폭주 (R, 2.148.0)
 - 목록(960x540): 예열 `SUMMON;stand=gold_experience;face=180;dummy=1;dfw=3;time=6000;len=60;slows=0:2;save=0-1;then=KEY_Q@4/KEY_R@20`, 시전자(옆 카메라, 강펀치 → 걸어가 러시: 숫자가 2씩 오름) `...;len=170;fov=55;hud=1;orbit=7.0/1.8/0/118/3.0/0/1.2;then=KEY_Q@6/KEY_R@40/KEYDOWN_W@60/KEYUP_W@73/KEYDOWN_E@78/KEYUP_E@150`, 맞은 사람(게임 카메라) `SUMMON;stand=gold_experience;face=180;dummy=1;dattack=1;dfw=1.6;time=6000;len=160;hud=1;pitch=14;dist=4.2;then=SOULOUT@20/KEYDOWN_S@26/KEYUP_S@44/KEYDOWN_D@48/KEYUP_D@58/ATTACKDOWN@62/ATTACKUP@63/...`. `SHOTS_LANG=ko_kr`.
 - `SOULOUT@n`은 서버가 플레이어의 영혼을 내보냅니다(`GoldExperienceOverdrive.out`: 싱글에는 감각폭주를 걸어 줄 상대가 없습니다). 이동 키(`KEYDOWN_W` 등)와 `ATTACKDOWN`이 영혼을 움직입니다.
@@ -602,6 +608,7 @@
   - 이소상 평타(2.77.0):
     - `python3 -I tools/isosang/shots/mux_m1.py 소리폴더 영상폴더 항목 시작초 끝초 영상.mp4 결과.mp4`
   - 골드 익스피리언스 R·Y·T·H(2.153.0): `python3 -I tools/stand/shots/mux_gold.py 소리폴더 영상폴더 항목 시작초 끝초 영상.mp4 결과.mp4 종류`(종류: over·mend·self·frog·punch·tree, 위 '골드 익스피리언스 소리').
+  - 골드 익스피리언스 평타(2.154.0): 같은 도구의 종류 `m1`(위 '골드 익스피리언스 평타').
   - 그 밖의 인자 순서는 모두 `소리폴더 영상폴더 항목 시작초 끝초 영상.mp4 결과.mp4`입니다.
 - 소리 파일 만들기와 자르기 도구는 아래와 같습니다(녹음 원본은 고치지 않고 자르기만 합니다).
   - 녹음 자르기: `tools/stand/cut_summon.py`, `cut_ora.py`, `cut_rush.py`, `cut_heavy.py`, `cut_finger.py`, `cut_beatdown.py`, `cut_timestop.py`, `cut_arrow_sounds.py`, `tools/meteor/user_fall_sound.py`, `tools/stand/cut_gold_sounds.py`(2.153.0: 골드 익스피리언스 R의 외침과 Y의 두 힐 소리, `R영상.mp4 힐영상.mp4`).

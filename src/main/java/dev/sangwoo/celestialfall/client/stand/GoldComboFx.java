@@ -43,7 +43,7 @@ import static dev.sangwoo.celestialfall.client.stand.StandPunchFx.way;
  */
 final class GoldComboFx {
     /** How big each punch's light is (the fourth's most), and how long its burst lasts after its contact (seconds). */
-    static final float[] SIZE={0,.95f,1f,1.12f,1.9f},BURST={0,.17f,.17f,.2f,.3f};
+    static final float[] SIZE={0,.8f,.85f,.95f,1.3f},BURST={0,.17f,.17f,.2f,.3f};
     /** A punch's effects are over this long after its contact (seconds): the fourth's target flies a while. */
     static final float AFTER=1.2f;
     /** Where the blow landed, held from the first frame at or past it: the fist, the way the punch went, its right, its user's feet. */
@@ -90,7 +90,7 @@ final class GoldComboFx {
         return !FRAME.isEmpty();
     }
     static float burstU(Shown s){return Ease.unit(s.t,s.hit(),s.hit()+BURST[s.combo()]);}
-    static float burstSize(Shown s){return (float)((.62+.38*Ease.out(s.t,s.hit(),s.hit()+.07f))*SIZE[s.combo()]*(s.big()?1.2:1)*(1-.15*burstU(s)));}
+    static float burstSize(Shown s){return (float)((.62+.38*Ease.out(s.t,s.hit(),s.hit()+.07f))*SIZE[s.combo()]*(s.big()?1.1:1)*(1-.15*burstU(s)));}
     static float burstAlpha(Shown s){return Ease.smooth(s.t,s.hit()-.006f,s.hit()+.012f)*(float)Math.pow(1-burstU(s),.7);}
     /** Where whom it struck were as it landed (their chests), held. */
     static Vec3d[] struck(Shown s){return s.punch.struck.length>0?s.punch.struckAt:new Vec3d[0];}
@@ -109,9 +109,9 @@ final class GoldComboFx {
             }
             if(!s.big())continue;
             float u=Ease.unit(t,hit,hit+.34f);
-            if(u<1)FxLib.ringPlane(m,s.blow.fist.add(s.blow.way.multiply(.25)),s.blow.right,UP,.45+3.0*Ease.out(t,hit,hit+.26f),.36,INK,.5f*(1-u)*Ease.smooth(t,hit-.01f,hit+.01f));
+            if(u<1)FxLib.ringPlane(m,s.blow.fist.add(s.blow.way.multiply(.25)),s.blow.right,UP,.4+2.2*Ease.out(t,hit,hit+.26f),.3,INK,.45f*(1-u)*Ease.smooth(t,hit-.01f,hit+.01f));
             float lance=lance(t,hit);
-            if(lance>0)m.needle(s.blow.fist.subtract(s.blow.way.multiply(.5)),s.blow.fist.add(s.blow.way.multiply(LANCE*Ease.out(t,hit-.02f,hit+.05f))),.66,.25,INK,.6f*lance);
+            if(lance>0)m.needle(s.blow.fist.subtract(s.blow.way.multiply(.5)),s.blow.fist.add(s.blow.way.multiply(LANCE*Ease.out(t,hit-.02f,hit+.05f))),.4,.25,INK,.55f*lance);
         }
     }
     static void additive(EffectMesh m){
@@ -125,10 +125,10 @@ final class GoldComboFx {
             int heart=guard?GUARD_LIGHT:PALE,edge=guard?GUARD_BLUE:GOLD;
             // the impact burst: gold spikes round a pale heart (the ink under it gives the edge), a small white core
             float ba=burstAlpha(s),br=burstSize(s);
-            if(ba>0){burst(m,p,br,.36,9+s.combo(),s.seed(),heart,edge,.88f*ba,.75f*ba);m.star(p,br*.6,WHITE,.4f*ba);}
+            if(ba>0){burst(m,p,br,.36,9+s.combo(),s.seed(),heart,edge,.62f*ba,.6f*ba);m.star(p,br*.5,WHITE,.22f*ba);}
             if(u<1){
-                m.softDisc(p,(1.0+.6*u)*size,guard?GUARD_BLUE:AMBER,.34f*a*(1-u));m.softDisc(p,(.5+.25*u)*size,edge,.55f*a*(1-u));
-                m.softDisc(p,.16*size*(1-u)+.04,WHITE,.7f*a*(1-u));
+                m.softDisc(p,(1.0+.6*u)*size,guard?GUARD_BLUE:AMBER,.2f*a*(1-u));m.softDisc(p,(.5+.25*u)*size,edge,.32f*a*(1-u));
+                m.softDisc(p,.12*size*(1-u)+.03,WHITE,.4f*a*(1-u));
             }
             // a shock ring opening round the punch's line, then a wider one after it
             float ur=Ease.unit(t,hit,hit+.17f);
@@ -140,16 +140,16 @@ final class GoldComboFx {
             // whom it struck: a burst of light on them and a spray of it out of their backs
             for(var c:struck(s)){
                 float uc=Ease.unit(t,hit,hit+.28f);if(uc>=1)break;
-                if(ba>0)burst(m,c,br*.72,.36,9,s.seed()+17,PALE,GOLD,.78f*ba,.65f*ba);
-                m.softDisc(c,(1.1+.6*uc)*size,AMBER,.3f*a*(1-uc));m.softDisc(c,.3*size*(1-uc)+.06,WHITE,.5f*a*(1-uc));
-                FxLib.ringPlane(m,c,side,up,.35+1.5*size*Ease.out(t,hit,hit+.22f),.2,PALE,.55f*a*(1-uc));
+                if(ba>0)burst(m,c,br*.72,.36,9,s.seed()+17,PALE,GOLD,.5f*ba,.5f*ba);
+                m.softDisc(c,(1.1+.6*uc)*size,AMBER,.16f*a*(1-uc));m.softDisc(c,.25*size*(1-uc)+.05,WHITE,.28f*a*(1-uc));
+                FxLib.ringPlane(m,c,side,up,.35+1.5*size*Ease.out(t,hit,hit+.22f),.2,PALE,.4f*a*(1-uc));
                 float sp=a*(1-Ease.smooth(t,hit+.06f,hit+.3f));
                 if(sp>0)for(int k=0;k<10+s.combo()*3;k++){
                     double ang=Ease.hash(k*5+s.seed()+3)*Math.PI*2,spread=.15+.4*Ease.hash(k*7+s.seed());
                     Vec3d d=go.add(side.multiply(Math.cos(ang)*spread)).add(up.multiply(Math.sin(ang)*spread)).normalize();
                     double len=(.7+1.3*Ease.hash(k*11+s.seed()))*size*Ease.out(t,hit,hit+.16f);
                     Vec3d q=c.add(d.multiply(.25+len*.45));
-                    m.needle(q,q.add(d.multiply(len*.55)),.055*size,.3,k%5==0?WHITE:k%3==1?PALE:k%2==0?GOLD:AMBER,sp);
+                    m.needle(q,q.add(d.multiply(len*.55)),.055*size,.3,k%5==0?WHITE:k%3==1?PALE:k%2==0?GOLD:AMBER,.7f*sp);
                 }
             }
             if(s.big())finisher(m,s,t,hit,guard);
@@ -216,9 +216,9 @@ final class GoldComboFx {
             double ang=Ease.hash(k*5+s.seed()+31)*Math.PI*2,spread=.06+.28*Ease.hash(k*7+s.seed()+37);
             Vec3d d=go.add(side.multiply(Math.cos(ang)*spread)).add(up.multiply(Math.sin(ang)*spread)).normalize();
             double reach=length*(.45+.55*Ease.hash(k*11+s.seed()+41))*grow;
-            m.needle(p.add(d.multiply(.1+reach*.4)),p.add(d.multiply(.1+reach)),.06*size,.4,k%5==0?WHITE:k%2==0?GOLD:PALE,.7f*a);
+            m.needle(p.add(d.multiply(.1+reach*.4)),p.add(d.multiply(.1+reach)),.06*size,.4,k%5==0?WHITE:k%2==0?GOLD:PALE,.5f*a);
         }
-        m.softTaper(p,p.add(go.multiply(length*grow)),.22*size,.9*size,AMBER,.24f*a);
+        m.softTaper(p,p.add(go.multiply(length*grow)),.22*size,.9*size,AMBER,.14f*a);
         float ur=Ease.unit(t,hit,hit+.2f);
         if(ur<1)FxLib.ringPlane(m,p.add(go.multiply(.2+length*.85*Ease.out(t,hit,hit+.2f))),side,up,(.3+.7*ur)*size,.13*size,GOLD,.7f*Ease.smooth(t,hit-.005f,hit+.015f)*(1-ur));
     }
@@ -248,30 +248,30 @@ final class GoldComboFx {
         float in=Ease.smooth(t,hit-.01f,hit+.012f);
         float ud=Ease.unit(t,hit,hit+.4f);
         if(ud<1){
-            Vec3d c=p.add(go.multiply(.6));double r=.45+3.0*Ease.out(t,hit,hit+.36f);float al=.72f*in*(1-ud);
+            Vec3d c=p.add(go.multiply(.6));double r=.4+2.2*Ease.out(t,hit,hit+.36f);float al=.55f*in*(1-ud);
             FxLib.ringPlane(m,c,side,up,r,.28,PALE,al);FxLib.ringPlane(m,c,go,side,r*.92,.22,GOLD,.85f*al);FxLib.ringPlane(m,c,go,up,r*.88,.2,AMBER,.75f*al);
         }
         for(int k=0;k<4;k++){
             float at=hit+.035f*k,u=Ease.unit(t,at,at+.34f);if(t<at||u>=1)continue;
             Vec3d o=p.add(go.multiply(.4+1.2*k+1.8*Ease.out(t,at,at+.34f)));
-            FxLib.ringPlane(m,o,side,up,.4+(1.25+.55*k)*Ease.out(t,at,at+.28f),.22+.04*k,k==0?PALE:k%2==1?GOLD:AMBER,.85f*(1-u)*Ease.smooth(t,at,at+.015f));
+            FxLib.ringPlane(m,o,side,up,.35+(.9+.4*k)*Ease.out(t,at,at+.28f),.18+.03*k,k==0?PALE:k%2==1?GOLD:AMBER,.6f*(1-u)*Ease.smooth(t,at,at+.015f));
         }
         float s1=in*(1-Ease.smooth(t,hit+.12f,hit+.45f));
-        if(s1>0)for(int k=0;k<48;k++){
+        if(s1>0)for(int k=0;k<36;k++){
             double az=(Ease.hash(k*3+811)-.5)*1.8,el=(Ease.hash(k*5+812)-.4)*1.3,go2=(1.3+3.8*Ease.hash(k*7+813))*Ease.out(t,hit,hit+.32f);
             Vec3d d=go.multiply(Math.cos(el)*Math.cos(az)).add(side.multiply(Math.cos(el)*Math.sin(az))).add(up.multiply(Math.sin(el)));
             Vec3d q=p.add(d.multiply(.3+go2)).add(0,-.9*Math.pow(Math.max(0,t-hit),2),0);
-            m.needle(q.subtract(d.multiply(.28+.3*Ease.hash(k*11+814))),q,.07,.3,k%5==0?WHITE:k%3==1?PALE:k%2==0?GOLD:AMBER,s1);
+            m.needle(q.subtract(d.multiply(.28+.3*Ease.hash(k*11+814))),q,.06,.3,k%5==0?WHITE:k%3==1?PALE:k%2==0?GOLD:AMBER,.7f*s1);
         }
         if(guard)return;
         float lance=lance(t,hit);
         if(lance>0){Vec3d a0=p.subtract(go.multiply(.5)),a1=p.add(go.multiply(LANCE*Ease.out(t,hit-.02f,hit+.05f)));
-            m.softLine(a0,a1,1.6,AMBER,.32f*lance);m.needle(a0,a1,.48,.25,GOLD,lance);m.needle(a0,a1.subtract(go.multiply(.5)),.17,.25,WHITE,.8f*lance);}
+            m.softLine(a0,a1,.9,AMBER,.18f*lance);m.needle(a0,a1,.28,.25,GOLD,.8f*lance);m.needle(a0,a1.subtract(go.multiply(.5)),.09,.25,WHITE,.55f*lance);}
         // the ground ripples out from under the blow
         Vec3d floor=new Vec3d(p.x,s.blow.feet.y+.06,p.z);
         float ug=Ease.unit(t,hit,hit+.55f);
-        if(ug<1){FxLib.ring(m,floor,.5+5*Ease.out(t,hit,hit+.5f),.5,PALE,.5f*in*(1-ug));
-            float ug2=Ease.unit(t,hit+.07f,hit+.6f);if(t>=hit+.07f&&ug2<1)FxLib.ring(m,floor,.4+3.6*Ease.out(t,hit+.07f,hit+.55f),.36,GOLD,.42f*(1-ug2));}
+        if(ug<1){FxLib.ring(m,floor,.5+3.6*Ease.out(t,hit,hit+.5f),.4,PALE,.38f*in*(1-ug));
+            float ug2=Ease.unit(t,hit+.07f,hit+.6f);if(t>=hit+.07f&&ug2<1)FxLib.ring(m,floor,.4+2.6*Ease.out(t,hit+.07f,hit+.55f),.3,GOLD,.3f*(1-ug2));}
         // whom it threw trail light as they fly
         float fly=t<hit?0:Ease.smooth(t,hit,hit+.04f)*(1-Ease.smooth(t,hit+.55f,hit+.9f));
         if(fly>0){
@@ -280,7 +280,7 @@ final class GoldComboFx {
                 if(world==null||!(world.getEntityById(s.punch.struck[i]) instanceof LivingEntity e))continue;
                 Vec3d q=e.getLerpedPos(delta).add(0,e.getHeight()*.55,0),back=s.punch.struckAt[i].subtract(q);double l=back.length();if(l<.3)continue;
                 Vec3d end=q.add(back.multiply(Math.min(1,4.5/l)));
-                m.softTaper(q,end,1.2,.07,AMBER,.6f*fly);m.softTaper(q,end,.42,.02,WHITE,.7f*fly);m.softDisc(q,.9,GOLD,.3f*fly);
+                m.softTaper(q,end,.8,.06,AMBER,.45f*fly);m.softTaper(q,end,.25,.02,WHITE,.5f*fly);m.softDisc(q,.6,GOLD,.2f*fly);
             }
         }
     }
@@ -293,7 +293,10 @@ final class GoldComboFx {
             if(!s.big()||s.blow==null||s.guarded())continue;
             for(int i=0;i<s.punch.struck.length;i++){
                 Vec3d at=s.punch.struckAt[i];
+                int from=puffs.size();
                 FxLib.dustRing(new Vec3d(at.x,s.blow.feet.y,at.z),s.t,s.hit(),.25,1.1,7,.35,dust,puffs,s.seed()+i*7);
+                // plain dust, not the violet cast of Kageno's and Star Platinum's light
+                for(int k=from;k<puffs.size();k++)puffs.get(k)[2]=0;
             }
         }
         if(!dust.isEmpty())KagenoFire.dust(matrix,camera,dust,puffs,(float)(world.getTime()+delta));
@@ -305,7 +308,7 @@ final class GoldComboFx {
             if(c>0&&s.body!=null)f.light(s.fistAt(s.t),0xffdc8a,5,1.2f*c);
             if(s.blow==null)continue;
             float a=burstAlpha(s);
-            if(a>0)f.light(s.blow.fist,s.guarded()?0xb8c8ff:0xffe6a8,s.big()?9:5,(s.big()?2.2f:1.4f)*a);
+            if(a>0)f.light(s.blow.fist,s.guarded()?0xb8c8ff:0xffe6a8,s.big()?7:4,(s.big()?1.5f:1f)*a);
         }
     }
 }

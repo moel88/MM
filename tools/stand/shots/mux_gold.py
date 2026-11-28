@@ -1,5 +1,5 @@
 """Lays the game's own sound under a film of one of Gold Experience's skills with sounds of 2.153.0 (its R, its Y's two
-healings, its T's frog and fist, its H's tree), where the game plays it.
+healings, its T's frog and fist, its H's tree) and 2.154.0 (its basic attack), where the game plays it.
 usage: python3 -I tools/stand/shots/mux_gold.py AUDIO_DIR FILM_DIR ENTRY START END FILM.mp4 OUT.mp4 KIND
 
 As tools/stand/shots/mux_gold_beatdown.py (mux_heavy's way): AUDIO_DIR is a run of tools/kageno/shots/run_shots.py with
@@ -15,6 +15,7 @@ of the same entry (the frog's return, the fly's, the tree's withering) is laid b
   frog   the frog's birth (T with an item), 6 ticks in (GoldLife.FROG_SOUNDS)
   punch  the punch's rush (T with the hand empty), 5 ticks in (GoldLife.PUNCH_SOUNDS)
   tree   the tree's burst (H), 10 ticks in (GoldTree.SOUNDS)
+  m1     the basic attack's first punch's whoosh (2.154.0), 3 ticks in (GoldCombo.cues)
   swat   the fly swatted by whom it belongs to (T), on the tick its client hears of it: the dummy's blows are not on the
          same ticks in two runs (nor which of them meets the fly), so a stretch from the swat on is laid by it
 """
@@ -35,6 +36,8 @@ KINDS = {
     'frog': ('gold_life_born', 6, r'giving life at (\d+): \S+ 1,([0-9.]+),'),
     'punch': ('gold_life_punch', 5, r'giving life at (\d+): \S+ 0,([0-9.]+),'),
     'tree': ('gold_tree_burst', 10, r'tree of life at (\d+): \S+ ([0-9.]+),'),
+    # (2.154.0) the basic attack: the jab's whoosh, 3 ticks in (client/stand/GoldCombo: its cue at HIT-SWING_PEAK)
+    'm1': ('gold_punch_swing_1', 3, r'gold punch at (\d+): \S+ 1,([0-9.]+),'),
     # the fly swatted (T): its owner's blow on it, the tick the client hears of it (the dummy knocked down then)
     'swat': ('gold_life_swat', 0, r'the dummy knocked down at (\d+)'),
 }

@@ -131,6 +131,7 @@ public final class MpServer implements ModInitializer {
         if(GOLDBEAT_ONLY)goldBeat(server);
         if(GOLDLIFE_ONLY)goldLife(server);
         if(GOLDTREE_ONLY)goldTree(server);
+        if(GOLDM1_ONLY)goldM1(server);
         called(server);
         if(COOLDOWNS_ONLY||SWAP_ONLY||FRESH_ONLY)cooldowns(server);
         if(STAGGER_ONLY||ISOSANG_ONLY)staggers(server);
@@ -525,6 +526,42 @@ public final class MpServer implements ModInitializer {
         float w=watcher.getHealth();
         if(healWatcher>=0&&Math.abs(w-healWatcher)>1e-3f)note(server,String.format(java.util.Locale.ROOT,"the watcher's health %.1f -> %.1f at tick %d (%.2f blocks from the caster)%s",healWatcher,w,now,watcher.distanceTo(caster),mode==1?String.format(java.util.Locale.ROOT,", %d ticks into the tap",now-healSince):""));
         healWatcher=w;
+    }
+    /** Only Gold Experience's basic attack's script (2.154.0, MP_ONLY=goldm1). */
+    static final boolean GOLDM1_ONLY="goldm1".equals(System.getProperty("botand.mp.only"));
+    private long m1Start=-1,m1Thrown=-1;private int m1Combo=-1;private boolean m1Landed,m1Air,m1Guard,m1Staggered;private float m1Health=-1;private net.minecraft.util.math.Vec3d m1From;
+    /**
+     * Gold Experience's punches as the server runs them (2.154.0, MP_ONLY=goldm1): the caster's punch as it begins and
+     * lands (which, when it began, the stand out or not, when the attack is ready again after a rest), every loss of
+     * health of the watcher (how much, its guard, staggered, how fast it is leaving), its guard and stagger as they come
+     * and go, and where the fourth's throw brings it down.
+     */
+    private void goldM1(MinecraftServer server){
+        ServerPlayerEntity caster=null,watcher=null;
+        for(var p:server.getPlayerManager().getPlayerList())if(caster(p))caster=p;else watcher=p;
+        if(caster==null)return;
+        long now=server.getOverworld().getTime();
+        var punch=dev.sangwoo.celestialfall.stand.GoldExperienceAttack.punch(caster);
+        if(punch!=null&&(punch.start()!=m1Start||punch.combo()!=m1Combo||punch.landed()!=m1Landed)){
+            note(server,String.format(java.util.Locale.ROOT,"punch %d %s at tick %d (begun at %d: %d ticks in), the caster's stand %s (out %s), its attack ready again in %d ticks",
+                punch.combo(),punch.landed()?"landed":"thrown",now,punch.start(),now-punch.start(),dev.sangwoo.celestialfall.progression.ProgressManager.profile(caster).stand(),
+                ((dev.sangwoo.celestialfall.stand.StandHolder)caster).botand$isStandOut(),punch.ready()-now));
+            m1Start=punch.start();m1Combo=punch.combo();m1Landed=punch.landed();
+        }
+        if(watcher==null)return;
+        boolean guard=dev.sangwoo.celestialfall.combat.CombatManager.guarding(watcher),staggered=dev.sangwoo.celestialfall.combat.CombatManager.staggered(watcher);
+        if(guard!=m1Guard)note(server,"the watcher's guard "+(guard?"up":"down")+" at tick "+now+(dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(watcher)?" (incapacitated)":""));
+        if(staggered!=m1Staggered)note(server,"the watcher "+(staggered?"staggered":"free of its stagger")+" at tick "+now);
+        m1Guard=guard;m1Staggered=staggered;
+        float h=watcher.getHealth();
+        if(m1Health>=0&&h<m1Health-1e-3f){
+            note(server,String.format(java.util.Locale.ROOT,"the watcher lost %.1f at tick %d (health %.1f), its guard %s, leaving at %.3f blocks a tick, %.2f blocks from the caster",
+                m1Health-h,now,h,guard?"up":"down",watcher.getVelocity().horizontalLength(),watcher.distanceTo(caster)));
+            if(punch!=null&&punch.combo()==4&&now-punch.start()<=dev.sangwoo.celestialfall.stand.GoldExperienceRules.M1_CONTACT[4]+1){m1From=watcher.getPos();m1Thrown=now;m1Air=true;}
+        }
+        m1Health=h;
+        if(m1Air&&now>m1Thrown+3&&watcher.isOnGround()){
+            note(server,String.format(java.util.Locale.ROOT,"the watcher thrown by the fourth came down %.2f blocks from where it was struck, %d ticks after",watcher.getPos().distanceTo(m1From),now-m1Thrown));m1Air=false;}
     }
     /** Only Gold Experience's overdrive punch's script (2.148.0, MP_ONLY=goldover). */
     static final boolean GOLDOVER_ONLY="goldover".equals(System.getProperty("botand.mp.only"));

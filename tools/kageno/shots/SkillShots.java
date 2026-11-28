@@ -358,7 +358,7 @@ public final class SkillShots implements ClientModInitializer {
     }
     private int skill(String name){return switch(name){case "M1"->M1;case "E"->E;case "R"->R;case "T"->T;case "RUSH"->RUSH;case "Y"->Y;case "Q"->Q;case "H"->H;case "G"->G;case "PULSE"->PULSE;default->-1;};}
     private boolean mapShot(){return "METEOR".equals(current)||"SHOP".equals(current);}
-    private String overSeen,soulSeen;private boolean dummySoulless;
+    private String overSeen,soulSeen,comboSeen;private boolean dummySoulless;
     private String healSeen;private float healthSeen=-1;
     private String lifeSeen,handSeen,treeSeen;private boolean downSeen;
     private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "METEOR"->300;case "SHOP"->400;case "BASE"->150;case "HUD"->400;case "UI"->300;case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;case "GDUMMY"->560;case "STAND"->240;case "SUMMON"->300;default->DURATION[skill(name)]+20;};}
@@ -827,6 +827,17 @@ public final class SkillShots implements ClientModInitializer {
             if(soul==null&&soulSeen!=null)log.append("  soul back in the body at ").append(age).append('\n');
             soulSeen=soul;
             if(dummy!=null){boolean gone=dev.sangwoo.celestialfall.client.stand.SoulClient.soulless(dummy);if(gone!=dummySoulless)log.append(gone?"  the dummy's soul is out at ":"  the dummy's soul is back at ").append(age).append('\n');dummySoulless=gone;}
+        }
+        // (2.154.0) Gold Experience's basic attack: its newest punch as it changes (which, landed, whom it struck, whose guard
+        // took it, stopped, its sounds and blows heard), and the dummy's health then
+        {
+            String combo=mc.player==null?null:dev.sangwoo.celestialfall.client.stand.GoldCombo.describe(mc.player.getUuid(),0);
+            String key=combo==null?null:combo.substring(0,combo.indexOf(','))+combo.substring(combo.indexOf(',',combo.indexOf(',')+1));
+            if(key!=null&&!key.equals(comboSeen)){var dm=mc.world.getEntityById(dummyId);
+                log.append("  gold punch at ").append(age).append(": combo,age,landed,struck,guarded,stopped,sounds,blows ").append(combo)
+                   .append(String.format(Locale.ROOT,", dummy %s, ready in %d%n",dm instanceof net.minecraft.entity.LivingEntity dl?String.format(Locale.ROOT,"%.1f at %.2f %.2f %.2f",dl.getHealth(),dl.getX(),dl.getY(),dl.getZ()):"-",
+                       dev.sangwoo.celestialfall.client.stand.GoldCombo.ready(mc.player.getUuid())-mc.world.getTime()));}
+            comboSeen=key;
         }
         // (2.149.0) Gold Experience's healing (Y): its state as it changes, and the player's health as it goes up or down
         {
