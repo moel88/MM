@@ -32,7 +32,7 @@ public final class StandManager {
         ((StandHolder)p).botand$setStand(MapGate.enabled(p.getWorld())?ProgressManager.profile(p).stand():"none");
     }
     public static void initialize(){
-        KagenoManager.initialize();StandSummon.initialize();StarPlatinumAttack.initialize();StarPlatinumRush.initialize();GoldExperienceOverdrive.initialize();GoldExperienceHeal.initialize();GoldExperienceBeatdown.initialize();GoldExperienceLife.initialize();GoldExperienceTree.initialize();StarPlatinumInhale.initialize();StarPlatinumBeatdown.initialize();StarPlatinumTimeStop.initialize();StandArrow.initialize();
+        KagenoManager.initialize();StandSummon.initialize();StarPlatinumAttack.initialize();StarPlatinumRush.initialize();GoldExperienceOverdrive.initialize();GoldExperienceHeal.initialize();GoldExperienceBeatdown.initialize();GoldExperienceLife.initialize();GoldExperienceTree.initialize();GoldExperienceAttack.initialize();StarPlatinumInhale.initialize();StarPlatinumBeatdown.initialize();StarPlatinumTimeStop.initialize();StandArrow.initialize();
         // (after the stands' own ticks, which may set a cooldown as a move they cut off ends)
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(StandManager::forgetOthers);
         ServerPlayNetworking.registerGlobalReceiver(SKILL,(server,player,handler,buf,response)->{
@@ -62,7 +62,7 @@ public final class StandManager {
             // (2.147.0) the rush is Star Platinum's and Gold Experience's: each one's cooldown goes with its stand
             StarPlatinumRush.forget(p,ProgressManager.profile(p).stand());
             // (2.148.0) Gold Experience's overdrive's cooldown
-            if(!"gold_experience".equals(ProgressManager.profile(p).stand())){GoldExperienceOverdrive.forget(p);GoldExperienceHeal.forget(p);GoldExperienceBeatdown.forget(p);GoldExperienceLife.forget(p);GoldExperienceTree.forget(p);}
+            if(!"gold_experience".equals(ProgressManager.profile(p).stand())){GoldExperienceOverdrive.forget(p);GoldExperienceHeal.forget(p);GoldExperienceBeatdown.forget(p);GoldExperienceLife.forget(p);GoldExperienceTree.forget(p);GoldExperienceAttack.forget(p);}
             // (2.77.0) Lee So-sang's sword's rest after a combo, as Star Platinum's punches'
             if(!"isosang".equals(ProgressManager.profile(p).stand()))dev.sangwoo.celestialfall.isosang.IsosangAttack.forget(p);
             // (2.112.0) X Chara's G's cooldown

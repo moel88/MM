@@ -48,7 +48,8 @@ import static dev.sangwoo.celestialfall.stand.StarPlatinumRules.*;
  * <p>
  * Since 2.147.0 it runs Gold Experience's muda rush as well (GoldExperienceRules: a little slower, a little weaker and
  * shorter): the same E, the same word to the clients, with whose rush it is at its end (KIND; a client from before
- * reads no further than it knows). Gold Experience has no punches of its own to give way to or to wait for.
+ * reads no further than it knows). Since 2.154.0 Gold Experience's punches (GoldExperienceAttack) give way to it as Star
+ * Platinum's do, and wait for its fists to be back in the guard.
  */
 public final class StarPlatinumRush {
     public static final Identifier INPUT=CelestialFall.id("stand_rush_v1"),EVENT=CelestialFall.id("stand_rush_event_v1");
@@ -143,8 +144,10 @@ public final class StarPlatinumRush {
             // a punch in flight gives way to it: it starts once the stand has turned back to its guard (StarPlatinumRules.STOP_RETURN)
             StarPlatinumAttack.yieldTo(p);
         }
+        // (2.154.0) Gold Experience's punch in flight as well
+        else GoldExperienceAttack.yieldTo(p);
         s.kind=kind;s.ready=0;
-        s.on=true;s.start=kind==STAR?Math.max(now,StarPlatinumAttack.guardAt(p)):now;s.struck.clear();
+        s.on=true;s.start=Math.max(now,kind==STAR?StarPlatinumAttack.guardAt(p):GoldExperienceAttack.guardAt(p));s.struck.clear();
         p.setSprinting(false);p.clearActiveItem();slow(p,true);
         send(p,s,START,null,null);
         return true;

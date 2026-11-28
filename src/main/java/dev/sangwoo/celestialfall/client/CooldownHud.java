@@ -131,7 +131,7 @@ public final class CooldownHud {
         // the stand they have (2.74.2): the server's word of it (ProgressClient), which stays as they die and come back to
         // life; another stand's cooldowns count as over (their boxes drain away), and Star Platinum's short ones are
         // forgotten here as the server forgets them (StandManager), so none comes back with the stand
-        String stand=ProgressClient.profile.stand();boolean kageno=shows(G,stand),star=shows(PUNCHES,stand);
+        String stand=ProgressClient.profile.stand();boolean kageno=shows(G,stand),star="star_platinum".equals(stand);
         if(!star){
             dev.sangwoo.celestialfall.client.stand.StandAttack.forget(p.getUuid());
             dev.sangwoo.celestialfall.client.stand.StandInhale.forget(p.getUuid());
@@ -169,8 +169,10 @@ public final class CooldownHud {
         long dash=CombatClient.snapshot(p.getUuid()).dashReady();
         if(dash!=dashSeen){show(DASH,dashName(),dash-time,CombatState.DASH_COOLDOWN,now);dashSeen=dash;}
         // Star Platinum's punches (2.54.0): only their rest after a combo, as Kageno's attack (the server's ready tick)
-        long punches=star?dev.sangwoo.celestialfall.client.stand.StandAttack.ready(p.getUuid()):0;
-        if(punches!=punchesSeen){show(PUNCHES,punchesName(),punches-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.REST,now);punchesSeen=punches;}
+        // (2.154.0) the punches' box is Gold Experience's basic attack's too (its rest after a combo; its own name)
+        if(!"gold_experience".equals(stand))dev.sangwoo.celestialfall.client.stand.GoldCombo.forget(p.getUuid());
+        long punches=star?dev.sangwoo.celestialfall.client.stand.StandAttack.ready(p.getUuid()):"gold_experience".equals(stand)?dev.sangwoo.celestialfall.client.stand.GoldCombo.ready(p.getUuid()):0;
+        if(punches!=punchesSeen){show(PUNCHES,"gold_experience".equals(stand)?GOLD_PUNCHES:punchesName(),punches-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.REST,now);punchesSeen=punches;}
         // its rush (2.57.0): from when it is over (the server's ready tick, told as it ends)
         long barrage=star||gold?dev.sangwoo.celestialfall.client.stand.StandRush.ready(p.getUuid()):0;
         if(barrage!=barrageSeen){show(BARRAGE,gold?MUDA:barrageName(),barrage-time,gold?dev.sangwoo.celestialfall.stand.GoldExperienceRules.RUSH_COOLDOWN:dev.sangwoo.celestialfall.stand.StarPlatinumRules.RUSH_COOLDOWN,now);barrageSeen=barrage;}
@@ -298,7 +300,8 @@ public final class CooldownHud {
         // (2.112.0) X Chara's to theirs
         if(slot==XCHARA_G||slot==XCHARA||slot==XCHARA_E||slot==XCHARA_JAB||slot==XCHARA_CLONE||slot==XCHARA_WEAKEN||slot==XCHARA_PULL||slot==XCHARA_SLAM||slot==XCHARA_CUTTER||slot==XCHARA_SHOT||slot==XCHARA_KNIVES||slot==XCHARA_ERASE||slot==XCHARA_X||slot==XCHARA_Z)return "x_chara".equals(stand);
         // (2.147.0) the rush's box is Gold Experience's muda rush's too
-        if((slot==BARRAGE||slot==HEAVY||slot==INHALE||slot==BEATDOWN||slot==FINGER||slot==TIME_STOP)&&"gold_experience".equals(stand))return true;
+        // (2.154.0) and the punches' box its basic attack's
+        if((slot==PUNCHES||slot==BARRAGE||slot==HEAVY||slot==INHALE||slot==BEATDOWN||slot==FINGER||slot==TIME_STOP)&&"gold_experience".equals(stand))return true;
         return (slot<DASH?"kageno":"star_platinum").equals(stand);
     }
     /**
@@ -315,6 +318,8 @@ public final class CooldownHud {
     private static String punchesName(){return "오라!";}
     /** Star Platinum's rush's name in the list (the user's word for it). */
     private static String barrageName(){return "러시";}
+    /** Gold Experience's basic attack in the list (2.154.0): the punches' box, named as the other characters' are. */
+    static final String GOLD_PUNCHES="평타";
     /** Gold Experience's rush in the list (2.147.0): the rush's box, named for its own. */
     static final String MUDA="무다 러시";
     /** Gold Experience's overdrive in the list (2.148.0): the heavy punch's box, named for its own (the user's word for it). */

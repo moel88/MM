@@ -8,7 +8,8 @@ public final class GoldExperienceStance {
      * Floating at rest; the pose of the picture the user sent (floating with its legs crossed, its left hand on its hip
      * and its right hand hanging at its thigh); and standing straight as the model is built, for looking at it.
      */
-    public static final List<String> NAMES=List.of("idle","hero","stand","summon","guard","rush_l","rush_l_hi","rush_l_lo","rush_r","rush_r_hi","rush_r_lo","over_wind","over_punch","mend","ground");
+    public static final List<String> NAMES=List.of("idle","hero","stand","summon","guard","rush_l","rush_l_hi","rush_l_lo","rush_r","rush_r_hi","rush_r_lo","over_wind","over_punch","mend","ground",
+        "jab_wind","jab","cross_wind","cross","hook_wind","hook","finish_wind","finish");
     /** SUMMON (2.146.0): curled up behind its crossed forearms, as it comes out of its user and goes back into them. */
     public static final int IDLE=0,HERO=1,STAND=2,SUMMON=3;
     /**
@@ -25,6 +26,11 @@ public final class GoldExperienceStance {
      * (client/stand/GoldTree goes idle, this, idle: the user's "스탠드가 땅을 만지고 나무가 자라나게").
      */
     public static final int GROUND=14;
+    /**
+     * (2.154.0) The basic attack: each of its four punches loaded and thrown, 1 a left jab, 2 a right cross, 3 a left
+     * hook, 4 a right with the whole body behind it (client/stand/GoldCombo goes guard, loaded, thrown, guard).
+     */
+    public static final int JAB_WIND=15,JAB=16,CROSS_WIND=17,CROSS=18,HOOK_WIND=19,HOOK=20,FINISH_WIND=21,FINISH=22;
     /** How long the figure takes to go over from one stance to another (ticks). */
     public static final float CROSSFADE=12;
     private GoldExperienceStance(){}

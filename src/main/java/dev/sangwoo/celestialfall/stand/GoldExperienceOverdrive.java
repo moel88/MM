@@ -93,6 +93,8 @@ public final class GoldExperienceOverdrive {
         if(!punches(p)||p.isSleeping()||p.hasVehicle()||CombatManager.busy(p)||CombatManager.cinematic(p)||GoldExperienceHeal.active(p)||GoldExperienceBeatdown.opening(p)||GoldExperienceLife.punching(p))return false;
         var s=state(p);long now=p.getWorld().getTime();boolean free=NoCooldownState.enabled(p);
         if(s.flying(now)||now<s.ready&&!free)return false;
+        // (2.154.0) a punch of the basic attack in flight gives way to it (the clients' stand takes over from it)
+        GoldExperienceAttack.yieldTo(p);
         s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.landed=false;
         s.ready=free?now+OVER_LENGTH:overReady(now+OVER_LENGTH);
         send(p,s,PUNCH,null,false,0);

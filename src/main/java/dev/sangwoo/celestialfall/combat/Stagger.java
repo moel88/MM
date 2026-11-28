@@ -44,6 +44,13 @@ public final class Stagger {
         return combo>=1&&combo<4?Math.max(now,start+StarPlatinumRules.STEP[combo]+StarPlatinumRules.CONTACT[combo+1])+PAST:now+LAST;
     }
     /**
+     * Gold Experience's punch {@code combo} (2.154.0) that started at {@code start} and lands {@code now}: as Star
+     * Platinum's, on its own times (GoldExperienceRules.M1_STEP, M1_CONTACT: a little slower).
+     */
+    public static long gold(int combo,long start,long now){
+        return dev.sangwoo.celestialfall.stand.GoldExperienceRules.m1Stagger(combo,start,now,PAST,LAST);
+    }
+    /**
      * Lee So-sang's sword (2.77.0): blow {@code blow} of hit {@code combo} that started at {@code start} and lands
      * {@code now}. The next blow is the hit's own next one (the third hit lands four), else the next hit's first, started
      * as soon as it may (IsosangRules.STEP); the fourth hit's blow throws no one (user request: "평타는 넉백이 없게") and

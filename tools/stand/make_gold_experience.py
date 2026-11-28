@@ -837,9 +837,32 @@ def broadened():
     return back
 
 
+def chest_at(spec):
+    """(2.154.0) Where a stance puts the chest (4x4, model units, soles at 0): down from the root, as the game's model
+    places it."""
+    m = np.eye(4)
+    for name in ('root', 'hips', 'torso', 'chest'):
+        m = m @ rig.bone_matrix(rig.BONES[name], spec.get(name, {}))
+    return m
+
+
 def reaching(spec):
-    """A stance with what its arms reach for carried out with the body."""
-    return {n: ({**e, 'reach': (tuple(wide(e['reach'][0])), e['reach'][1])} if 'reach' in e else e) for n, e in spec.items()}
+    """A stance with what its arms reach for carried out with the body. An arm can also be carried (2.154.0: "carry":
+    where its grip goes and where its elbow points, written as if the body stood in the guard): it reaches there in the
+    guard's chest, carried round with this stance's chest. So the arm holds to the chest as it does in the guard however
+    the body turns, and a stance whose arms are carried blends with the guard and the others without the arm going round
+    the far way (an arm reaching for a point in the model has to turn as far as the body does, and then some)."""
+    carry = chest_at(spec) @ np.linalg.inv(chest_at(POSES['guard']))
+
+    def placed(e):
+        if 'reach' in e:
+            return {**e, 'reach': (tuple(wide(e['reach'][0])), e['reach'][1])}
+        if 'carry' in e:
+            at = carry @ np.array([*wide(e['carry'][0]), 1.0])
+            pole = carry[:3, :3] @ np.array(e['carry'][1], dtype=np.float64)
+            return {**{k: v for k, v in e.items() if k != 'carry'}, 'reach': (tuple(at[:3]), tuple(pole))}
+        return e
+    return {n: placed(e) for n, e in spec.items()}
 
 
 # ---------------------------------------------------------------- the muda rush (2.147.0)
@@ -962,6 +985,130 @@ POSES['ground'] = {
     'hide_0': {'rot': (-30, 0, 0)}, 'hide_1': {'rot': (-26, 0, 0)}, 'hide_2': {'rot': (-22, 0, 0)},
 }
 
+# The basic attack (2.154.0, user request: "마지막으로 평타 만들자"; asked and answered: "스타플래티나처럼 주먹 4타"):
+# Star Platinum's four punches (tools/stand/make_star_platinum.py's) at this figure's heights, thrown from the guard
+# above (the left side forward): 1 a left jab, 2 a right cross, 3 a left hook, 4 a right with the whole body behind it.
+# Each has its loading stance and its strike (client/stand/GoldCombo goes guard -> wind -> strike -> guard, the next
+# taking over before the last is back). Every load coils the body round away from the blow, low and back; every strike
+# drives the whole body after the fist, the hips and shoulders wheeled through, leaning over the front leg with the
+# back leg kicked out straight. The straights reach out past the stand's own arm's length (the arm then straight).
+SY = SHOULDER_Y
+# The arms that are not punching, and the loads, are carried with the chest (written as if the body stood in the guard,
+# reaching() turns them with it): so the guard's hand stays at the chin however the body wheels, and no arm has to turn
+# the far way round between one stance and the next (the first build reached every hand for a point in the model, and
+# with the body wheeled 60 to 90 degrees off the guard an arm then went over half a turn between stances: it flipped).
+GUARD_L = ((3.4, SY + 1.4, -8.5), (.6, -1, .2))
+GUARD_R = ((-2.0, SY + 1.0, -4.5), (-.4, -1, .1))
+LEGS_LOAD = {'left_leg': {'rot': (-30, 0, -4)}, 'left_shin': {'rot': (50, 0, 0)}, 'left_foot': {'rot': (18, 0, 0)},
+             'right_leg': {'rot': (24, 0, 6)}, 'right_shin': {'rot': (50, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)}}
+POSES['jab_wind'] = {
+    'root': {'pos': (0, 0, 1.2)},
+    'hips': {'rot': (13, 34, 0)}, 'torso': {'rot': (9, 8, 0)}, 'chest': {'rot': (7, 8, 0)},
+    'neck': {'rot': (-10, -17, 0)}, 'head': {'rot': (-12, -24, 0)},
+    # coiled a little further round, the fists held up where they are in the guard (drawn in to the chin, the left
+    # went the far way round from how it is summoned, a hand on the hip, and Q then the attack at once flipped it)
+    'left_arm': {'carry': GUARD_L},
+    'right_arm': {'carry': GUARD_R},
+    **LEGS_LOAD,
+    'right_wing': {'rot': (0, -12, 0)}, 'left_wing': {'rot': (0, 12, 0)},
+    **FIST,
+}
+POSES['jab'] = {
+    'root': {'pos': (0, .7, -4.3)},
+    'hips': {'rot': (20, 40, 0)}, 'torso': {'rot': (11, 12, 0)}, 'chest': {'rot': (7, 13, 0)},
+    'neck': {'rot': (-11, -21, 0)}, 'head': {'rot': (-14, -32, 0)},
+    # the left arm shot out straight at the target, the lead shoulder rammed forward, the body lunging in after it
+    'left_arm': {'reach': ((.4, SY - 2.2, -28.0), (.5, -1, 0))},
+    'right_arm': {'carry': GUARD_R},
+    'left_leg': {'rot': (-44, 0, -4)}, 'left_shin': {'rot': (28, 0, 0)}, 'left_foot': {'rot': (10, 0, 0)},
+    'right_leg': {'rot': (38, 0, 6)}, 'right_shin': {'rot': (14, 0, 0)}, 'right_foot': {'rot': (46, 0, 0)},
+    'right_wing': {'rot': (0, -16, 0)}, 'left_wing': {'rot': (0, 16, 0)},
+    'hide_0': {'rot': (10, 0, 0)}, 'hide_1': {'rot': (12, 0, 0)}, 'hide_2': {'rot': (10, 0, 0)},
+    **FIST,
+}
+POSES['cross_wind'] = {
+    'root': {'pos': (0, 0, 1.6)},
+    'hips': {'rot': (13, 44, 0)}, 'torso': {'rot': (9, 12, 0)}, 'chest': {'rot': (7, 10, 0)},
+    'neck': {'rot': (-10, -21, 0)}, 'head': {'rot': (-12, -32, 0)},
+    # wound hard round to the right and low, the right fist cocked back by the cheek, the left still out at the target
+    'left_arm': {'carry': ((3.4, SY + .8, -13.0), (.6, -1, .15))},
+    'right_arm': {'carry': ((-2.4, SY + 1.2, -3.5), (-.45, -1, .15))},
+    'left_leg': {'rot': (-29, 0, -4)}, 'left_shin': {'rot': (50, 0, 0)}, 'left_foot': {'rot': (18, 0, 0)},
+    'right_leg': {'rot': (24, 0, 8)}, 'right_shin': {'rot': (52, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
+    'right_wing': {'rot': (0, -14, 0)}, 'left_wing': {'rot': (0, 10, 0)},
+    **FIST,
+}
+POSES['cross'] = {
+    'root': {'pos': (0, .5, -4.7)},
+    'hips': {'rot': (20, -24, 0)}, 'torso': {'rot': (11, -10, 0)}, 'chest': {'rot': (7, -10, 0)},
+    'neck': {'rot': (-11, 15, 0)}, 'head': {'rot': (-14, 23, 0)},
+    # the hips and shoulders wrenched round to the left, the right arm out straight, the left fist pulled back in to the guard
+    'right_arm': {'reach': ((-.4, SY - 2.4, -28.5), (-.5, -1, 0))},
+    'left_arm': {'carry': ((3.2, SY + .9, -7.5), (.6, -1, .2))},
+    'left_leg': {'rot': (-42, 0, -4)}, 'left_shin': {'rot': (24, 0, 0)}, 'left_foot': {'rot': (10, 0, 0)},
+    'right_leg': {'rot': (42, 0, 6)}, 'right_shin': {'rot': (12, 0, 0)}, 'right_foot': {'rot': (50, 0, 0)},
+    'right_wing': {'rot': (0, -18, 0)}, 'left_wing': {'rot': (0, 18, 0)},
+    'hide_0': {'rot': (12, 0, 0)}, 'hide_1': {'rot': (14, 0, 0)}, 'hide_2': {'rot': (12, 0, 0)},
+    **FIST,
+}
+POSES['hook_wind'] = {
+    'root': {'pos': (0, -.7, 1.6)},
+    'hips': {'rot': (14, -22, 7)}, 'torso': {'rot': (11, -15, 7)}, 'chest': {'rot': (7, -9, 5)},
+    'neck': {'rot': (-8, 16, -6)}, 'head': {'rot': (-12, 20, -6)},
+    # dropped low, the weight on the left leg, the body flung open to the left, the left elbow raised out at the side
+    # and the fist cocked up beside the head
+    'left_arm': {'carry': ((9.5, SY + 1.0, -5.0), (1, -.3, .3))},
+    'right_arm': {'carry': GUARD_R},
+    'left_leg': {'rot': (-25, 0, -9)}, 'left_shin': {'rot': (58, 0, 0)}, 'left_foot': {'rot': (16, 0, 0)},
+    'right_leg': {'rot': (20, 0, 9)}, 'right_shin': {'rot': (50, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
+    'right_wing': {'rot': (0, -8, 0)}, 'left_wing': {'rot': (0, 20, 0)},
+    **FIST,
+}
+POSES['hook'] = {
+    'root': {'pos': (0, .5, -3.4)},
+    'hips': {'rot': (16, 50, -5)}, 'torso': {'rot': (9, 18, -5)}, 'chest': {'rot': (7, 18, 0)},
+    'neck': {'rot': (-8, -30, 0)}, 'head': {'rot': (-11, -46, 0)},
+    # the body wrenched round to the right, the left arm whipped round level with the elbow out at the shoulder's
+    # height and bent square, the fist smashing in across the front at the target
+    'left_arm': {'carry': ((3.5, SY - .8, -8.5), (1, .1, .4))},
+    'right_arm': {'carry': GUARD_R},
+    'left_leg': {'rot': (-33, 0, -4)}, 'left_shin': {'rot': (26, 0, 0)}, 'left_foot': {'rot': (10, 0, 0)},
+    'right_leg': {'rot': (29, 0, 13)}, 'right_shin': {'rot': (28, 0, 0)}, 'right_foot': {'rot': (40, 0, 0)},
+    'right_wing': {'rot': (0, -22, 0)}, 'left_wing': {'rot': (0, 10, 0)},
+    'hide_0': {'rot': (8, 0, -10)}, 'hide_1': {'rot': (10, 0, -8)}, 'hide_2': {'rot': (8, 0, -6)},
+    **FIST,
+}
+POSES['finish_wind'] = {
+    'root': {'pos': (0, 3.0, 2.8)},
+    'hips': {'rot': (-11, 54, 0)}, 'torso': {'rot': (-9, 17, 0)}, 'chest': {'rot': (-7, 13, 0)},
+    'neck': {'rot': (4, -31, 0)}, 'head': {'rot': (8, -43, 0)},
+    # rearing up and back, wound right round, the right fist kept up high by the cheek and so carried far back with the
+    # body (drawn back by the arm alone it went the far way round from the guard), the left arm out at the target taking
+    # aim, the knees drawn up to spring
+    'right_arm': {'carry': ((-2.9, SY + 1.9, -2.4), (-.6, -1, .25))},
+    'left_arm': {'carry': ((3.6, SY + .6, -14.0), (.6, -1, .1))},
+    'left_leg': {'rot': (-50, 0, -6)}, 'left_shin': {'rot': (70, 0, 0)}, 'left_foot': {'rot': (16, 0, 0)},
+    'right_leg': {'rot': (9, 0, 8)}, 'right_shin': {'rot': (72, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
+    'right_wing': {'rot': (0, -24, 0)}, 'left_wing': {'rot': (0, 14, 0)},
+    'hide_0': {'rot': (-12, 0, 0)}, 'hide_1': {'rot': (-8, 0, 0)},
+    **FIST,
+}
+POSES['finish'] = {
+    'root': {'pos': (0, 0, -7.8)},
+    'hips': {'rot': (27, -26, 0)}, 'torso': {'rot': (13, -12, 0)}, 'chest': {'rot': (9, -10, 0)},
+    'neck': {'rot': (-14, 20, 0)}, 'head': {'rot': (-19, 26, 0)},
+    # the whole body explodes forward, wheeling round to the left and flung far over the front leg, the right arm driven
+    # straight through the target, the left fist pulled back in, low, the back leg flung out straight behind
+    'right_arm': {'reach': ((0.0, SY - 4.4, -36.0), (-.5, -1, 0))},
+    'left_arm': {'carry': ((3.4, SY - .1, -8.0), (.6, -1, .25))},
+    'left_leg': {'rot': (-52, 0, -4)}, 'left_shin': {'rot': (42, 0, 0)}, 'left_foot': {'rot': (0, 0, 0)},
+    'right_leg': {'rot': (55, 0, 6)}, 'right_shin': {'rot': (0, 0, 0)}, 'right_foot': {'rot': (46, 0, 0)},
+    'right_wing': {'rot': (0, -30, 0)}, 'left_wing': {'rot': (0, 30, 0)},
+    'hide_0': {'rot': (26, 0, 0)}, 'hide_1': {'rot': (22, 0, 0)}, 'hide_2': {'rot': (16, 0, 0)},
+    **FIST,
+}
+M1 = ('jab_wind', 'jab', 'cross_wind', 'cross', 'hook_wind', 'hook', 'finish_wind', 'finish')
+
 # a fist's knuckles as it is drawn (the end of the palm, the fingers folded): where the rush's light is (GoldRush)
 KNUCKLES = {'right': (ARM_X + .4, WRIST_Y - 2.4, 0.0), 'left': (-ARM_X - .4, WRIST_Y - 2.4, 0.0)}
 
@@ -1019,7 +1166,7 @@ def main():
     poses = json.dumps({k: rig.pose_table(reaching(v), grips) for k, v in POSES.items()}, indent=1)
     # where the fists are in the rush's stances, for its light (client/stand/GoldRush)
     fists = json.dumps({k: {**stance_points(reaching(v), grips), **(touches(reaching(v), grips) if k == 'ground' else {})}
-                        for k, v in POSES.items() if k == 'guard' or k == 'mend' or k == 'ground' or k.startswith('rush_') or k.startswith('over_')}, indent=1)
+                        for k, v in POSES.items() if k == 'guard' or k == 'mend' or k == 'ground' or k.startswith('rush_') or k.startswith('over_') or k in M1}, indent=1)
     top = max(c.origin[1] + c.size[1] for c in rig.CUBES if rig.BONES[c.bone].rot == [0, 0, 0])
     across = max(max(abs(c.origin[0]), abs(c.origin[0] + c.size[0])) for c in rig.CUBES if c.bone.endswith('_arm'))
     drawn()

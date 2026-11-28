@@ -169,4 +169,42 @@ class GoldExperienceRulesTest {
         assertEquals(TREE_RISE,top,.02);assertEquals(TREE_AHEAD,x,.05);
         assertTrue(TREE_SPARED>=k,"spared the fall's harm at least as long as they are in the air ("+k+" ticks)");
     }
+
+    /**
+     * Its basic attack (2.154.0; asked and answered: "스타플래티나처럼 주먹 4타", "조금 느리고 약하게"): Star Platinum's
+     * four punches, each landing a little later than Star Platinum's thrown as fast as they may (about a tenth), dealing
+     * 4, 4, 5 and 8 to its 5, 5, 6 and 10, in its punches' way; the combo breaks and rests as Star Platinum's does.
+     */
+    @Test void theBasicAttackIsStarPlatinumsFourPunchesALittleSlowerAndWeaker(){
+        // thrown as fast as they may, their blows land 0.2, 0.55, 1.2 and 1.95 s in (Star Platinum's 0.2, 0.5, 1.05, 1.75)
+        long[] mine=new long[5],star=new long[5];long a=0,b=0;
+        for(int c=1;c<=4;c++){
+            mine[c]=a+M1_CONTACT[c];star[c]=b+StarPlatinumRules.CONTACT[c];
+            if(c<4){a=m1NextAt(c,a);b=StarPlatinumRules.nextAt(c,b);}
+        }
+        assertArrayEquals(new long[]{0,4,11,24,39},mine);assertArrayEquals(new long[]{0,4,10,21,35},star);
+        for(int c=2;c<=4;c++){
+            assertTrue(mine[c]>star[c],"blow "+c+" a little later than Star Platinum's");
+            double slower=(mine[c]-mine[1])/(double)(star[c]-star[1]);
+            assertTrue(slower>1.05&&slower<1.2,"blow "+c+": "+slower+" times as long from the first (about 1.1, a little slower: not much)");
+        }
+        // each a little weaker; 21 in all to its 26
+        float sum=0,starSum=0;
+        for(int c=1;c<=4;c++){assertTrue(M1_DAMAGE[c]<StarPlatinumRules.DAMAGE[c],"punch "+c);sum+=M1_DAMAGE[c];starSum+=StarPlatinumRules.DAMAGE[c];}
+        assertEquals(21,sum,1e-4);assertEquals(26,starSum,1e-4);
+        // each over before the next may start, the fourth's long enough for its target to fly (its stand back in its guard)
+        for(int c=1;c<=4;c++){assertTrue(M1_CONTACT[c]<M1_LENGTH[c]);if(c<4)assertTrue(M1_STEP[c]>M1_CONTACT[c]&&M1_STEP[c]<=M1_LENGTH[c]);}
+        // the next punch after the fourth is the first again; begun late, the combo breaks and rests M1_REST
+        assertEquals(1,m1Next(4));assertEquals(2,m1Next(1));assertEquals(1,m1Next(0));
+        assertEquals(-1,m1Broken(1,0,M1_STEP[1]+M1_GRACE),"in time");
+        assertEquals(M1_STEP[1]+M1_GRACE+1+M1_REST,m1Broken(1,0,M1_STEP[1]+M1_GRACE+1),"late: it rests");
+        assertEquals(M1_LENGTH[4]+M1_REST,m1Rested(0),"after the fourth it rests once it is over");
+        assertEquals(StarPlatinumRules.REST,M1_REST);
+        // the way: Star Platinum's punches' (the fourth's longer)
+        assertTrue(m1Lane(1,3.5,0,1,.3));assertFalse(m1Lane(1,4.0,0,1,.3));assertTrue(m1Lane(4,4.4,0,1,.3));
+        // the stagger holds them until the next blow could land, and the fourth's a moment as it throws them
+        for(int c=1;c<4;c++)assertEquals(M1_STEP[c]+M1_CONTACT[c+1]+2,m1Stagger(c,0,M1_CONTACT[c],2,6));
+        assertEquals(M1_CONTACT[4]+6,m1Stagger(4,0,M1_CONTACT[4],2,6));
+        assertEquals(StarPlatinumRules.FLY,M1_FLY);assertEquals(StarPlatinumRules.FLY_UP,M1_FLY_UP);
+    }
 }

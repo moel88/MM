@@ -71,6 +71,11 @@ public final class CombatManager {
                 if(player instanceof ServerPlayerEntity p)dev.sangwoo.celestialfall.stand.StarPlatinumAttack.request(p);
                 return ActionResult.FAIL;
             }
+            // (2.154.0) and Gold Experience's
+            if(dev.sangwoo.celestialfall.stand.GoldExperienceAttack.punches(player)){
+                if(player instanceof ServerPlayerEntity p)dev.sangwoo.celestialfall.stand.GoldExperienceAttack.request(p);
+                return ActionResult.FAIL;
+            }
             if(hand==Hand.MAIN_HAND&&bare(player)&&!player.isSpectator()) {
                 if(player instanceof ServerPlayerEntity p)input(p,0,0,0);
                 return ActionResult.FAIL;
@@ -89,9 +94,10 @@ public final class CombatManager {
     }
     /**
      * The player fights with their own fists: no Kageno, Star Platinum not out (its punches are the attack then, 2.54.0),
-     * not Lee So-sang (their sword is, 2.77.0), not X Chara (their knife is, 2.114.0), hands empty.
+     * nor Gold Experience (2.154.0), not Lee So-sang (their sword is, 2.77.0), not X Chara (their knife is, 2.114.0),
+     * hands empty.
      */
-    public static boolean bare(PlayerEntity p) { return !dev.sangwoo.celestialfall.stand.StandManager.kageno(p)&&!dev.sangwoo.celestialfall.stand.StarPlatinumAttack.punches(p)&&!dev.sangwoo.celestialfall.stand.StandManager.isosang(p)&&!dev.sangwoo.celestialfall.stand.StandManager.xChara(p)&& p.getMainHandStack().isEmpty()&&p.getOffHandStack().isEmpty(); }
+    public static boolean bare(PlayerEntity p) { return !dev.sangwoo.celestialfall.stand.StandManager.kageno(p)&&!dev.sangwoo.celestialfall.stand.StarPlatinumAttack.punches(p)&&!dev.sangwoo.celestialfall.stand.GoldExperienceAttack.punches(p)&&!dev.sangwoo.celestialfall.stand.StandManager.isosang(p)&&!dev.sangwoo.celestialfall.stand.StandManager.xChara(p)&& p.getMainHandStack().isEmpty()&&p.getOffHandStack().isEmpty(); }
     /** In a cutscene or a cast that holds the player: Kageno's skills, the old items', and Star Platinum's beatdown's (2.64.0, its user and the one struck). */
     public static boolean cinematic(PlayerEntity p) { return dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||SpellManager.isCasting(p.getUuid())||AtomicManager.isCasting(p.getUuid())||HeavenManager.isCasting(p.getUuid())||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.isosang.IsosangAttack.casting(p)||dev.sangwoo.celestialfall.xchara.XCharaUltimate.involved(p)||dev.sangwoo.celestialfall.samurai.SamuraiUltimate.involved(p); }
     private static boolean valid(ServerPlayerEntity p) {

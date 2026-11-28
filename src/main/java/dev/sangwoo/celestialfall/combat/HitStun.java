@@ -34,8 +34,9 @@ public final class HitStun {
     private static boolean valid(Hold h) {
         if(!(dev.sangwoo.celestialfall.map.MapGate.enabled(h.target.getWorld())&&h.target.isAlive()&&!h.target.isRemoved()&&!h.target.isSpectator()&&h.attacker.isAlive()&&!h.attacker.isRemoved()&&!h.attacker.isSpectator()
             &&h.target.getWorld()==h.attacker.getWorld()))return false;
-        // a barrage holds them for its own time, while its user still has their stand out
-        return h.target.getWorld().getTime()<h.until&&h.attacker instanceof PlayerEntity p&&dev.sangwoo.celestialfall.stand.StarPlatinumAttack.punches(p);
+        // a barrage holds them for its own time, while its user still has their stand out (2.154.0: Gold Experience's
+        // muda rush's too; till then only Star Platinum's user counted, and its rush's hold let go the tick it began)
+        return h.target.getWorld().getTime()<h.until&&h.attacker instanceof PlayerEntity p&&dev.sangwoo.celestialfall.stand.StarPlatinumRush.may(p)>=0;
     }
     /** Whether a barrage holds this entity where it stands now (a stagger is in its combat state instead, CombatManager). */
     public static boolean stunned(LivingEntity entity) {

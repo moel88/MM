@@ -156,6 +156,8 @@ public final class GoldExperienceTree {
     public static boolean request(ServerPlayerEntity p){
         var s=state(p);long now=p.getWorld().getTime();
         if(!may(p,s,now))return false;
+        // (2.154.0) a punch of the basic attack in flight gives way to it
+        GoldExperienceAttack.yieldTo(p);
         s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.spot=p.getPos();s.burst=false;s.tree=null;
         s.ready=NoCooldownState.enabled(p)?now+TREE_END:treeReady(now+TREE_END);
         p.setSprinting(false);p.clearActiveItem();KagenoManager.freeze(p);

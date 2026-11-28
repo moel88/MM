@@ -11,7 +11,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Gold Experience's sounds (2.153.0): the user's recordings for its R and Y (tools/stand/cut_gold_sounds.py), and its T's
- * and H's laid together from downloaded recordings (tools/stand/make_gold_sounds.py: nothing synthesized). Every one is
+ * and H's (and since 2.154.0 its basic attack's) laid together from downloaded recordings (tools/stand/make_gold_sounds.py:
+ * nothing synthesized). Every one is
  * the mod's (in sounds.json, its files there, Ogg Vorbis, mono at 48 kHz, as long as its tool makes it); the croak and the
  * knock are three each, the game picking one; the buzz loops in the world; and each comes on its skill's moment.
  */
@@ -37,7 +38,10 @@ class GoldSoundsTest {
         Map.entry("gold_life_punch",.32f),Map.entry("gold_life_strike",.75f),Map.entry("gold_life_fly_born",.5f),
         Map.entry("gold_life_fly_buzz",2.5f),Map.entry("gold_life_fly_back",.42f),Map.entry("gold_life_swat",.6f),Map.entry("gold_life_fall",.75f),
         Map.entry("gold_tree_touch",.62f),Map.entry("gold_tree_burst",1.45f),
-        Map.entry("gold_tree_knock_1",.55f),Map.entry("gold_tree_knock_2",.5f),Map.entry("gold_tree_knock_3",.5f),Map.entry("gold_tree_wither",1.3f));
+        Map.entry("gold_tree_knock_1",.55f),Map.entry("gold_tree_knock_2",.5f),Map.entry("gold_tree_knock_3",.5f),Map.entry("gold_tree_wither",1.3f),
+        // (2.154.0) the basic attack's
+        Map.entry("gold_punch_swing_1",.26f),Map.entry("gold_punch_swing_2",.3f),Map.entry("gold_punch_swing_3",.38f),Map.entry("gold_punch_swing_4",.5f),
+        Map.entry("gold_punch_hit_1",.35f),Map.entry("gold_punch_hit_2",.4f),Map.entry("gold_punch_hit_3",.42f),Map.entry("gold_punch_hit_4",.8f));
     /** Every sound event and its files. */
     static final Map<String,String[]> EVENTS=Map.ofEntries(
         Map.entry("gold_experience_overdrive",new String[]{"gold_experience_overdrive"}),Map.entry("gold_experience_mend",new String[]{"gold_experience_mend"}),
@@ -50,7 +54,11 @@ class GoldSoundsTest {
         Map.entry("gold_life_fly_buzz",new String[]{"gold_life_fly_buzz"}),Map.entry("gold_life_fly_back",new String[]{"gold_life_fly_back"}),
         Map.entry("gold_life_swat",new String[]{"gold_life_swat"}),Map.entry("gold_life_fall",new String[]{"gold_life_fall"}),
         Map.entry("gold_tree_touch",new String[]{"gold_tree_touch"}),Map.entry("gold_tree_burst",new String[]{"gold_tree_burst"}),
-        Map.entry("gold_tree_knock",new String[]{"gold_tree_knock_1","gold_tree_knock_2","gold_tree_knock_3"}),Map.entry("gold_tree_wither",new String[]{"gold_tree_wither"}));
+        Map.entry("gold_tree_knock",new String[]{"gold_tree_knock_1","gold_tree_knock_2","gold_tree_knock_3"}),Map.entry("gold_tree_wither",new String[]{"gold_tree_wither"}),
+        Map.entry("gold_punch_swing_1",new String[]{"gold_punch_swing_1"}),Map.entry("gold_punch_swing_2",new String[]{"gold_punch_swing_2"}),
+        Map.entry("gold_punch_swing_3",new String[]{"gold_punch_swing_3"}),Map.entry("gold_punch_swing_4",new String[]{"gold_punch_swing_4"}),
+        Map.entry("gold_punch_hit_1",new String[]{"gold_punch_hit_1"}),Map.entry("gold_punch_hit_2",new String[]{"gold_punch_hit_2"}),
+        Map.entry("gold_punch_hit_3",new String[]{"gold_punch_hit_3"}),Map.entry("gold_punch_hit_4",new String[]{"gold_punch_hit_4"}));
 
     @Test void everyOneIsTheModsMonoAt48kHzAndAsLongAsItsToolMakesIt()throws Exception{
         JsonObject json=JsonParser.parseString(Files.readString(ASSETS.resolve("sounds.json"))).getAsJsonObject();

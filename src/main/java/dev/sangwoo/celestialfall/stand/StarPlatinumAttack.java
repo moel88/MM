@@ -281,10 +281,15 @@ public final class StarPlatinumAttack {
         else{s.beatdownReady=free?now:beatdownReady(p,end);kept(p,s);}
         send(p,s,PUNCH,null,null);
     }
-    /** The user was struck: whom the punches hold go, and the punch in flight stops short. */
+    /**
+     * The user was struck: whom the punches hold go, and the punch in flight stops short. (2.154.0) Gold Experience's
+     * punches too (GoldExperienceAttack): everything that stops a stand's punch as its user is struck, held or sent back
+     * asks this.
+     */
     public static void struck(ServerPlayerEntity p){
         HitStun.releaseStand(p.getUuid());
         var s=STATES.get(p.getUuid());if(s!=null)stop(p,s,p.getWorld().getTime());
+        GoldExperienceAttack.struck(p);
     }
     /** The rush starts (2.57.0): the punch in flight, if one is, stops short (and the combo starts again after its rest). */
     public static void yieldTo(ServerPlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null)stop(p,s,p.getWorld().getTime());}

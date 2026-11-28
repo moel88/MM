@@ -40,6 +40,55 @@ public final class GoldExperienceRules {
     /** The tick it is ready again after ending at {@code end}. */
     public static long rushReady(long end){return end+RUSH_COOLDOWN;}
 
+    // ---- the basic attack (2.154.0, user request: "마지막으로 평타 만들자 효과음도 잘 넣어서"; asked and answered: Star
+    // Platinum's four punches ("스타플래티나처럼 주먹 4타"), a little slower and weaker ("조금 느리고 약하게": about 1.1
+    // times as long from blow to blow, 4, 4, 5 and 8), the fourth with the overdrive's shout "무-다!" on it). With the
+    // stand out, the attack key makes it come round to the front of its user and throw 1 a left jab, 2 a right cross,
+    // 3 a left hook and 4 a right with its whole body behind it, each the way its user faced as it began, landing
+    // M1_CONTACT ticks in on everyone in its way (Star Platinum's punches' way, StarPlatinumRules.lane). The first three a
+    // guard takes, and they stagger whom they strike (Stagger.gold); the fourth no guard takes and it throws them along it
+    // (Star Platinum's finisher's throw). The next may start M1_STEP ticks after one began (a press up to M1_BUFFER ticks
+    // before is kept); begun later than M1_GRACE after that, the combo is broken and rests M1_REST ticks; after the fourth
+    // it rests that long once it is over. Star Platinum's: CONTACT 4, 4, 9, 10; STEP 6, 6, 13; LENGTH 10, 10, 17, 23 (its
+    // blows thrown at full speed land 0.2, 0.5, 1.05 and 1.75 s in; these 0.2, 0.55, 1.2 and 1.95 s).
+
+    /** Ticks into each punch (1 to 4) its blow lands. */
+    public static final int[] M1_CONTACT={0,4,4,10,11};
+    /** Ticks from a punch's start until the next may start (none after the fourth: the rest). */
+    public static final int[] M1_STEP={0,7,7,14,0};
+    /** How long each punch is (ticks): its stand back in its guard. */
+    public static final int[] M1_LENGTH={0,11,11,19,25};
+    /** Each punch's damage (21 in all; Star Platinum's 5, 5, 6 and 10). */
+    public static final float[] M1_DAMAGE={0,4,4,5,8};
+    /** A press this many ticks before the next punch may start is kept for it; begun no later than M1_GRACE after it may, the combo holds; it rests M1_REST (Star Platinum's). */
+    public static final int M1_BUFFER=StarPlatinumRules.BUFFER,M1_GRACE=StarPlatinumRules.GRACE,M1_REST=StarPlatinumRules.REST;
+    /** The fourth's throw (blocks a tick, along it and up: Star Platinum's finisher's, some ten blocks on flat ground). */
+    public static final double M1_FLY=StarPlatinumRules.FLY,M1_FLY_UP=StarPlatinumRules.FLY_UP;
+    /** The punch after {@code combo}: 1 again after the fourth (or none yet). */
+    public static int m1Next(int combo){return combo>=1&&combo<4?combo+1:1;}
+    /** When the punch after {@code combo} (begun at {@code start}) may start. */
+    public static long m1NextAt(int combo,long start){return start+M1_STEP[combo];}
+    /**
+     * The tick the attack is ready again after the combo whose punch {@code combo} began at {@code start}, if it broke by
+     * {@code now} (the next punch did not start in time), or -1 while it holds (or has nothing to break).
+     */
+    public static long m1Broken(int combo,long start,long now){
+        if(combo<1||combo>=4)return -1;
+        long late=m1NextAt(combo,start)+M1_GRACE;
+        return now>late?late+1+M1_REST:-1;
+    }
+    /** When the attack is ready again after the fourth punch, begun at {@code start}: its rest runs once it is over. */
+    public static long m1Rested(long start){return start+M1_LENGTH[4]+M1_REST;}
+    /** Whether a body ahead along a punch (blocks from its user's feet) is in its way: Star Platinum's punches' (the fourth's longer). */
+    public static boolean m1Lane(int combo,double forward,double side,double height,double halfWidth){return StarPlatinumRules.lane(combo>=4?4:combo,forward,side,height,halfWidth);}
+    /**
+     * Until when punch {@code combo} begun at {@code start} and landing {@code now} staggers whom it strikes: until the
+     * next could land if it came as soon as it may, and {@code past} ticks more; the fourth, which throws them, {@code last}.
+     */
+    public static long m1Stagger(int combo,long start,long now,int past,int last){
+        return combo>=1&&combo<4?Math.max(now,start+M1_STEP[combo]+M1_CONTACT[combo+1])+past:now+last;
+    }
+
     // ---- R, the sensory overdrive (2.148.0, user request: "이번에는 R스킬 감각폭주 ... 적에게 강펀치를 꽂으면 적은
     // 유체이탈이 돼 그 상태에서는 속도가 2배가 평타도 꽂을 수 있는데 평타가 통과가 되고 유체이탈 상태에서는 아무에게도 안
     // 보이고 자신에게만 보여 그리고 유체이탈 상태에서 본체는 받는 데미지가 2배가 되고 ... 그동안 본체는 아무것도 못하고

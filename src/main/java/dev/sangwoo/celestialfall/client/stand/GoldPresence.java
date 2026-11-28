@@ -146,6 +146,21 @@ public final class GoldPresence {
                     dispatcher.render(arm,b.at().x-cam.x,b.at().y-cam.y,b.at().z-cam.z,b.yaw(),delta,c.matrixStack(),c.consumers(),dispatcher.getLight(arm,delta));
                 }
             }
+            // (2.154.0) the basic attack's strikes: faint golden afterimages of the whole stand a moment behind it, each a
+            // body of its own (GeckoLib poses a body once a frame)
+            float strike=s.combo?GoldCombo.ghost(s.owner,delta)*look.alpha:0;
+            if(strike>.02f)for(int i=0;i<s.ghosts.length;i++){
+                if(s.ghosts[i]==null)s.ghosts[i]=new GoldPuppet(mc.world);
+                var ghostPuppet=s.ghosts[i];var gl=ghostPuppet.look;
+                s.look(ticks-1d+delta,gl);gl.armL=gl.armR=1;gl.showL=gl.showR=1;gl.armsOnly=false;
+                s.ghostShape.clear();
+                if(!GoldCombo.pose(s.owner,delta,GoldCombo.GHOST_BACK[i],gl,s.ghostShape,s.scratch))continue;
+                gl.alpha=strike*GoldCombo.GHOST_ALPHA[i];gl.out=look.out;gl.scale=look.scale;gl.shadow=0;gl.glow=0;gl.lean=look.lean;gl.roll=look.roll;
+                gl.red=GoldRush.RED;gl.green=GoldRush.GREEN;gl.blue=GoldRush.BLUE;
+                ghostPuppet.age=s.puppet.age;
+                var b=s.where(p,delta,gl,s.ghostShape);ghostPuppet.place(b.at(),b.yaw());
+                dispatcher.render(ghostPuppet,b.at().x-cam.x,b.at().y-cam.y,b.at().z-cam.z,b.yaw(),delta,c.matrixStack(),c.consumers(),dispatcher.getLight(ghostPuppet,delta));
+            }
             // coming out or going back: faint golden afterimages where it was a moment ago (the same pose: GeckoLib
             // poses a body once a frame)
             float main=look.out;ghost.set(look);
@@ -198,6 +213,9 @@ public final class GoldPresence {
         GoldLife.Life life;
         /** Its user's tree of life if it shows this frame (2.152.0). */
         GoldTree.Tree tree;
+        /** Whether its user's punches show this frame (2.154.0), and the bodies of a strike's afterimages. */
+        boolean combo;final GoldPuppet[] ghosts=new GoldPuppet[GoldCombo.GHOST_BACK.length];
+        final GoldExperienceLook ghostLook=new GoldExperienceLook();final GoldRush.Shape ghostShape=new GoldRush.Shape();
 final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceStance.NAMES.size()];
         /** Its look, place and facing on the last frame drawn and that frame's moment: how it stands while its user is stopped in a time stop. */
         final GoldExperienceLook held=new GoldExperienceLook();Vec3d heldAt;float heldYaw,heldDelta=1;
@@ -235,43 +253,44 @@ final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceSt
             look(ticks-1d+delta,look);
             look.armL=look.armR=1;look.showL=look.showR=1;look.armsOnly=false;
             shape.lean=0;shape2.lean=0;
-            // (2.147.0) the muda rush: its stances over the pose it has, and where it stands
-            var rush=StandRush.of(owner);
-            if(rush!=null&&(!rush.gold()||!out||!GoldRush.pose(rush,delta,look,shape,scratch)))rush=null;
-            // (2.148.0) the overdrive punch: its stances over that, and where it stands (the two never run together; one
-            // just after the other, the punch takes over from where the rush had got to)
-            var punch=GoldPunch.of(owner);
-            boolean punching=punch!=null&&out&&GoldPunch.pose(punch,delta,look,rush==null?shape:shape2,scratch);
-            if(punching&&rush!=null)shape.over(shape2);
-            front=rush!=null||punching;
-            // (2.149.0) the healing: its one punch's stances over those, and where it stands (the tap in front of its
-            // user; the hold at their front right, turned on them, by the way they face as it follows it)
-            heal=GoldHeal.of(owner);
-            if(heal!=null&&out&&GoldHeal.pose(heal,delta,look,front?shape2:shape,scratch,MathHelper.lerpAngleDegrees(delta,prevYaw,yaw))){
-                if(front)shape.over(shape2);
-                front=true;
-            }else heal=null;
-            // (2.150.0) the beatdown: its punch's and its rush's stances over those, and where it stands (in front of
-            // the one struck, then under them, leaning back)
-            beat=GoldBeatdown.of(owner);
-            if(beat!=null&&out&&GoldBeatdown.pose(beat,delta,look,front?shape2:shape,scratch)){
-                if(front)shape.over(shape2);
-                front=true;
-            }else beat=null;
-            // (2.151.0) giving life: the punch (in front of them, the way it goes); the frog it plays no part in (2.151.1:
-            // the item held up turns of itself, the stand where it was)
-            life=GoldLife.of(owner);
-            if(life!=null&&out&&GoldLife.pose(life,delta,look,front?shape2:shape,scratch)){
-                if(front)shape.over(shape2);
-                front=true;
-            }else life=null;
-            // (2.152.0) the tree of life: down on its knee at its user's front right, its palm on the ground, pinned where it
-            // touched it while the tree bursts up and flings them
-            tree=GoldTree.of(owner);
-            if(tree!=null&&out&&GoldTree.pose(tree,delta,look,front?shape2:shape,scratch)){
-                if(front)shape.over(shape2);
-                front=true;
-            }else tree=null;
+            // the stand's skills, each with its stances over the pose it has and where it stands (2.154.0: laid in the
+            // order they began, the newest taking over from those before it, as its punches come between the others):
+            // (2.147.0) the muda rush; (2.148.0) the overdrive punch; (2.149.0) the healing (the tap in front of its user;
+            // the hold at their front right, turned on them, by the way they face as it follows it); (2.150.0) the
+            // beatdown (in front of the one struck, then under them, leaning back); (2.151.0) giving life's punch (the
+            // frog it plays no part in, 2.151.1: the item held up turns of itself, the stand where it was); (2.152.0) the
+            // tree of life (down on its knee at its user's front right, its palm on the ground, pinned where it touched it
+            // while the tree bursts up and flings them); (2.154.0) the basic attack's punches
+            var rush=StandRush.of(owner);if(rush!=null&&(!rush.gold()||!out))rush=null;
+            var punch=out?GoldPunch.of(owner):null;
+            heal=out?GoldHeal.of(owner):null;beat=out?GoldBeatdown.of(owner):null;life=out?GoldLife.of(owner):null;tree=out?GoldTree.of(owner):null;
+            float[] ages={rush==null?Float.NaN:rush.age(delta),punch==null?Float.NaN:punch.age(delta),heal==null?Float.NaN:heal.age(delta),
+                beat==null?Float.NaN:beat.age(delta),life==null?Float.NaN:life.age(delta),tree==null?Float.NaN:tree.age(delta),out?GoldCombo.newest(owner,delta):Float.NaN};
+            Integer[] order={0,1,2,3,4,5,6};
+            // oldest first (the longest since it began), the newest last, over the rest
+            java.util.Arrays.sort(order,(x,y)->Float.compare(Float.isNaN(ages[y])?-1:ages[y],Float.isNaN(ages[x])?-1:ages[x]));
+            boolean rushing=false,punching=false,healing=false,beating=false,living=false,treeing=false;combo=false;
+            shape.clear();boolean first=true;
+            float yawNow=MathHelper.lerpAngleDegrees(delta,prevYaw,yaw);
+            for(int k:order){
+                if(Float.isNaN(ages[k]))continue;
+                var into=first?shape:shape2;if(!first)shape2.clear();
+                boolean shown=switch(k){
+                    case 0->GoldRush.pose(rush,delta,look,into,scratch);
+                    case 1->GoldPunch.pose(punch,delta,look,into,scratch);
+                    case 2->GoldHeal.pose(heal,delta,look,into,scratch,yawNow);
+                    case 3->GoldBeatdown.pose(beat,delta,look,into,scratch);
+                    case 4->GoldLife.pose(life,delta,look,into,scratch);
+                    case 5->GoldTree.pose(tree,delta,look,into,scratch);
+                    default->GoldCombo.pose(owner,delta,0,look,into,scratch);
+                };
+                if(!shown)continue;
+                if(!first)shape.over(shape2);
+                first=false;
+                switch(k){case 0->rushing=true;case 1->punching=true;case 2->healing=true;case 3->beating=true;case 4->living=true;case 5->treeing=true;default->combo=true;}
+            }
+            if(!rushing)rush=null;if(!healing)heal=null;if(!beating)beat=null;if(!living)life=null;if(!treeing)tree=null;
+            front=!first;
             float calm=front?1-shape.engage:1;
             var v=prevVel.lerp(vel,delta);float y=MathHelper.lerpAngleDegrees(delta,prevYaw,yaw);
             double r=Math.toRadians(y),fx=-Math.sin(r),fz=Math.cos(r);
@@ -291,6 +310,8 @@ final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceSt
             if(life!=null)look.glow=Math.max(look.glow,look.out*(1+.5f*GoldLife.glow(life,life.age(delta))));
             // and as life goes into the ground for the tree
             if(tree!=null)look.glow=Math.max(look.glow,look.out*(1+.7f*GoldTree.glow(tree,tree.age(delta))));
+            // (2.154.0) and as the light gathers in its fist for the basic attack's fourth punch
+            if(combo)look.glow=Math.max(look.glow,look.out*(1+.5f*GoldCombo.charge(owner,delta)));
             put(p,delta,look,front?shape:null);
             return rush;
         }
@@ -301,6 +322,10 @@ final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceSt
          * through them), to stand right in front of them facing where they face (as Star Platinum does, StandPresence).
          */
         void put(PlayerEntity p,float delta,GoldExperienceLook look,GoldRush.Shape shape){
+            var b=where(p,delta,look,shape);puppet.place(b.at(),b.yaw());
+        }
+        /** Where the look and the shape put the body this frame (as {@link #put} does), without moving it there. */
+        StandPresence.Body where(PlayerEntity p,float delta,GoldExperienceLook look,GoldRush.Shape shape){
             var home=p.getLerpedPos(delta);var at=prevPos.lerp(pos,delta);float y=MathHelper.lerpAngleDegrees(delta,prevYaw,yaw);
             // (2.152.0) kneeling where it touched the ground for the tree, while its user is flung up off it
             if(shape!=null&&shape.engage>0&&shape.pin>0)home=home.lerp(new Vec3d(shape.gx,shape.gy,shape.gz),Math.min(1,shape.pin)*Math.min(1,shape.engage*4));
@@ -318,7 +343,7 @@ final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceSt
                 if(shape.inward>0)to=MathHelper.lerpAngleDegrees(shape.inward,to,(float)Math.toDegrees(Math.atan2(-(home.x-at.x),home.z-at.z)));
                 y=y+MathHelper.wrapDegrees(to-y)*e;
             }
-            puppet.place(home.lerp(at,look.out),y);
+            return new StandPresence.Body(home.lerp(at,look.out),y,look.scale);
         }
         static double wrapRad(double a){a%=Math.PI*2;if(a>Math.PI)a-=Math.PI*2;if(a<-Math.PI)a+=Math.PI*2;return a;}
     }

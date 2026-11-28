@@ -1482,5 +1482,77 @@
         "preload": true
       }
     ]
+  },
+  "gold_punch_swing_1": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_punch_swing_1",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_punch_swing_2": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_punch_swing_2",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_punch_swing_3": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_punch_swing_3",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_punch_swing_4": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_punch_swing_4",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_punch_hit_1": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_punch_hit_1",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_punch_hit_2": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_punch_hit_2",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_punch_hit_3": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_punch_hit_3",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "gold_punch_hit_4": {
+    "sounds": [
+      {
+        "name": "celestialfall:gold_punch_hit_4",
+        "stream": false,
+        "preload": true
+      }
+    ]
   }
 }

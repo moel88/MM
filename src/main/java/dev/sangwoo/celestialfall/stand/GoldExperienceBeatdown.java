@@ -114,7 +114,12 @@ public final class GoldExperienceBeatdown {
     public static void forget(PlayerEntity p){var s=OPENS.get(p.getUuid());if(s!=null)s.ready=0;}
 
     /** G: its user glows now if it may be begun (CutsceneGlow), and its opening punch is thrown as the glow ends ({@link #glowed}). Returns whether the glow began. */
-    public static boolean request(ServerPlayerEntity p){return may(p)&&CutsceneGlow.begin(p,CutsceneGlow.GOLD_BEATDOWN);}
+    public static boolean request(ServerPlayerEntity p){
+        if(!may(p))return false;
+        // (2.154.0) a punch of the basic attack in flight stops short now, as Star Platinum's does at its G
+        GoldExperienceAttack.yieldTo(p);
+        return CutsceneGlow.begin(p,CutsceneGlow.GOLD_BEATDOWN);
+    }
     /** Whether the beatdown may be begun now. */
     private static boolean may(ServerPlayerEntity p){
         if(!GoldExperienceOverdrive.punches(p)||p.isSleeping()||p.hasVehicle()||CombatManager.busy(p)||CombatManager.cinematic(p))return false;

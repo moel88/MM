@@ -155,6 +155,8 @@ public final class GoldExperienceLife {
             send(p,s,FROG,now,null,0,false,-1,-1);
             return true;
         }
+        // (2.154.0) a punch of the basic attack in flight gives way to its punch
+        GoldExperienceAttack.yieldTo(p);
         s.punchStart=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.landed=false;s.ready=WAITING;
         send(p,s,PUNCH,now,null,0,false,-1,-1);
         return true;

@@ -110,6 +110,8 @@ public final class GoldExperienceHeal {
         if(!may(p,s,now))return false;
         float yaw=MathHelper.wrapDegrees(p.getYaw());
         var e=first(p,yaw);if(e==null)return false;
+        // (2.154.0) a punch of the basic attack in flight gives way to it
+        GoldExperienceAttack.yieldTo(p);
         s.on=TAP;s.start=now;s.yaw=yaw;s.touched=false;
         s.ready=NoCooldownState.enabled(p)?now+MEND_LENGTH:healReady(now+MEND_LENGTH);
         send(p,s,MENDING,e,0);
@@ -119,6 +121,7 @@ public final class GoldExperienceHeal {
     public static boolean self(ServerPlayerEntity p){
         var s=state(p);long now=p.getWorld().getTime();
         if(!may(p,s,now))return false;
+        GoldExperienceAttack.yieldTo(p);
         s.on=HOLD;s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.ready=0;s.touched=false;
         p.setSprinting(false);p.clearActiveItem();slow(p,true);
         send(p,s,SELFING,null,0);

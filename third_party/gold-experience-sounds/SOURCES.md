@@ -1,7 +1,9 @@
-# Gold Experience's T and H sounds: where they come from
+# Gold Experience's T, H and basic attack sounds: where they come from
 
 Gold Experience's T (giving life) and H (the tree of life) sounds (2.153.0,
-`src/main/resources/assets/celestialfall/sounds/gold_life_*.ogg`, `gold_tree_*.ogg`) are laid together from these
+`src/main/resources/assets/celestialfall/sounds/gold_life_*.ogg`, `gold_tree_*.ogg`) and its basic attack's punches
+(2.154.0, `gold_punch_swing_*.ogg`, `gold_punch_hit_*.ogg`: user request "마지막으로 평타 만들자 효과음도 잘 넣어서", asked
+and answered: "주먹 소리 + 4타에 '무-다!'") are laid together from these
 recordings by `tools/stand/make_gold_sounds.py` (stretches of them, mono, faded at the cuts, some played faster or slower,
 backwards, or under a high-pass filter to take the hum of an outdoor recording off, each at its level among the others,
 the whole set to its loudness under a limiter; nothing synthesized). The user asked for exactly that: "t스킬과 H스킬은
@@ -20,13 +22,23 @@ anyway. The recordings themselves are not in the repository (the tool reads them
 | Chimes "butterfly" #1 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/chimes-butterfly-1-s2087.html | `gold_life_reflect`, `gold_life_frog_back` |
 | Champagne cork #2 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/champagne-cork-2-s0648.html | `gold_life_born`, `gold_life_frog_burst`, `gold_life_strike` (the pop) |
 | Cap cider #1 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/cap-cider-s0547.html | `gold_life_frog_back` (the item's pop) |
-| Whoosh #4 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/whoosh-4-s1796.html | `gold_tree_burst` (its user flung up) |
-| Whoosh #5 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/whoosh-5-s1797.html | `gold_life_strike`, `gold_life_fly_back` |
-| Whoosh #6 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/whoosh-6-s1799.html | `gold_life_punch`, `gold_life_reflect` |
-| Whoosh #9 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/whoosh-9-s1802.html | `gold_life_hop`, `gold_life_frog_back` |
+| Whoosh #4 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/whoosh-4-s1796.html | `gold_tree_burst` (its user flung up), `gold_punch_swing_4` (the whole body behind it) |
+| Whoosh #5 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/whoosh-5-s1797.html | `gold_life_strike`, `gold_life_fly_back`, `gold_punch_swing_4`, `gold_punch_hit_4` (the air as they are thrown) |
+| Whoosh #6 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/whoosh-6-s1799.html | `gold_life_punch`, `gold_life_reflect`, `gold_punch_swing_2` |
+| Whoosh #9 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/whoosh-9-s1802.html | `gold_life_hop`, `gold_life_frog_back`, `gold_punch_swing_1` (a little weight under it) |
+| Sword through the air | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/sword-through-the-air-s0128.html | `gold_punch_swing_1` (the jab's quick swish, faster) |
+| Whoosh #3 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/whoosh-3-s1795.html | `gold_punch_swing_2` (the cross) |
+| Whoosh #7 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/whoosh-7-s1800.html | `gold_punch_swing_3` (the hook's arm swept round) |
+| Whoosh #10 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/whoosh-10-s1798.html | `gold_punch_swing_3` |
+| Whoosh #8 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/whoosh-8-s1801.html | `gold_punch_swing_4` |
 | Slaps | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/slaps-s0597.html | `gold_life_swat` (the slap), `gold_life_hop` (a pat, faster) |
-| Punch #5 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/punch-5-s2460.html | `gold_life_strike` (the blow) |
-| Body Fall #2 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/body-fall-2-s2453.html | `gold_life_fall`, `gold_life_strike` (its weight) |
+| Punch #5 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/punch-5-s2460.html | `gold_life_strike` (the blow), `gold_punch_hit_4` (the crack) |
+| Punch #6 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/punch-6-s2461.html | `gold_punch_hit_3` (a snap over it, high-passed) |
+| Punch #8 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/punch-8-s2463.html | `gold_punch_hit_2` (the smack) |
+| Punch #11 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/punch-11-s2466.html | `gold_punch_hit_3` (a meatier smack) |
+| Punch #12 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/punch-12-s2467.html | `gold_punch_hit_1` (the jab's sharp smack) |
+| Punches #3 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/punches-3-s0806.html | `gold_punch_hit_1`–`_4` (the thump in a body: one of its blows each, low-passed) |
+| Body Fall #2 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/body-fall-2-s2453.html | `gold_life_fall`, `gold_life_strike` (its weight), `gold_punch_hit_1`–`_4` (a body's weight behind each blow) |
 | Gore (pepper) #2 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/gore-pepper-2-s2594.html | `gold_life_strike` (wetly) |
 | Gore (pepper) #4 | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/gore-pepper-4-s2596.html | `gold_life_swat` (the squelch) |
 | Steps in the Mud | Joseph SARDIN, BigSoundBank.com | https://bigsoundbank.com/steps-in-the-mud-s0495.html | `gold_life_swat` |
@@ -52,4 +64,5 @@ BigSoundBank (https://bigsoundbank.com/licenses.html): "Creative Commons CC0 1.0
 Dedication"; each sound page: "CC0 (public domain): Free and royalty-free".
 
 Gold Experience's R and Y sounds (`gold_experience_overdrive`, `gold_experience_mend`, `gold_experience_self_heal`) are the
-user's own recordings, only cut (`tools/stand/cut_gold_sounds.py`).
+user's own recordings, only cut (`tools/stand/cut_gold_sounds.py`). The basic attack's fourth punch shouts R's "무-다!"
+(`gold_experience_overdrive`, the same file).

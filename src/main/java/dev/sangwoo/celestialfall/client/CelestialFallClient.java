@@ -40,6 +40,8 @@ public final class CelestialFallClient implements ClientModInitializer {
         dev.sangwoo.celestialfall.client.stand.StandAttack.initialize();
         dev.sangwoo.celestialfall.client.stand.StandRush.initialize();
         dev.sangwoo.celestialfall.client.stand.GoldPunch.initialize();
+        // (2.154.0) its basic attack's punches
+        dev.sangwoo.celestialfall.client.stand.GoldCombo.initialize();
         dev.sangwoo.celestialfall.client.stand.SoulClient.initialize();
         dev.sangwoo.celestialfall.client.stand.GoldHeal.initialize();
         dev.sangwoo.celestialfall.client.stand.StandInhale.initialize();

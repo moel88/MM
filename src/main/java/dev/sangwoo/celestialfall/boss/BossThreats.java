@@ -121,6 +121,13 @@ public final class BossThreats {
                     c<=3||finger,heavy||beat,beat,damage,false,false));
             }
         }
+        // (2.154.0) Gold Experience's punches, read as Star Platinum's are: a guard takes the first three, not the fourth
+        var gp=dev.sangwoo.celestialfall.stand.GoldExperienceAttack.punch(p);
+        if(gp!=null&&gp.combo()>=1&&!gp.landed()){
+            int c=gp.combo();long hit=gp.start()+dev.sangwoo.celestialfall.stand.GoldExperienceRules.M1_CONTACT[c];
+            if(now<=hit)out.add(new Threat(p,"gold_punch"+c,Math.min(gp.start(),now),hit,hit,Zone.lane(p.getPos(),gp.yaw(),StarPlatinumRules.NEAR,c>=4?StarPlatinumRules.REACH_BIG:StarPlatinumRules.REACH,StarPlatinumRules.HALF_WIDTH,StarPlatinumRules.LOW,StarPlatinumRules.HIGH),
+                c<=3,false,false,dev.sangwoo.celestialfall.stand.GoldExperienceRules.M1_DAMAGE[c],false,false));
+        }
         long rush=StarPlatinumRush.startedAt(p);
         if(rush!=Long.MIN_VALUE){
             // (2.147.0) Gold Experience's muda rush is read as Star Platinum's rush is: its own length and what it deals

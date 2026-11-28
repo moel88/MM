@@ -1,4 +1,4 @@
-"""Gold Experience's T (giving life) and H (the tree of life): their sounds, laid together from recordings (2.153.0).
+"""Gold Experience's T (giving life), H (the tree of life) and basic attack: their sounds, laid together from recordings (2.153.0, 2.154.0).
 
 usage: python3 -I tools/stand/make_gold_sounds.py RECORDINGS_DIR [OUT_DIR]
 
@@ -30,6 +30,15 @@ What each is (the moments are the skill's: client/stand/GoldLife, GoldTree, Gold
     gold_life_fly_back its time up untouched: it flies back into the body, a sparkle swelling backwards
     gold_life_swat     its owner swats it: a slap and a squelch
     gold_life_fall     its owner falls on their back
+  the basic attack (2.154.0: Star Platinum's four punches, its fourth with the overdrive's shout, the user's recording)
+    gold_punch_swing_1 the jab through the air: a quick swish
+    gold_punch_swing_2 the cross: a swish with more weight
+    gold_punch_swing_3 the hook: the arm swept round
+    gold_punch_swing_4 the fourth, the whole body behind it
+    gold_punch_hit_1   the jab landing: a sharp smack and the thump in a body
+    gold_punch_hit_2   the cross landing
+    gold_punch_hit_3   the hook landing: a meatier smack
+    gold_punch_hit_4   the fourth landing: the crack, the thump, a body's weight, the air as they are thrown
   H, the tree
     gold_tree_touch    the stand's palm laid on the ground, the light running to its user's feet swelling to the burst
     gold_tree_burst    the tree bursting up: a thud in the ground, wood tearing and twigs snapping as it grows,
@@ -175,6 +184,51 @@ SOUNDS = {
         L('1305', 4.0, 4.6, .45, -13, hp=150, fade_in=.05, fade_out=.2),  # soil settling
         L('1839', .855, 1.20, .78, -12, speed=.9, fade_out=.1),  # the last of it into the ground
     ]),
+    # ---- the basic attack (2.154.0): each punch's whoosh through the air (its loudest moment where client/stand/GoldCombo's
+    # SWING_PEAK says: as the fist lands), and the blow on whom it lands (its crack at the start: played as the server's
+    # word comes, on the punch's contact)
+    'gold_punch_swing_1': dict(lufs=-17, length=.26, layers=[
+        L('0128', .03, .30, .07, -1, speed=1.3, hp=250, peak=True, fade_out=.06),   # a quick swish
+        L('1802', .08, .22, .07, -11, speed=1.4, hp=120, peak=True),                # a little weight under it
+    ]),
+    'gold_punch_swing_2': dict(lufs=-16, length=.3, layers=[
+        L('1795', .22, .46, .07, -1, speed=1.45, hp=200, peak=True, fade_in=.02, fade_out=.06),
+        L('1799', .12, .30, .075, -9, speed=1.3, hp=100, peak=True),
+    ]),
+    'gold_punch_swing_3': dict(lufs=-16, length=.38, layers=[
+        L('1800', .24, .50, .10, -1, speed=1.3, hp=200, peak=True, fade_in=.03, fade_out=.08),  # the arm swept round
+        L('1798', .15, .33, .10, -8, speed=1.15, hp=90, peak=True),
+    ]),
+    'gold_punch_swing_4': dict(lufs=-14.5, length=.5, layers=[
+        L('1796', .18, .52, .12, -1, speed=1.1, hp=150, peak=True, fade_in=.05, fade_out=.1),  # the whole body behind it
+        L('1797', .14, .36, .12, -6, speed=.9, hp=60, peak=True),
+        L('1801', .30, .48, .125, -9, speed=1.2, hp=300, peak=True),
+    ]),
+    # (a blow alone is all crack, some 20 dB between its peak and its loudness over 100 ms: a body's thud under it gives
+    # it weight, and brings it to about the loudness of the game's own strong attack, -14.6; the limiter presses its
+    # crack down 3 dB at most and lets go of it in 12 ms, not 60, so the thud after it keeps its weight)
+    'gold_punch_hit_1': dict(release=.012, lufs=-16, length=.35, layers=[
+        L('2467', .07, .45, .006, -3, peak=True, fade_out=.12),                    # a sharp smack
+        L('0806', 1.11, 1.30, .008, -3, peak=True, lp=2500, fade_out=.08),         # the thump in a body
+        L('2453', .44, .62, .014, -9, peak=True, hp=60, fade_out=.08),             # its weight
+    ]),
+    'gold_punch_hit_2': dict(release=.012, lufs=-15.5, length=.4, layers=[
+        L('2463', .045, .45, .006, -2, peak=True, fade_out=.12),
+        L('0806', 2.17, 2.36, .009, -3, peak=True, lp=2500, fade_out=.08),
+        L('2453', .44, .64, .015, -7, peak=True, hp=60, fade_out=.1),
+    ]),
+    'gold_punch_hit_3': dict(release=.012, lufs=-14.5, length=.42, layers=[
+        L('2466', .075, .45, .006, -3, peak=True, fade_out=.12),                   # a meatier smack across the jaw
+        L('0806', 3.21, 3.40, .009, -2, peak=True, lp=2500, fade_out=.08),
+        L('2453', .44, .66, .016, -6, peak=True, hp=60, fade_out=.1),
+        L('2461', .05, .30, .004, -12, peak=True, hp=1500),
+    ]),
+    'gold_punch_hit_4': dict(release=.012, lufs=-13.5, length=.8, layers=[
+        L('2460', .065, .55, .006, -1, peak=True, fade_out=.15),                   # the crack
+        L('0806', 4.40, 4.62, .009, -3, peak=True, lp=2500, fade_out=.1),          # the thump
+        L('2453', .44, .75, .016, -4, peak=True, hp=50, fade_out=.15),             # a body's weight behind it
+        L('1797', .15, .50, .12, -14, speed=1.2, hp=300, peak=True),               # the air as they are thrown
+    ]),
 }
 # the sounds the game picks among (each a sound event with these files)
 VARIANTS = {'gold_life_croak': 3, 'gold_tree_knock': 3}
@@ -254,15 +308,16 @@ def loudness(y):
     return -0.691 + 10 * np.log10(power + 1e-20)
 
 
-def limit(y, ceiling):
-    """Keeps the peaks under the ceiling: a gain that looks LOOK ahead and comes down over it, and recovers over 60 ms."""
+def limit(y, ceiling, release=.06):
+    """Keeps the peaks under the ceiling: a gain that looks LOOK ahead and comes down over it, and recovers over
+    {release} seconds (60 ms; a blow's own, its crack a few milliseconds long, sooner)."""
     from scipy.ndimage import minimum_filter1d, uniform_filter1d
     need = np.minimum(1, ceiling / np.maximum(np.abs(y), 1e-12))
     if need.min() >= 1:
         return y
     n = int(LOOK * SR)
     g = uniform_filter1d(minimum_filter1d(need, 2 * n + 1, mode='nearest'), 2 * n + 1, mode='nearest')
-    rel = 1 - np.exp(-1 / (.06 * SR))
+    rel = 1 - np.exp(-1 / (release * SR))
     out = np.empty_like(g)
     cur = 1.0
     for i, v in enumerate(g):
@@ -276,11 +331,11 @@ LOOK = .0015
 SQUEEZE = 8.0
 
 
-def finish(y, lufs):
+def finish(y, lufs, squeeze=SQUEEZE, release=.06):
     ceiling = 10 ** (CEILING_DB / 20)
     gain = 10 ** ((lufs - loudness(y)) / 20)
-    gain = min(gain, ceiling * 10 ** (SQUEEZE / 20) / np.abs(y).max())
-    return limit(y * gain, ceiling)
+    gain = min(gain, ceiling * 10 ** (squeeze / 20) / np.abs(y).max())
+    return limit(y * gain, ceiling, release)
 
 
 def loop(y, cross):
@@ -308,7 +363,7 @@ def make(folder, name, spec):
     mix = mix[:int(length * SR)]
     s = np.arange(len(mix)) / SR
     mix *= smooth((length - s) / TAIL)
-    return finish(mix, spec['lufs'])
+    return finish(mix, spec['lufs'], spec.get('squeeze', SQUEEZE), spec.get('release', .06))
 
 
 def write(y, out, name):
