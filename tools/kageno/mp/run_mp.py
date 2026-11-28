@@ -36,7 +36,9 @@ the watcher 11/3 blocks off in its band: the formation over at once, its swords 
 stood (as drawn and as the server holds her; 2.101.1: round her lap of the sky on her sword, drawn level against its
 plan on each client, and its 28 swords), five blows of 12, the recording each client plays, her H ready again only
 once its swords are gone), MP_ONLY=goldbeat Gold Experience's beatdown (2.150.0, MpClient.GOLDBEAT_SCRIPT: nothing with the stand in; on a guard the guard breaks and no cutscene comes, its 3 minutes on; refused on its cooldown; cut short by a strike as it glows; on no one; on the watcher the cutscene to its end, both held, the watcher never under 1 health before it comes down),
-MP_ONLY=goldtree Gold Experience's H, the tree of life (2.152.0, MpClient.GOLDTREE_SCRIPT: the tree bursts up under the caster,
+MP_ONLY=goldm1 Gold Experience's basic attack (2.154.0, MpClient.GOLDM1_SCRIPT: the bare hand with the stand in, its four
+punches held (4, 4, 5, 8; the fourth through a guard and throwing), into a guard, stopped as the caster is struck, cut
+by E and by R), MP_ONLY=goldtree Gold Experience's H, the tree of life (2.152.0, MpClient.GOLDTREE_SCRIPT: the tree bursts up under the caster,
 striking the watcher and flinging the caster up; the watcher's blows on the tree come back on it; H refused while it
 stands, gone 20 s after its burst and refused 90 s from then; its guard takes it; struck as the palm goes down it is
 stopped short).
