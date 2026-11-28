@@ -967,9 +967,9 @@ public final class MpClient implements ClientModInitializer {
         "160 G",
         "170 NOCDON","175 HOME","180 HEAL","185 JAB+","190 G","215 JAB-",
         "235 AWAY","245 G",
-        "270 HOME","275 HEAL","280 G","297 HITME",
-        "320 HOME","325 HEAL","335 G",
-        "1040 NOCDOFF","1050 END"};
+        "290 HOME","295 HEAL","300 G","317 HITME",
+        "345 HOME","350 HEAL","360 G",
+        "1070 NOCDOFF","1080 END"};
     /**
      * Gold Experience's H, the tree of life (2.152.0, MP_ONLY=goldtree): the caster takes Gold Experience, its cooldowns on.
      * H with the stand in: nothing. Q, the watcher 3 blocks ahead and 1.5 to the left, H: the caster held 10 ticks (the

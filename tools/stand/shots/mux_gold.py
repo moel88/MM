@@ -15,6 +15,8 @@ of the same entry (the frog's return, the fly's, the tree's withering) is laid b
   frog   the frog's birth (T with an item), 6 ticks in (GoldLife.FROG_SOUNDS)
   punch  the punch's rush (T with the hand empty), 5 ticks in (GoldLife.PUNCH_SOUNDS)
   tree   the tree's burst (H), 10 ticks in (GoldTree.SOUNDS)
+  swat   the fly swatted by whom it belongs to (T), on the tick its client hears of it: the dummy's blows are not on the
+         same ticks in two runs (nor which of them meets the fly), so a stretch from the swat on is laid by it
 """
 import math
 import os
@@ -33,6 +35,8 @@ KINDS = {
     'frog': ('gold_life_born', 6, r'giving life at (\d+): \S+ 1,([0-9.]+),'),
     'punch': ('gold_life_punch', 5, r'giving life at (\d+): \S+ 0,([0-9.]+),'),
     'tree': ('gold_tree_burst', 10, r'tree of life at (\d+): \S+ ([0-9.]+),'),
+    # the fly swatted (T): its owner's blow on it, the tick the client hears of it (the dummy knocked down then)
+    'swat': ('gold_life_swat', 0, r'the dummy knocked down at (\d+)'),
 }
 
 
@@ -43,7 +47,10 @@ def begun(path, entry, pattern):
         parts = re.split(r'(?m)^%s at \d+$' % re.escape(name), fh.read())
     part = parts[int(k) if k else 1]
     m = re.search(pattern, part)
-    return None if m is None else math.ceil(int(m.group(1)) - float(m.group(2)) * 20 - 1e-3)
+    if m is None:
+        return None
+    # (a moment's own tick, with no age: the swat)
+    return int(m.group(1)) if m.lastindex == 1 else math.ceil(int(m.group(1)) - float(m.group(2)) * 20 - 1e-3)
 
 
 if __name__ == '__main__':

@@ -1886,6 +1886,10 @@ public final class SkillShots implements ClientModInitializer {
                     if(what.equals("SOULOUT")){if(age==at){server(p->dev.sangwoo.celestialfall.stand.GoldExperienceOverdrive.out(p,p.getWorld().getTime()));log.append("  soul put out at ").append(age).append('\n');}continue;}
                     if(what.equals("GAUGE")){if(age==at){server(p->dev.sangwoo.celestialfall.isosang.IsosangAttack.setGauge(p,dev.sangwoo.celestialfall.isosang.IsosangRules.GAUGE_FULL));log.append("  gauge full at ").append(age).append('\n');}continue;}
                     if(what.equals("DGO")){if(age==at)server(p->{if(p.getServerWorld().getEntityById(dummyId) instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity t){t.resetTraining();log.append("  dummy goes at ").append(age).append('\n');}});continue;}
+                    // "DHOLD@n" (2.153.0): the attacking dummy holds off again from then, its combo stopped where it is (a
+                    // stretch filmed after it has no blow of its in it: its blows' timing drifts from run to run, and the
+                    // sound run's would not go with the film run's)
+                    if(what.equals("DHOLD")){if(age==at)server(p->{if(p.getServerWorld().getEntityById(dummyId) instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity t){t.interruptCombat();nextCombo(t,p.getServerWorld().getTime()+1_000_000);log.append("  dummy holds off at ").append(age).append('\n');}});continue;}
                     // "DTREE@n" (2.152.0): the dummy strikes Gold Experience's tree once (8, a bare-handed blow from it on the tree:
                     // the server's GoldTreeEntity.damage, as a player's blow on it goes), to see the blow come back on it
                     if(what.equals("DTREE")){if(age==at)server(p->{var w=p.getServerWorld();var d=w.getEntityById(dummyId);
