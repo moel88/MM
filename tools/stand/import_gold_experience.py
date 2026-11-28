@@ -20,8 +20,8 @@ game's: standing straight, the arms hanging straight down with the palms in and 
 down, the feet as the model has them. The model is bound in a T-pose; its arms and legs are turned down at their joints
 and the body is skinned into that pose (linear blend skinning, as the file's skin does it). Then it is set up in the
 game's frame (soles at 0, the hips over the origin, the front towards -z, units of a sixteenth of a block, 40.49 to the
-top of the helmet: Star Platinum's height to the top of its head at GoldExperienceRenderer.SCALE) and each of the file's
-joints hands its weight to the game's bone it moves with.
+top of the helmet: drawn at GoldExperienceRenderer.SCALE that is 2.24 blocks, 2.155.1's size, 1.12 times Star Platinum's
+height to the top of its head) and each of the file's joints hands its weight to the game's bone it moves with.
 
 Coordinates: the geo.json is written as Bedrock writes a model (x mirrored: the right side at -x), the mesh as GeckoLib
 bakes the geo.json (x the right way, in blocks), so a vertex sits on the cube grid of its bone.

@@ -76,6 +76,14 @@ CARRIER = np.array([BODY[0][BODY[2][i, int(np.argmax(BODY[3][i]))]] for i in ran
 SHOULDER_Y = float(PIVOT['left_arm'][1]) + 1.1
 BELT_Y, CROTCH_Y = 25.2, 22.5
 SY = SHOULDER_Y
+# (2.155.1) How much lower than they were first written the arms aim at whom they are for (units). Drawn 1.12 times as
+# big as in 2.155.0 (client/stand/GoldExperienceRenderer.SCALE; the user's choice of four drafts: "B 통째로 1.12배")
+# this body's shoulders stand a third of a block higher than the box-built figure's did, and fists aimed from them as
+# before went over a player's head; aimed this much lower they land where the box-built figure's landed (a player's
+# face and the top of their chest), the arms driven down a little at whom they strike. An arm reaching out past its
+# length (a blow at full stretch) goes down less than the point it aims at; a hand held within its reach (the hook,
+# the left held out as the cross winds up) goes down as far: DROP_HELD.
+DROP, DROP_HELD = 9.0, 6.0
 # an arm reaches with the middle of its palm (where a fist is), straight on down its forearm at rest; the fist's
 # knuckles (where the rush's light is: client/stand/GoldRush) are over the fingers' joints, on the back of the hand
 _PALM = float(PIVOT['left_hand'][1] - PIVOT['left_fingers'][1])
@@ -177,7 +185,8 @@ def reaching(spec):
 # fist out -- at the middle, high or low -- and client/stand/GoldRush goes from one to the next, left and right in turn.
 # The guard is what it holds before the first fist and after the last.
 FIST = {**fist('right', 100), **fist('left', 100)}
-RUSH_OUT = {'mid': ((1.0, SHOULDER_Y - 2.4, -24.0), 0.0), 'hi': ((1.8, SHOULDER_Y + 2.8, -24.0), -5.0), 'lo': ((.4, SHOULDER_Y - 7.8, -23.0), 8.0)}
+RUSH_OUT = {'mid': ((1.0, SHOULDER_Y - 2.4 - DROP, -24.0), 0.0), 'hi': ((1.8, SHOULDER_Y + 2.8 - DROP, -24.0), -5.0),
+            'lo': ((.4, SHOULDER_Y - 7.8 - DROP, -23.0), 8.0)}
 RUSH_BACK = {'left': ((3.4, SHOULDER_Y + 1.2, -6.5), (.6, -1, .2)), 'right': ((-3.4, SHOULDER_Y + 1.2, -6.5), (-.6, -1, .2))}
 RUSH_RISE = {'mid': 0.0, 'hi': .4, 'lo': -.9}
 
@@ -225,7 +234,7 @@ POSES['over_wind'] = {
     'neck': {'rot': (-6, -36, 0)}, 'head': {'rot': (-8, -52, 0)},
     # (behind the hip the arm was half a turn from the guard's, and the blend of the two had no short way: it flipped)
     'right_arm': {'reach': ((-7.0, SHOULDER_Y - 1.5, 12.0), (-1, 0, 1))},
-    'left_arm': {'reach': ((5.6, SHOULDER_Y + .4, -19.0), (.7, -1, 0))},
+    'left_arm': {'reach': ((5.6, SHOULDER_Y + .4 - DROP, -19.0), (.7, -1, 0))},
     'left_leg': {'rot': (-48, 0, -8)}, 'left_shin': {'rot': (66, 0, 0)}, 'left_foot': {'rot': (14, 0, 0)},
     'right_leg': {'rot': (12, 0, 10)}, 'right_shin': {'rot': (72, 0, 0)}, 'right_foot': {'rot': (32, 0, 0)},
     **fist('right', 100), **fist('left', 12),
@@ -234,7 +243,7 @@ POSES['over_punch'] = {
     'root': {'pos': (0, -.2, -8.6)},
     'hips': {'rot': (30, -40, 0)}, 'torso': {'rot': (14, -20, 0)}, 'chest': {'rot': (9, -18, 0)},
     'neck': {'rot': (-15, 32, 0)}, 'head': {'rot': (-20, 38, 0)},
-    'right_arm': {'reach': ((.2, SHOULDER_Y - 5.2, -40.0), (-.5, -1, 0))},
+    'right_arm': {'reach': ((.2, SHOULDER_Y - 5.2 - DROP, -40.0), (-.5, -1, 0))},
     'left_arm': {'reach': ((8.0, SHOULDER_Y - 7.0, -2.0), (.3, .3, 1))},
     'left_leg': {'rot': (-58, 0, -4)}, 'left_shin': {'rot': (46, 0, 0)}, 'left_foot': {'rot': (0, 0, 0)},
     'right_leg': {'rot': (60, 0, 6)}, 'right_shin': {'rot': (0, 0, 0)}, 'right_foot': {'rot': (50, 0, 0)},
@@ -249,7 +258,7 @@ POSES['mend'] = {
     'root': {'pos': (0, .3, -3.6)},
     'hips': {'rot': (13, -18, 0)}, 'torso': {'rot': (9, -12, 0)}, 'chest': {'rot': (7, -14, 0)},
     'neck': {'rot': (-2, 16, 0)}, 'head': {'rot': (2, 20, 0)},
-    'right_arm': {'reach': ((-.6, SHOULDER_Y - 3.4, -24.5), (-.5, -1, 0))},
+    'right_arm': {'reach': ((-.6, SHOULDER_Y - 3.4 - DROP, -24.5), (-.5, -1, 0))},
     'left_arm': {'reach': RUSH_BACK['left']},
     'left_leg': {'rot': (-30, 0, -4)}, 'left_shin': {'rot': (36, 0, 0)}, 'left_foot': {'rot': (14, 0, 0)},
     'right_leg': {'rot': (26, 0, 6)}, 'right_shin': {'rot': (30, 0, 0)}, 'right_foot': {'rot': (36, 0, 0)},
@@ -311,7 +320,7 @@ POSES['jab'] = {
     'hips': {'rot': (20, 40, 0)}, 'torso': {'rot': (11, 12, 0)}, 'chest': {'rot': (7, 13, 0)},
     'neck': {'rot': (-11, -21, 0)}, 'head': {'rot': (-14, -32, 0)},
     # the left arm shot out straight at the target, the lead shoulder rammed forward, the body lunging in after it
-    'left_arm': {'reach': ((.4, SY - 2.2, -28.0), (.5, -1, 0))},
+    'left_arm': {'reach': ((.4, SY - 2.2 - DROP, -28.0), (.5, -1, 0))},
     'right_arm': {'carry': GUARD_R},
     'left_leg': {'rot': (-44, 0, -4)}, 'left_shin': {'rot': (28, 0, 0)}, 'left_foot': {'rot': (10, 0, 0)},
     'right_leg': {'rot': (38, 0, 6)}, 'right_shin': {'rot': (14, 0, 0)}, 'right_foot': {'rot': (46, 0, 0)},
@@ -322,7 +331,7 @@ POSES['cross_wind'] = {
     'hips': {'rot': (13, 44, 0)}, 'torso': {'rot': (9, 12, 0)}, 'chest': {'rot': (7, 10, 0)},
     'neck': {'rot': (-10, -21, 0)}, 'head': {'rot': (-12, -32, 0)},
     # wound hard round to the right and low, the right fist cocked back by the cheek, the left still out at the target
-    'left_arm': {'carry': ((3.4, SY + .8, -13.0), (.6, -1, .15))},
+    'left_arm': {'carry': ((3.4, SY + .8 - DROP_HELD, -13.0), (.6, -1, .15))},
     'right_arm': {'carry': ((-2.4, SY + 1.2, -3.5), (-.45, -1, .15))},
     'left_leg': {'rot': (-29, 0, -4)}, 'left_shin': {'rot': (50, 0, 0)}, 'left_foot': {'rot': (18, 0, 0)},
     'right_leg': {'rot': (24, 0, 8)}, 'right_shin': {'rot': (52, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
@@ -333,7 +342,7 @@ POSES['cross'] = {
     'hips': {'rot': (20, -24, 0)}, 'torso': {'rot': (11, -10, 0)}, 'chest': {'rot': (7, -10, 0)},
     'neck': {'rot': (-11, 15, 0)}, 'head': {'rot': (-14, 23, 0)},
     # the hips and shoulders wrenched round to the left, the right arm out straight, the left fist pulled back in to the guard
-    'right_arm': {'reach': ((-.4, SY - 2.4, -28.5), (-.5, -1, 0))},
+    'right_arm': {'reach': ((-.4, SY - 2.4 - DROP, -28.5), (-.5, -1, 0))},
     'left_arm': {'carry': ((3.2, SY + .9, -7.5), (.6, -1, .2))},
     'left_leg': {'rot': (-42, 0, -4)}, 'left_shin': {'rot': (24, 0, 0)}, 'left_foot': {'rot': (10, 0, 0)},
     'right_leg': {'rot': (42, 0, 6)}, 'right_shin': {'rot': (12, 0, 0)}, 'right_foot': {'rot': (50, 0, 0)},
@@ -357,7 +366,7 @@ POSES['hook'] = {
     'neck': {'rot': (-8, -30, 0)}, 'head': {'rot': (-11, -46, 0)},
     # the body wrenched round to the right, the left arm whipped round level with the elbow out at the shoulder's
     # height and bent square, the fist smashing in across the front at the target
-    'left_arm': {'carry': ((3.5, SY - .8, -8.5), (1, .1, .4))},
+    'left_arm': {'carry': ((3.5, SY - .8 - DROP_HELD, -8.5), (1, .1, .4))},
     'right_arm': {'carry': GUARD_R},
     'left_leg': {'rot': (-33, 0, -4)}, 'left_shin': {'rot': (26, 0, 0)}, 'left_foot': {'rot': (10, 0, 0)},
     'right_leg': {'rot': (29, 0, 13)}, 'right_shin': {'rot': (28, 0, 0)}, 'right_foot': {'rot': (40, 0, 0)},
@@ -371,7 +380,7 @@ POSES['finish_wind'] = {
     # body (drawn back by the arm alone it went the far way round from the guard), the left arm out at the target taking
     # aim, the knees drawn up to spring
     'right_arm': {'carry': ((-2.9, SY + 1.9, -2.4), (-.6, -1, .25))},
-    'left_arm': {'carry': ((3.6, SY + .6, -14.0), (.6, -1, .1))},
+    'left_arm': {'carry': ((3.6, SY + .6 - DROP, -14.0), (.6, -1, .1))},
     'left_leg': {'rot': (-50, 0, -6)}, 'left_shin': {'rot': (70, 0, 0)}, 'left_foot': {'rot': (16, 0, 0)},
     'right_leg': {'rot': (9, 0, 8)}, 'right_shin': {'rot': (72, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
     **FIST,
@@ -382,7 +391,7 @@ POSES['finish'] = {
     'neck': {'rot': (-14, 20, 0)}, 'head': {'rot': (-19, 26, 0)},
     # the whole body explodes forward, wheeling round to the left and flung far over the front leg, the right arm driven
     # straight through the target, the left fist pulled back in, low, the back leg flung out straight behind
-    'right_arm': {'reach': ((0.0, SY - 4.4, -36.0), (-.5, -1, 0))},
+    'right_arm': {'reach': ((0.0, SY - 4.4 - DROP, -36.0), (-.5, -1, 0))},
     'left_arm': {'carry': ((3.4, SY - .1, -8.0), (.6, -1, .25))},
     'left_leg': {'rot': (-52, 0, -4)}, 'left_shin': {'rot': (42, 0, 0)}, 'left_foot': {'rot': (0, 0, 0)},
     'right_leg': {'rot': (55, 0, 6)}, 'right_shin': {'rot': (0, 0, 0)}, 'right_foot': {'rot': (46, 0, 0)},

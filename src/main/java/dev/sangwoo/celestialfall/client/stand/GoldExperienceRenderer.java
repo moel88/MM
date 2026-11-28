@@ -23,15 +23,16 @@ import software.bernie.geckolib.renderer.GeoEntityRenderer;
  */
 public final class GoldExperienceRenderer extends GeoEntityRenderer<GoldExperienceEntity> {
     /**
-     * The model stands 40.49 units to the top of its helmet; at this size it stands 2.0 blocks, as tall as Star
-     * Platinum to the top of its head (44.35 units at {@link StarPlatinumRenderer#SCALE}, its hair above that).
-     * (2.146.1; .72 and a player's 1.8 blocks before, which read as too small beside Star Platinum. 2.146.2: .789 from
-     * .8, its head a little larger and so a little taller. 2.155.0: the body the user sent, set to the same height.)
+     * The model stands 40.49 units to the top of its helmet; at this size it stands 2.24 blocks: 2.155.0's .789 (2.0
+     * blocks, as tall as Star Platinum to the top of its head) drawn 1.12 times as big. (2.146.1; .72 and a player's 1.8
+     * blocks before, which read as too small beside Star Platinum. 2.146.2: .789 from .8. 2.155.0: the body the user sent,
+     * set to that height, read as small beside the box-built figure, wider and with a bigger head; 2.155.1: the user's
+     * choice of four drafts in the game, "B 통째로 1.12배", the model's own build kept.)
      */
-    public static final float SCALE=.789f;
+    public static final float SCALE=.884f;
     /** The model's height to the top of its helmet (units, tools/stand/import_gold_experience.py). */
     public static final float HEIGHT=40.49f;
-    public GoldExperienceRenderer(EntityRendererFactory.Context context){super(context,new GoldExperienceModel());withScale(SCALE);shadowRadius=.45f;}
+    public GoldExperienceRenderer(EntityRendererFactory.Context context){super(context,new GoldExperienceModel());withScale(SCALE);shadowRadius=.5f;}
     public static void initialize(){EntityRendererRegistry.register(GoldExperience.TYPE,GoldExperienceRenderer::new);}
     /** The height (blocks above its feet) it leans about as it follows its user: its waist (2.155.0: this body's hips). */
     static final float WAIST=26f/16*SCALE;

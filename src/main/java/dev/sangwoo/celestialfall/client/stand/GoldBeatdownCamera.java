@@ -42,9 +42,10 @@ public final class GoldBeatdownCamera {
 
     /**
      * The stand's face, the top of its head and its chest (blocks up from its feet): the body the user sent (2.155.0),
-     * its head from 1.73 to 2.0 and its eyes at 1.84; the box-built one had them at 1.72, 1.95 and 1.35.
+     * drawn 2.24 blocks tall (2.155.1), its head from 1.94 to 2.24 and its eyes at 2.06 (at 2.0 blocks, 2.155.0, they
+     * were 1.8, 1.97 and 1.48); the box-built one had them at 1.72, 1.95 and 1.35.
      */
-    static final double FACE=1.8,CROWN=1.97,CHEST=1.48;
+    static final double FACE=2.02,CROWN=2.21,CHEST=1.66;
 
     /** The shot at {@code t} on the beatdown's clock (before any blow's jolt). */
     public static Shot at(Beat b,float t){

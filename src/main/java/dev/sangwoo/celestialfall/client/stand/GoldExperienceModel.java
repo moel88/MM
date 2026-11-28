@@ -19,8 +19,9 @@ public final class GoldExperienceModel extends GeoModel<GoldExperienceEntity> {
     private final GoldExperiencePoses poses=new GoldExperiencePoses();
     private final float[] pose=new float[6];
     /**
-     * For trying a build before it goes into the generator (the filming tool's "goldfit=BULK/HEAD"): the body drawn
-     * BULK times as wide and deep, the head HEAD times its size. Null but while a trial is filmed.
+     * For trying a build before it goes into the generator (the filming tool's "goldfit=BULK/HEAD[/SIZE]"): the body
+     * drawn BULK times as wide and deep, the head HEAD times its size, and all of it SIZE times as big from its soles.
+     * Null but while a trial is filmed.
      */
     static float[] tuned;
 
@@ -48,7 +49,7 @@ public final class GoldExperienceModel extends GeoModel<GoldExperienceEntity> {
             // (2.147.0) the rush's arms, bigger from the shoulder (set every frame too: the next body may have its own size)
             if(name.equals("left_arm")){float a=look==null?1:look.armL;bone.setScaleX(a);bone.setScaleY(a);bone.setScaleZ(a);}
             else if(name.equals("right_arm")){float a=look==null?1:look.armR;bone.setScaleX(a);bone.setScaleY(a);bone.setScaleZ(a);}
-            if("root".equals(bone.getName())){float w=fit==null?1:fit[0];bone.setScaleX(w);bone.setScaleY(1);bone.setScaleZ(w);}
+            if("root".equals(bone.getName())){float w=fit==null?1:fit[0],z=fit==null||fit.length<3?1:fit[2];bone.setScaleX(w*z);bone.setScaleY(z);bone.setScaleZ(w*z);}
             else if("head".equals(bone.getName())){float w=fit==null?1:fit[1]/fit[0],h=fit==null?1:fit[1];bone.setScaleX(w);bone.setScaleY(h);bone.setScaleZ(w);}
         }
     }

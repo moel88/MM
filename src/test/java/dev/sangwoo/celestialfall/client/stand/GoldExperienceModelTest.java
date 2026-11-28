@@ -105,14 +105,16 @@ class GoldExperienceModelTest {
         }
         assertEquals(0,sum/count,.01,"the trunk's middle: "+sum/count+" blocks off");
     }
-    @Test void itStandsOnItsSolesAsTallAsStarPlatinum()throws Exception{
+    @Test void itStandsOnItsSolesTallerThanStarPlatinumAsTheUserChose()throws Exception{
         var m=mesh();float low=1e9f,high=-1e9f;
         for(int v=0;v<m.vertices();v++){low=Math.min(low,m.pos[v*3+1]);high=Math.max(high,m.pos[v*3+1]);}
         assertEquals(0,low*16,1e-3);
         assertEquals(GoldExperienceRenderer.HEIGHT,high*16,.01,"the height the renderer takes it to be");
-        // (2.146.1) drawn as tall as Star Platinum to the top of its head: 44.35 units at its own size
+        // (2.146.1) drawn as tall as Star Platinum to the top of its head (44.35 units at its own size); (2.155.1) and
+        // then 1.12 times as big, the user's choice: 2.24 blocks
         double blocks=high*GoldExperienceRenderer.SCALE,platinum=44.35/16*StarPlatinumRenderer.SCALE;
-        assertEquals(platinum,blocks,.02,"it stands "+blocks+" blocks, Star Platinum "+platinum);
+        assertEquals(1.12*platinum,blocks,.02,"it stands "+blocks+" blocks, Star Platinum "+platinum);
+        assertEquals(2.24,blocks,.01);
     }
     /** Its colours are the model's: cream gold, orange armour, purple ladybirds and stones, silver pads and hooks. */
     @Test void itIsTheModelsColours()throws Exception{

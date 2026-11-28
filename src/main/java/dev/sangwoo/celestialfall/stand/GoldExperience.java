@@ -22,7 +22,7 @@ public final class GoldExperience {
     private GoldExperience(){}
     public static void initialize(){
         TYPE=Registry.register(Registries.ENTITY_TYPE,CelestialFall.id("gold_experience"),FabricEntityTypeBuilder.<GoldExperienceEntity>create(SpawnGroup.MISC,GoldExperienceEntity::new)
-            .dimensions(EntityDimensions.fixed(.85f,2.1f)).trackRangeBlocks(96).trackedUpdateRate(20).build());
+            .dimensions(EntityDimensions.fixed(.95f,2.35f)).trackRangeBlocks(96).trackedUpdateRate(20).build());
         FabricDefaultAttributeRegistry.register(TYPE,GoldExperienceEntity.attributes());
     }
     /**
