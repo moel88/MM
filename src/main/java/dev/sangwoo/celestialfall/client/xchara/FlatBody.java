@@ -15,11 +15,11 @@ import net.minecraft.util.math.Vec3d;
  * through its own renderer, every layer asked of it the one colour (no texture, no light: the shape of whatever it is),
  * a little lighter where it faces up so its form still reads. No name is drawn over it meanwhile ({@link #drawing}).
  */
-final class FlatBody {
+public final class FlatBody {
     private FlatBody(){}
     private static boolean drawing;
     /** Whether a body is being drawn again as a flat silhouette now (no name over it then: EntityRenderer.render). */
-    static boolean drawing(){return drawing;}
+    public static boolean drawing(){return drawing;}
     /** Every layer asked of it is the one flat colour: a body drawn through it is its silhouette. */
     private static final class Flat implements VertexConsumerProvider,VertexConsumer {
         final VertexConsumer to;final int r,g,b,a;double x,y,z;float ny;
@@ -43,10 +43,10 @@ final class FlatBody {
      * about its middle (so it covers the body), into {@code immediate}'s debug quads (the caller draws them).
      */
     @SuppressWarnings({"unchecked","rawtypes"})
-    static void draw(MinecraftClient mc,MatrixStack m,VertexConsumerProvider.Immediate immediate,Vec3d cam,LivingEntity e,Vec3d at,float delta,int rgb,float swell){draw(mc,m,immediate,cam,e,at,delta,rgb,swell,1);}
+    public static void draw(MinecraftClient mc,MatrixStack m,VertexConsumerProvider.Immediate immediate,Vec3d cam,LivingEntity e,Vec3d at,float delta,int rgb,float swell){draw(mc,m,immediate,cam,e,at,delta,rgb,swell,1);}
     /** The same, as solid as {@code alpha} (2.137.0, X Chara the boss's silhouettes behind it). */
     @SuppressWarnings({"unchecked","rawtypes"})
-    static void draw(MinecraftClient mc,MatrixStack m,VertexConsumerProvider.Immediate immediate,Vec3d cam,LivingEntity e,Vec3d at,float delta,int rgb,float swell,float alpha){
+    public static void draw(MinecraftClient mc,MatrixStack m,VertexConsumerProvider.Immediate immediate,Vec3d cam,LivingEntity e,Vec3d at,float delta,int rgb,float swell,float alpha){
         var renderer=(EntityRenderer)mc.getEntityRenderDispatcher().getRenderer(e);
         double half=e.getHeight()*.5;
         m.push();

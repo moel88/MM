@@ -25,6 +25,8 @@ import net.minecraft.world.RaycastContext;
  */
 public final class HitStun {
     public static final Identifier PACKET=CelestialFall.id("botand_hitstun_v1");
+    /** (2.157.0) The reaction of one a perfect guard turned back (its "strike": viewers draw them recoiling, MotionClips.parried). */
+    public static final int PARRIED=9;
     /** A target held by a stand's barrage (Star Platinum's rush) where it stands until {@code until}. */
     private record Hold(LivingEntity attacker,LivingEntity target,long hitAt,long until,int strike) {}
     private static final Map<UUID,Hold> HELD=new HashMap<>();
@@ -75,6 +77,8 @@ public final class HitStun {
      */
     public static void standHold(LivingEntity attacker,LivingEntity target,int strike,long until) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld()))return;
+        // (2.157.0) not one untouchable from their evasive
+        if(CombatManager.untouchable(target))return;
         release(target.getUuid());
         if(!target.isAlive()||stoppedInTime(target))return;
         var h=new Hold(attacker,target,target.getWorld().getTime(),until,strike);
@@ -87,6 +91,14 @@ public final class HitStun {
      * it besides (its own screen showed the hold's notice, the others' its flinch, while time was stopped for it).
      */
     private static boolean stoppedInTime(LivingEntity target){return dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.stopped(target);}
+    /**
+     * (2.157.0) {@code target} turned back by {@code by}'s perfect guard until {@code until} (CombatManager.parry staggers
+     * them): every viewer draws them recoiling.
+     */
+    public static void parried(LivingEntity by,LivingEntity target,long until) {
+        if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld())||!target.isAlive()||HELD.containsKey(target.getUuid()))return;
+        react(by,target,PARRIED,target.getWorld().getTime(),until,false);
+    }
     /** Lets go of everyone a stand's barrage of {@code attacker} holds. */
     public static void releaseStand(UUID attacker) {
         for(var e:new ArrayList<>(HELD.entrySet()))if(e.getValue().attacker.getUuid().equals(attacker))release(e.getKey());

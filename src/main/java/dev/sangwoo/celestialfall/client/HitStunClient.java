@@ -27,7 +27,8 @@ public final class HitStunClient {
                 if(!MapClient.enabled()||mc.world==null||!mc.world.getRegistryKey().getValue().equals(dimension))return;
                 if(world!=mc.world){REACTIONS.clear();world=mc.world;}
                 if(until==0)REACTIONS.remove(target);
-                else if(strike>=1&&strike<=3) {
+                // (2.157.0: and one a perfect guard turned back, HitStun.PARRIED)
+                else if(strike>=1&&strike<=3||strike==HitStun.PARRIED) {
                     REACTIONS.put(target,new Reaction(attacker,entityId,until,hitAt,strike,held));
                     Entity e=mc.world.getEntityById(entityId);if(held&&e instanceof LivingEntity living&&e.getUuid().equals(target))HitStun.freeze(living);
                 }
@@ -42,7 +43,12 @@ public final class HitStunClient {
     }
     public static Reaction reaction(LivingEntity e){var r=REACTIONS.get(e.getUuid());return r!=null&&r.entityId==e.getId()&&r.until>e.getWorld().getTime()&&e.isAlive()?r:null;}
     /** Whether a barrage holds {@code e} where it stands now (a stagger only flinches it here). */
-    public static boolean stunned(LivingEntity e){if(!MapClient.enabled()||e.getWorld()!=world)return false;var r=reaction(e);return r!=null&&r.held();}
+    public static boolean stunned(LivingEntity e){
+        if(!MapClient.enabled()||e.getWorld()!=world)return false;
+        // (2.157.0) its own player under way with an evasive it predicted is out of the hold here at once (EngineClient)
+        if(e==MinecraftClient.getInstance().player&&dev.sangwoo.celestialfall.client.engine.EngineClient.evadingHere())return false;
+        var r=reaction(e);return r!=null&&r.held();
+    }
     public static boolean localStunned(){var p=MinecraftClient.getInstance().player;return p!=null&&stunned(p);}
     public static boolean aimCapturedTarget() {
         var mc=MinecraftClient.getInstance();if(!MapClient.enabled()||mc.player==null||mc.world==null||localStunned())return false;

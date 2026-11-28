@@ -151,7 +151,7 @@ public final class XCharaPull {
         }
     }
     /** Whether something else holds {@code t} where they are now (a cutscene, stopped time, another's hold, a formation's sword under them): they are not pulled out of it. */
-    static boolean caught(LivingEntity t){
+    public static boolean caught(LivingEntity t){
         if(StarPlatinumBeatdown.involved(t)||StarPlatinumTimeStop.stopped(t)||StarPlatinumTimeStop.holds(t)||XCharaUltimate.held(t)||XCharaClone.involved(t))return true;
         if(dev.sangwoo.celestialfall.isosang.IsosangAttack.casting(t)||dev.sangwoo.celestialfall.isosang.IsosangAttack.finaling(t))return true;
         if(t instanceof PlayerEntity q&&(dev.sangwoo.celestialfall.AtomicManager.immobilized(q)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(q)))return true;

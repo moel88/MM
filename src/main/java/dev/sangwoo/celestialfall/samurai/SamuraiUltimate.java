@@ -183,6 +183,8 @@ public final class SamuraiUltimate {
         if(e==p||!e.isAlive()||e.isRemoved()||e.isSpectator()||!e.canHit()||e.getWorld()!=p.getWorld())return false;
         if(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity||e instanceof dev.sangwoo.celestialfall.stand.GoldFlyEntity||e instanceof dev.sangwoo.celestialfall.stand.GoldTreeEntity)return false;
         if(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other))return false;
+        // (2.157.0) nor one untouchable from their evasive
+        if(dev.sangwoo.celestialfall.combat.CombatManager.untouchable(e))return false;
         Vec3d eye=p.getEyePos(),chest=e.getPos().add(0,e.getHeight()*.55,0);
         if(eye.squaredDistanceTo(chest)>range*range)return false;
         if(p.getWorld().raycast(new RaycastContext(eye,chest,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p)).getType()!=HitResult.Type.MISS)return false;

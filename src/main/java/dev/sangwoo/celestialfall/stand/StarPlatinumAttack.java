@@ -372,7 +372,8 @@ public final class StarPlatinumAttack {
             for(var e:way){
                 if(CombatManager.breakGuard(e,HEAVY_BREAK))broke.add(e);
                 // (2.94.0) Lee So-sang's H's dodge keeps its blow from her, as any other's (IsosangAttack.dodges): no cutscene
-                else if(!e.isInvulnerableTo(source)&&!dev.sangwoo.celestialfall.isosang.IsosangAttack.dodges(e,source)&&StarPlatinumBeatdown.begin(p,e,s.start,s.yaw)){
+                // (2.157.0) nor reaches one untouchable from their evasive
+                else if(!e.isInvulnerableTo(source)&&!dev.sangwoo.celestialfall.combat.CombatManager.untouchable(e)&&!dev.sangwoo.celestialfall.isosang.IsosangAttack.dodges(e,source)&&StarPlatinumBeatdown.begin(p,e,s.start,s.yaw)){
                     struck.add(e);p.onAttacking(e);
                     // it lands without harm (the cutscene's blows deal it): a hit all the same (2.108.0), and the count is held
                     // open through the cutscene's words to its landing (the uppercut comes some 4 s on)
@@ -404,13 +405,10 @@ public final class StarPlatinumAttack {
                 if(!heavy)HitStun.stagger(p,e,combo,Stagger.stand(combo,s.start,now));
                 Vec3d fly=f.multiply(heavy?FLY_HEAVY:FLY).add(0,heavy?FLY_HEAVY_UP:FLY_UP,0);
                 // one stopped in a time stop (2.67.0) is thrown as time moves again, with whatever else came to them
-                if(!StarPlatinumTimeStop.deferLaunch(e,fly)){
-                    e.setVelocity(fly);e.velocityModified=true;
-                    // the heavy punch tells a struck player's client of it once, through the tracker (velocityModified):
-                    // the finisher sends it here as well, a tick before the tracker does, and a client that moves between
-                    // the two is thrown twice (2.56.0's check: 11 or 20 blocks)
-                    if(!heavy&&e instanceof ServerPlayerEntity other)other.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(other));
-                }
+                // told a struck player's client once, through the tracker (2.157.0, the engine's Launch): till then the
+                // finisher sent it here as well, a tick before the tracker did, and a client that moved between the two
+                // was thrown twice (2.56.0's check: 11 or 20 blocks; the heavy punch has always sent it once)
+                dev.sangwoo.celestialfall.engine.Launch.at(e,fly);
             }else HitStun.stagger(p,e,combo,Stagger.stand(combo,s.start,now));
             // (until 2.68.0 the first three held them where they stood until the next punch had time to land: they are
             // staggered now, a tenth of their speed and nothing else for as long, Stagger)

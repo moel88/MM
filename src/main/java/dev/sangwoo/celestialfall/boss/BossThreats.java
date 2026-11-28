@@ -180,13 +180,25 @@ public final class BossThreats {
             default->{}
         }
     }
-    /** A bare hand's swing (CombatManager): a ray of 3.15 blocks from the eye along the look. */
+    /**
+     * A bare hand's swing (CombatManager), read off the move the combat engine runs (2.157.0, Moves.BARE): its hit's tick,
+     * shape, harm and whether a guard takes it. (Every move moved onto the engine is read this one way.)
+     */
     private static void bare(ServerPlayerEntity p,long now,List<Threat> out){
         var s=CombatManager.peek(p);
-        if(s==null||s.attack<1||s.hitDone)return;
-        long hit=s.attackStart+CombatState.WINDUP[s.attack];
+        if(s==null||s.attack<1||s.attack>dev.sangwoo.celestialfall.engine.Moves.BARE.size()||s.hitDone)return;
+        var move=dev.sangwoo.celestialfall.engine.Moves.BARE.move(s.attack);var first=move.first();if(first==null)return;
+        long hit=s.attackStart+first.tick();
         if(now>hit)return;
-        out.add(new Threat(p,"bare"+s.attack,s.attackStart,hit,hit,Zone.lane(p.getPos(),MathHelper.wrapDegrees(p.getYaw()),-.2,3.3,.55,-.6,2.6),true,false,false,CombatState.DAMAGE[s.attack],false,false));
+        out.add(new Threat(p,move.id,s.attackStart,hit,hit,zone(first.shape(),p),first.guard()==dev.sangwoo.celestialfall.engine.Move.Guard.BLOCKABLE,false,false,first.damage(),false,false));
+    }
+    /** The ground a move's shape covers for {@code p} as they stand now (a ray: a lane a little longer and as wide as a body and its pad). */
+    static Zone zone(dev.sangwoo.celestialfall.engine.Hitbox shape,ServerPlayerEntity p){
+        float yaw=MathHelper.wrapDegrees(p.getYaw());
+        if(shape instanceof dev.sangwoo.celestialfall.engine.Hitbox.Ray r)return Zone.lane(p.getPos(),yaw,-.2,r.reach()+.15,r.pad()+.41,-.6,2.6);
+        if(shape instanceof dev.sangwoo.celestialfall.engine.Hitbox.Lane l)return Zone.lane(p.getPos(),yaw,l.fwdMin(),l.fwdMax(),l.half(),l.low(),l.high());
+        var b=(dev.sangwoo.celestialfall.engine.Hitbox.Sphere)shape;
+        return Zone.ring(p.getPos().add(Vec3d.fromPolar(0,yaw).multiply(b.forward())),b.radius(),b.up()-b.radius(),b.up()+b.radius());
     }
     /** Kageno's casts that can be got out of the way of once begun (R's and H's take whom they take as they begin). */
     private static void kageno(ServerPlayerEntity p,long now,List<Threat> out){

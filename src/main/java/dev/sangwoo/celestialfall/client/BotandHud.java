@@ -18,7 +18,9 @@ public final class BotandHud {
         float guard=BotandHudLayout.guard(state.pressure(),broken);
         // (incapacitated, 2.60.0: its word over the guard bar, as BREAK over a broken guard)
         // (2.134.0: glitched by X Chara's great X slash, "가드 불가" over it while no guard can be raised)
-        var layout=BotandHudLayout.frame(mc.player.getHealth(),mc.player.getMaxHealth(),guard,ProgressClient.profile,broken,state.disabled(mc.world.getTime()+delta),state.sealed(mc.world.getTime()+delta));
+        // (2.157.0: PERFECT over it for a moment after a perfect guard, DefenseFx)
+        var layout=BotandHudLayout.frame(mc.player.getHealth(),mc.player.getMaxHealth(),guard,ProgressClient.profile,broken,state.disabled(mc.world.getTime()+delta),state.sealed(mc.world.getTime()+delta),
+            dev.sangwoo.celestialfall.client.engine.DefenseFx.perfectAgo(delta)<.8f);
         // Keep all artwork, bars and labels behind vanilla debug text in depth as well as order.
         var matrix=c.getMatrices();matrix.push();matrix.translate(8,8,-20);
         float scale=(float)(BotandHudLayout.width(c.getScaledWindowWidth())/BotandHudLayout.WIDTH);matrix.scale(scale,scale,1);

@@ -24,11 +24,20 @@ public final class CombatClient {
      * blow staggers them (Stagger).
      */
     public record Snapshot(int serial,int attack,long attackStart,boolean guard,float pressure,long brokenUntil,long dashStart,long dashReady,float forward,float side,long combatUntil,
-                           long brokenAt,long disabledUntil,long disabledAt,long staggerUntil,long sealedUntil) {
+                           long brokenAt,long disabledUntil,long disabledAt,long staggerUntil,long sealedUntil,
+                           long guardUpAt,long perfectAt,long evadeStart,long evadeReady,float evadeForward,float evadeSide,int ackSeq,boolean ackOk) {
         /** As before 2.60.0: the guard broken for BREAK_TICKS, never incapacitated. */
         public Snapshot(int serial,int attack,long attackStart,boolean guard,float pressure,long brokenUntil,long dashStart,long dashReady,float forward,float side,long combatUntil){
             this(serial,attack,attackStart,guard,pressure,brokenUntil,dashStart,dashReady,forward,side,combatUntil,brokenUntil-CombatState.BREAK_TICKS,0,-1000,0,0);
         }
+        /** As before 2.157.0: no perfect guard or evasive, no input answered. */
+        public Snapshot(int serial,int attack,long attackStart,boolean guard,float pressure,long brokenUntil,long dashStart,long dashReady,float forward,float side,long combatUntil,
+                        long brokenAt,long disabledUntil,long disabledAt,long staggerUntil,long sealedUntil){
+            this(serial,attack,attackStart,guard,pressure,brokenUntil,dashStart,dashReady,forward,side,combatUntil,brokenAt,disabledUntil,disabledAt,staggerUntil,sealedUntil,-1000,-1000,-1000,0,-1,0,-1,false);
+        }
+        /** (2.157.0) Under way with the evasive's dash (Defense). */
+        public boolean evading(double now){return now>=evadeStart&&now<evadeStart+dev.sangwoo.celestialfall.engine.Defense.EVADE_TICKS;}
+        public float evadeAge(double now){return (float)(now-evadeStart);}
         /** (2.134.0) Glitched by X Chara's great X slash: no guard can be raised. */
         public boolean sealed(double now){return now<sealedUntil;}
         public boolean broken(double now){return now<brokenUntil;}
@@ -41,7 +50,7 @@ public final class CombatClient {
         public float attackAge(double now){return (float)(now-attackStart);}
         public float dashAge(double now){return (float)(now-dashStart);}
     }
-    public static final Snapshot EMPTY=new Snapshot(0,0,-1000,false,0,0,-1000,0,1,0,0,-1000,0,-1000,0,0);
+    public static final Snapshot EMPTY=new Snapshot(0,0,-1000,false,0,0,-1000,0,1,0,0,-1000,0,-1000,0,0,-1000,-1000,-1000,0,-1,0,-1,false);
     private static final Map<UUID,Snapshot> STATES=new HashMap<>();
     private static final Map<UUID,Movement> MOVEMENT=new HashMap<>();
     private static final class Movement {
@@ -76,21 +85,42 @@ public final class CombatClient {
             long staggerUntil=b.readableBytes()>=8?b.readLong():0;
             // 2.134.0: until when they are glitched and can raise no guard (a server before it sends none)
             long sealedUntil=b.readableBytes()>=8?b.readLong():0;
-            Snapshot s=new Snapshot(serial,attack,attackStart,guard,pressure,brokenUntil,dashStart,dashReady,forward,side,combatUntil,brokenAt,disabledUntil,disabledAt,staggerUntil,sealedUntil);
-            mc.execute(()->{if(MapClient.enabled()&&mc.world!=null&&mc.world.getRegistryKey().getValue().equals(dimension))STATES.put(id,s);});
+            // 2.157.0: the engine's: the guard's going up and its perfect window, the evasive, the last input answered
+            boolean engine=b.readableBytes()>=8*4+4*2+4+1;
+            long guardUpAt=engine?b.readLong():-1000,perfectAt=engine?b.readLong():-1000,evadeStart=engine?b.readLong():-1000,evadeReady=engine?b.readLong():0;
+            float evadeForward=engine?b.readFloat():-1,evadeSide=engine?b.readFloat():0;int ackSeq=engine?b.readInt():-1;boolean ackOk=engine&&b.readBoolean();
+            Snapshot s=new Snapshot(serial,attack,attackStart,guard,pressure,brokenUntil,dashStart,dashReady,forward,side,combatUntil,brokenAt,disabledUntil,disabledAt,staggerUntil,sealedUntil,
+                guardUpAt,perfectAt,evadeStart,evadeReady,evadeForward,evadeSide,ackSeq,ackOk);
+            mc.execute(()->{
+                if(!MapClient.enabled()||mc.world==null||!mc.world.getRegistryKey().getValue().equals(dimension))return;
+                STATES.put(id,s);
+                // (2.157.0) its own player's: the prediction checks itself against it
+                if(mc.player!=null&&mc.player.getUuid().equals(id))dev.sangwoo.celestialfall.client.engine.EngineClient.server(s);
+            });
         });
         ClientTickEvents.END_CLIENT_TICK.register(CombatClient::tick);
+        // (2.157.0) the prediction's own turns and the dash or evasive it runs, before the player moves
+        ClientTickEvents.START_CLIENT_TICK.register(dev.sangwoo.celestialfall.client.engine.EngineClient::tick);
         ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->clear());
         HudRenderCallback.EVENT.register(CombatClient::hud);
     }
-    public static void clear(){STATES.clear();MOVEMENT.clear();DASH_INPUT.clear();guardHeld=false;world=null;PoseBlend.clear();}
+    public static void clear(){STATES.clear();MOVEMENT.clear();DASH_INPUT.clear();guardHeld=false;world=null;PoseBlend.clear();dev.sangwoo.celestialfall.client.engine.EngineClient.clear();}
     public static void dashKey(long window,int key,int scanCode,int action) {
         var mc=MinecraftClient.getInstance();
         if(DASH==null||window!=mc.getWindow().getHandle()||!DASH.matchesKey(key,scanCode))return;
         if(action==GLFW.GLFW_PRESS||action==GLFW.GLFW_RELEASE)
-            DASH_INPUT.key(action==GLFW.GLFW_PRESS,combatInput());
+            DASH_INPUT.key(action==GLFW.GLFW_PRESS,dashInput());
     }
-    public static Snapshot snapshot(UUID id){return STATES.getOrDefault(id,EMPTY);}
+    /**
+     * The server's last word of this player's combat state. (2.157.0) This client's own player's is its prediction of
+     * what they do themselves over the server's (EngineClient.merged): their punch, guard, dash and evasive from the
+     * frame they press.
+     */
+    public static Snapshot snapshot(UUID id){
+        var s=STATES.getOrDefault(id,EMPTY);
+        var mc=MinecraftClient.getInstance();
+        return mc.player!=null&&mc.player.getUuid().equals(id)&&MapClient.enabled()?dev.sangwoo.celestialfall.client.engine.EngineClient.merged(s):s;
+    }
     /** The server's guard or guard-break slowdown is on this player's speed (it arrives and leaves a tick or two after the guard flag). */
     public static boolean slowed(net.minecraft.entity.player.PlayerEntity p){
         var speed=p.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED);
@@ -110,6 +140,17 @@ public final class CombatClient {
         if(dev.sangwoo.celestialfall.client.integration.CinematicsBridge.active())return false;
         var mc=MinecraftClient.getInstance();return mc.player!=null&&mc.world!=null&&connected()&&mc.currentScreen==null&&!CinematicDirector.isActive()&&!actionLocked()&&mc.player.isAlive()&&!mc.player.isSpectator();
     }
+    /**
+     * Whether the dash key goes through now (2.157.0): as every combat key, or, held by a combo or a blow, as the evasive
+     * (EngineClient.evades: not in a cutscene or dead, the rest the server checks).
+     */
+    public static boolean dashInput() {
+        if(combatInput())return true;
+        if(dev.sangwoo.celestialfall.client.integration.CinematicsBridge.active())return false;
+        var mc=MinecraftClient.getInstance();
+        return mc.player!=null&&mc.world!=null&&connected()&&mc.currentScreen==null&&!CinematicDirector.isActive()&&mc.player.isAlive()&&!mc.player.isSpectator()
+            &&!DeathView.active()&&dev.sangwoo.celestialfall.client.engine.EngineClient.evades();
+    }
     public static boolean punch() {
         var mc=MinecraftClient.getInstance();
         if(!combatInput()||!CombatManager.bare(mc.player))return false;
@@ -118,27 +159,28 @@ public final class CombatClient {
             BotandCamera.aim();
             // Rotation is sent before the custom attack so its contact uses the same aim.
             mc.player.networkHandler.sendPacket(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.LookAndOnGround(mc.player.getYaw(),mc.player.getPitch(),mc.player.isOnGround()));
-            send(0,0,0);lastPunch=ticks;
+            // (2.157.0) the punch starts here at once and goes to the server with its number (EngineClient)
+            dev.sangwoo.celestialfall.client.engine.EngineClient.attack();lastPunch=ticks;
         }
         return true;
     }
-    private static void send(int action,int a,int b) {if(!connected())return;var buffer=PacketByteBufs.create();buffer.writeByte(action);buffer.writeByte(a);buffer.writeByte(b);ClientPlayNetworking.send(CombatManager.INPUT,buffer);}
     private static void tick(MinecraftClient mc) {
         if(!MapClient.enabled()){clear();return;}
         if(world!=mc.world){clear();world=mc.world;}
         ticks++;
         boolean pressed=combatInput()&&GUARD.isPressed();
-        if(pressed!=guardHeld||pressed&&ticks%5==0) {
-            if(pressed){BotandCamera.aim();sendLook();}
-            send(pressed?1:2,0,0);
-        }
+        // (2.157.0) the guard goes up here at once (EngineClient); sent as it changes and every few ticks while held, as before
+        boolean sendGuard=pressed!=guardHeld||pressed&&ticks%5==0;
+        if(sendGuard&&pressed){BotandCamera.aim();sendLook();}
+        if(connected())dev.sangwoo.celestialfall.client.engine.EngineClient.guard(pressed,sendGuard);
         guardHeld=pressed;
         boolean dashQueued=false;while(DASH.wasPressed())dashQueued=true;
-        if(DASH_INPUT.consume(DASH.isPressed(),dashQueued,combatInput()&&!mc.isPaused())) {
+        // (2.157.0: held by a combo or a blow, the dash key is the evasive, dashInput)
+        if(DASH_INPUT.consume(DASH.isPressed(),dashQueued,dashInput()&&!mc.isPaused())) {
             if(BotandCamera.controls()) {
                 BotandCamera.faceCamera();sendLook();
-                send(3,(mc.options.forwardKey.isPressed()?1:0)-(mc.options.backKey.isPressed()?1:0),(mc.options.leftKey.isPressed()?1:0)-(mc.options.rightKey.isPressed()?1:0));
-            } else send(3,(int)Math.signum(mc.player.input.movementForward),(int)Math.signum(mc.player.input.movementSideways));
+                dev.sangwoo.celestialfall.client.engine.EngineClient.dash((mc.options.forwardKey.isPressed()?1:0)-(mc.options.backKey.isPressed()?1:0),(mc.options.leftKey.isPressed()?1:0)-(mc.options.rightKey.isPressed()?1:0));
+            } else dev.sangwoo.celestialfall.client.engine.EngineClient.dash((int)Math.signum(mc.player.input.movementForward),(int)Math.signum(mc.player.input.movementSideways));
         }
         if(combatInput()&&mc.options.attackKey.isPressed()&&ticks-lastPunch>=4)punch();
         if(mc.isPaused())return;
@@ -194,6 +236,8 @@ public final class CombatClient {
         if(s.broken(now))return "broken";
         // (2.124.0: one held by X Chara's jab stands as they are under its X, not dazed)
         if(s.disabled(now)&&!dev.sangwoo.celestialfall.client.xchara.CorruptionJab.marked(p.getId()))return "dazed"+s.disabledAt();
+        // (2.157.0) the evasive's dash
+        if(s.evading(now))return "evade"+s.evadeStart();
         if(s.dashAge(now)>=0&&s.dashAge(now)<CombatState.DASH_TICKS)return "dash"+s.dashStart();
         if(s.attack>0&&s.attack<=4&&s.attackAge(now)>=0&&s.attackAge(now)<CombatState.DURATION[s.attack])return "attack"+s.attackStart();
         return "base";
@@ -201,12 +245,14 @@ public final class CombatClient {
     /** Ticks to fade into a state: a flinch lands at once, a punch or dash quickly, anything else gently. */
     public static float fade(Object state) {
         String s=String.valueOf(state);
-        return s.startsWith("hit")?1.2f:s.startsWith("dash")||s.startsWith("attack")?1.6f:3;
+        return s.startsWith("hit")?1.2f:s.startsWith("dash")||s.startsWith("evade")||s.startsWith("attack")?1.6f:3;
     }
     public static MotionPose pose(AbstractClientPlayerEntity p,float delta) {
         Movement m=MOVEMENT.get(p.getUuid());Snapshot s=snapshot(p.getUuid());double now=p.getWorld().getTime()+delta;
         if(m==null)m=new Movement();
         var reaction=HitStunClient.reaction(p);
+        // (2.157.0) turned back by a perfect guard: recoiling
+        if(reaction!=null&&reaction.strike()==HitStun.PARRIED)return MotionClips.parried((float)(now-reaction.hitAt()),(float)(reaction.until()-now));
         if(reaction!=null)return MotionClips.hitReaction((float)(now-reaction.hitAt()),reaction.strike());
         // (2.105.0) Lee So-sang stands at rest in her own stance in a fight too (IsosangIdle), not in the fists-up one;
         // (2.116.0) and X Chara in theirs, at attention (XCharaIdle)
@@ -237,6 +283,8 @@ public final class CombatClient {
             for(int i=0;i<2;i++)dazed.knee[i]=MathHelper.lerp(m.amount,dazed.knee[i],base.knee[i]);
             return dazed;
         }
+        // (2.157.0) the evasive: the dash's flight, quicker (its six ticks over the dash's seven)
+        if(s.evading(now))return MotionClips.dash(s.evadeAge(now)*CombatState.DASH_TICKS/dev.sangwoo.celestialfall.engine.Defense.EVADE_TICKS,s.evadeForward(),s.evadeSide());
         if(s.dashAge(now)>=0&&s.dashAge(now)<CombatState.DASH_TICKS)return MotionClips.dash(s.dashAge(now),s.forward,s.side);
         if(s.attack>0&&s.attack<=4&&s.attackAge(now)>=0&&s.attackAge(now)<CombatState.DURATION[s.attack]) {
             MotionPose attack=MotionClips.attack(s.attack,s.attackAge(now));

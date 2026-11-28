@@ -21,9 +21,17 @@ import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.*;
 import net.minecraft.world.RaycastContext;
 
-/** Validates input and traces each strike at its contact frame. Clients never select damage or targets. */
+/**
+ * Validates input and traces each strike at its contact frame. Clients never select damage or targets.
+ * <p>
+ * (2.157.0) The combat engine's runtime for the actions everyone has: its input ({@code engine_input_v1}: the action,
+ * its number, the world time the client showed), bare hands' strikes judged as the striker saw their targets (Rewind),
+ * the perfect guard and the evasive (Defense), throws told once (Launch). The client predicts its own player by the
+ * same combat state (EngineClient) and checks itself against the state this sends back, with the number of the last
+ * input gone through.
+ */
 public final class CombatManager {
-    public static final Identifier INPUT=CelestialFall.id("botand_input_v1"), STATE=CelestialFall.id("botand_state_v1");
+    public static final Identifier INPUT=dev.sangwoo.celestialfall.engine.EngineNet.INPUT, STATE=CelestialFall.id("botand_state_v1");
     public static final RegistryKey<DamageType> UNARMED=RegistryKey.of(RegistryKeys.DAMAGE_TYPE,CelestialFall.id("unarmed"));
     /**
      * The guard's, the guard break's and (2.60.0) an incapacitating blow's slowdown on the movement speed (the client
@@ -47,10 +55,10 @@ public final class CombatManager {
     private CombatManager() {}
     public static void initialize() {
         ServerPlayNetworking.registerGlobalReceiver(INPUT,(server,player,handler,buf,response)->{
-            if(buf.readableBytes()!=3)return;
-            int action=buf.readUnsignedByte(),a=buf.readByte(),b=buf.readByte();
-            if(action>3||Math.abs(a)>1||Math.abs(b)>1)return;
-            server.execute(()->input(player,action,a,b));
+            if(buf.readableBytes()!=dev.sangwoo.celestialfall.engine.EngineNet.INPUT_BYTES)return;
+            int action=buf.readUnsignedByte(),seq=buf.readUnsignedShort();long clientTick=buf.readLong();int a=buf.readByte(),b=buf.readByte();
+            if(action>dev.sangwoo.celestialfall.engine.EngineNet.EVADE||Math.abs(a)>1||Math.abs(b)>1)return;
+            server.execute(()->input(player,action,seq,clientTick,a,b));
         });
         AttackEntityCallback.EVENT.register((player,world,hand,entity,hit)->{
             // (2.110.0) off the map, or in one's vanilla mode (VanillaMode): Minecraft's own attack
@@ -77,14 +85,15 @@ public final class CombatManager {
                 return ActionResult.FAIL;
             }
             if(hand==Hand.MAIN_HAND&&bare(player)&&!player.isSpectator()) {
-                if(player instanceof ServerPlayerEntity p)input(p,0,0,0);
+                // (Minecraft's own attack: the engine's input carries the press; this one is judged as things stand)
+                if(player instanceof ServerPlayerEntity p)input(p,dev.sangwoo.celestialfall.engine.EngineNet.ATTACK,-1,-1,0,0);
                 return ActionResult.FAIL;
             }
             return ActionResult.PASS;
         });
         ServerTickEvents.END_SERVER_TICK.register(CombatManager::tick);
-        ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->{HitStun.disconnect(handler.player.getUuid());STATES.remove(handler.player.getUuid());RUN_AFTER.remove(handler.player.getUuid());});
-        ServerLifecycleEvents.SERVER_STOPPED.register(server->{STATES.clear();HitStun.clear();RUN_AFTER.clear();MOB_SLOWS.clear();MOB_STAGGERS.clear();});
+        ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->{HitStun.disconnect(handler.player.getUuid());STATES.remove(handler.player.getUuid());RUN_AFTER.remove(handler.player.getUuid());dev.sangwoo.celestialfall.engine.EngineDebug.leave(handler.player.getUuid());dev.sangwoo.celestialfall.engine.EngineLag.set(handler.player.getUuid(),0);});
+        ServerLifecycleEvents.SERVER_STOPPED.register(server->{STATES.clear();HitStun.clear();RUN_AFTER.clear();MOB_SLOWS.clear();MOB_STAGGERS.clear();dev.sangwoo.celestialfall.engine.Rewind.clear();dev.sangwoo.celestialfall.engine.EngineDebug.clear();});
     }
     /** A sprint packet the action lock dropped ({@code start}) or any stop: the latest wish to run is kept for when the lock ends. */
     public static void runRequest(ServerPlayerEntity p,boolean start){if(start)RUN_AFTER.add(p.getUuid());else RUN_AFTER.remove(p.getUuid());}
@@ -127,14 +136,27 @@ public final class CombatManager {
         return e==null||e.entityId!=p.getId()||!e.dimension.equals(p.getWorld().getRegistryKey().getValue())?null:e.state;
     }
     /** A boss's guard key (2.69.0, BossBrain): up while {@code hold} is sent at least every 16 ticks, down when it is not. */
-    public static boolean guardInput(ServerPlayerEntity p,boolean hold) {
+    public static boolean guardInput(ServerPlayerEntity p,boolean hold) {return guardInput(p,hold,false);}
+    /**
+     * As {@link #guardInput(ServerPlayerEntity,boolean)}; {@code perfect}: a guard going up now opens a perfect window
+     * (2.157.0, Defense: a boss raises its guard as a blow comes, and chooses when it means to take it perfectly).
+     */
+    public static boolean guardInput(ServerPlayerEntity p,boolean hold,boolean perfect) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
         var s=state(p);long now=p.getWorld().getTime();
         if(!hold){if(s.guard(false,now))sync(p,s);return false;}
         if(!valid(p)||p.isUsingItem())return false;
-        if(s.guard(true,now))sync(p,s);
+        if(s.guard(true,now,perfect))sync(p,s);
         return s.guarding;
     }
+    /** A boss's evasive (2.157.0, BossBrain): as a client's, {@code forward} along the way it faces and {@code side} to its left. */
+    public static boolean evadeInput(ServerPlayerEntity p,float forward,float side) {
+        if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
+        var s=state(p);long now=p.getWorld().getTime();
+        return evade(p,s,now,forward,side,false);
+    }
+    /** (2.157.0) Whether a boss's evasive is ready (its own cooldown; what holds it is checked as it is called). */
+    public static boolean evadeReady(ServerPlayerEntity p){var e=STATES.get(p.getUuid());return e==null||p.getWorld().getTime()>=e.state.evadeReady;}
     /**
      * A boss's dash (2.69.0, BossBrain): {@code forward} along the way it faces and {@code side} to its left (a client's
      * dash keys give -1, 0 or 1 of each; any mix of the two goes, as the dash makes it one way).
@@ -164,7 +186,8 @@ public final class CombatManager {
         // (2.109.0) glowing before a skill with a cutscene is cast (CutsceneGlow): they may only walk
         if(CutsceneGlow.glowing(p))return true;
         var e=STATES.get(p.getUuid());if(e==null)return false;
-        long n=p.getWorld().getTime();return e.state.locked(n)||e.state.attacking(n)||e.state.dashing(n)||e.state.guarding;
+        // (2.157.0: and the evasive's dash)
+        long n=p.getWorld().getTime();return e.state.locked(n)||e.state.attacking(n)||e.state.dashing(n)||e.state.evading(n)||e.state.guarding;
     }
     public static boolean actionLocked(PlayerEntity p) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
@@ -186,6 +209,26 @@ public final class CombatManager {
         var e=STATES.get(p.getUuid());return e!=null&&e.entityId==p.getId()&&e.dimension.equals(p.getWorld().getRegistryKey().getValue())&&e.state.locked(p.getWorld().getTime());
     }
     /**
+     * (2.157.0) Whether {@code e} is untouchable from its evasive now (Defense.EVADE_SAFE): no blow lands on it, and no
+     * stagger, incapacitation, slow or hold takes it. Only players and bosses have one.
+     */
+    public static boolean untouchable(LivingEntity e) {
+        if(!(e instanceof ServerPlayerEntity p)||!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
+        var x=STATES.get(p.getUuid());return x!=null&&x.entityId==p.getId()&&x.state.untouchable(p.getWorld().getTime());
+    }
+    /**
+     * (2.157.0) Whether {@code p} may get out by the evasive, as far as what the combat state does not know of goes:
+     * on the map, alive and free to move, and not held by a cutscene, a grab or stopped time (XCharaPull.caught: a
+     * beatdown, a time stop, an ultimate, a clone's throw, a Kageno hold, a stand arrow), Star Platinum's inhale, nor
+     * with their soul out of their body (Gold Experience's overdrive: "본체는 아무것도 못하고"). What the combat state
+     * holds them by (a stagger, an incapacitation, a broken guard) and a barrage's hold it may get them out of.
+     */
+    public static boolean evadeValid(ServerPlayerEntity p) {
+        return dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld())&&p.isAlive()&&!p.isSpectator()&&!p.hasVehicle()&&!p.isSleeping()&&!p.isFallFlying()
+            &&!cinematic(p)&&!dev.sangwoo.celestialfall.xchara.XCharaPull.caught(p)&&!dev.sangwoo.celestialfall.stand.StarPlatinumInhale.held(p)
+            &&!dev.sangwoo.celestialfall.stand.GoldExperienceOverdrive.out(p);
+    }
+    /**
      * Incapacitates whoever a blow struck (2.60.0: Star Platinum's Star Finger, user request: "맞추면 2초 95% 슬로우 +
      * 3초 동안 대쉬 평타 포함 아무 스킬도 사용 못함(무력화)"): for {@code ticks} they can use no skill and neither attack,
      * dash nor guard, and for {@code slowTicks} they walk {@code slow} slower (0.95: a twentieth of their speed), the
@@ -195,6 +238,8 @@ public final class CombatManager {
      */
     public static void incapacitate(LivingEntity target,int ticks,int slowTicks,double slow) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld())||!target.isAlive())return;
+        // (2.157.0) not one untouchable from their evasive
+        if(untouchable(target))return;
         // stopped in Star Platinum's stopped time (2.67.0): it comes to them as time moves again
         if(dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.deferIncapacitate(target,ticks,slowTicks,slow))return;
         if(target instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity dummy){dummy.incapacitate(ticks,slowTicks,slow);return;}
@@ -222,6 +267,7 @@ public final class CombatManager {
      */
     public static void slow(LivingEntity target,int ticks,double slow) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld())||!target.isAlive()||ticks<=0||slow<=0)return;
+        if(untouchable(target))return;
         if(target instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity)return;
         long now=target.getWorld().getTime();
         if(!(target instanceof ServerPlayerEntity p)) {
@@ -245,11 +291,17 @@ public final class CombatManager {
      * doing is cut off as an incapacitation cuts it off. A training dummy stands still as long; a mob does nothing and
      * walks as slowly.
      */
-    public static void stagger(LivingEntity target,long until) {
+    public static void stagger(LivingEntity target,long until) {stagger(target,until,true);}
+    /**
+     * As {@link #stagger(LivingEntity,long)}; {@code poise}: a boss held long enough lately may shrug it off (not when a
+     * perfect guard turns it back, 2.157.0).
+     */
+    private static void stagger(LivingEntity target,long until,boolean poise) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld())||!target.isAlive())return;
         long now=target.getWorld().getTime();if(until<=now)return;
+        if(untouchable(target))return;
         // a boss held down long enough lately shrugs it off for a moment (2.69.0, BossRules.Poise)
-        if(dev.sangwoo.celestialfall.boss.Bosses.shrugsStagger(target))return;
+        if(poise&&dev.sangwoo.celestialfall.boss.Bosses.shrugsStagger(target))return;
         // stopped in Star Platinum's stopped time (2.67.0): it comes to them as time moves again
         if(dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.deferStagger(target,(int)(until-now)))return;
         if(target instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity dummy){dummy.stagger(until,Stagger.SLOW);return;}
@@ -319,22 +371,83 @@ public final class CombatManager {
     }
     public static void interrupt(LivingEntity target) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld()))return;
+        if(untouchable(target))return;
         if(target instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity dummy){dummy.interruptCombat();return;}
         if(!(target instanceof ServerPlayerEntity p))return;
         long now=p.getWorld().getTime();var s=state(p);s.cancel(now);s.combatUntil=now+100;sync(p,s);
     }
-    private static void input(ServerPlayerEntity p,int action,int a,int b) {
+    /**
+     * (2.157.0) Turns back whoever a perfect guard of {@code by}'s took a blow from (Defense): staggered
+     * Defense.PARRY_TICKS, what they were doing cut off, a boss's poise no help; every viewer draws them recoiling.
+     */
+    public static void parry(LivingEntity striker,LivingEntity by) {
+        if(!dev.sangwoo.celestialfall.map.MapGate.enabled(striker.getWorld())||!striker.isAlive())return;
+        long until=striker.getWorld().getTime()+dev.sangwoo.celestialfall.engine.Defense.PARRY_TICKS;
+        stagger(striker,until,false);
+        if(!untouchable(striker)&&!dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.stopped(striker))HitStun.parried(by,striker,until);
+    }
+    /**
+     * The client's input (2.157.0: the engine's): {@code action} (EngineNet), its number {@code seq} (-1: none, Minecraft's
+     * own attack), the world time its client showed as it was pressed ({@code clientTick}, -1 none: for the lag
+     * compensation), and the two ways pressed for a dash or evasive. The client hears back how it went: the state with
+     * the number of this input.
+     */
+    private static void input(ServerPlayerEntity p,int action,int seq,long clientTick,int a,int b) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld())){leave(p);return;}
         var s=state(p);long now=p.getWorld().getTime();
-        if(action==2) { if(s.guard(false,now))sync(p,s);return; }
-        if(!valid(p)||p.isUsingItem())return;
-        if(action==0 && bare(p) && s.requestAttack(now)) { p.resetLastAttackedTicks();swing(p,s);sync(p,s); }
-        else if(action==1 && s.guard(true,now))sync(p,s);
-        else if(action==3 && !p.isTouchingWater()&&s.dash(now,a,b)) {
-            s.dashYaw=p.getYaw();p.setSprinting(false);sound(p,SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP,.35f,1.25f);sync(p,s);
+        boolean changed=act(p,s,now,action,clientTick,a,b);
+        if(seq>=0){
+            s.ackSeq=seq;
+            // whether it went through: a press kept counts; a guard asked for is as asked
+            s.ackOk=action==dev.sangwoo.celestialfall.engine.EngineNet.GUARD_UP?s.guarding:action==dev.sangwoo.celestialfall.engine.EngineNet.GUARD_DOWN?!s.guarding
+                :action==dev.sangwoo.celestialfall.engine.EngineNet.ATTACK?changed||s.queued:changed;
         }
+        // (told whether anything changed or not: the client's prediction checks itself against it)
+        if(changed||seq>=0)sync(p,s);
+    }
+    private static boolean act(ServerPlayerEntity p,CombatState s,long now,int action,long clientTick,int a,int b) {
+        if(action==dev.sangwoo.celestialfall.engine.EngineNet.GUARD_DOWN) return s.guard(false,now);
+        // the evasive is for what holds them: its own checks (evadeValid)
+        if(action==dev.sangwoo.celestialfall.engine.EngineNet.EVADE) return evade(p,s,now,a,b,ownClient(p));
+        if(!valid(p)||p.isUsingItem())return false;
+        if(action==dev.sangwoo.celestialfall.engine.EngineNet.ATTACK && bare(p)) {
+            boolean queued=s.queued;
+            if(s.requestAttack(now)) {
+                // its targets are judged where this player saw them (Rewind)
+                s.seen=dev.sangwoo.celestialfall.engine.Rewind.offset(now,clientTick);
+                p.resetLastAttackedTicks();swing(p,s);return true;
+            }
+            if(s.queued&&!queued){s.seen=dev.sangwoo.celestialfall.engine.Rewind.offset(now,clientTick);return true;}
+            return false;
+        }
+        if(action==dev.sangwoo.celestialfall.engine.EngineNet.GUARD_UP) return s.guard(true,now);
+        if(action==dev.sangwoo.celestialfall.engine.EngineNet.DASH && !p.isTouchingWater()&&s.dash(now,a,b)) {
+            // (2.157.0) a client of the engine's runs its dash itself as it predicts it: the server pushes none
+            s.dashYaw=p.getYaw();s.driven=ownClient(p);p.setSprinting(false);soundFor(p,SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP,.35f,1.25f);return true;
+        }
+        return false;
+    }
+    /** (2.157.0) Whether this player's client runs the engine (predicts its own moves): a boss has none. */
+    private static boolean ownClient(ServerPlayerEntity p){return ServerPlayNetworking.canSend(p,dev.sangwoo.celestialfall.engine.EngineNet.EVENT);}
+    /**
+     * (2.157.0) The evasive (Defense): out of what holds them and away, untouchable a moment; {@code driven}: their
+     * client runs the dash (else the server pushes it). Heard and seen by everyone near.
+     */
+    private static boolean evade(ServerPlayerEntity p,CombatState s,long now,float forward,float side,boolean driven) {
+        if(!evadeValid(p))return false;
+        boolean held=HitStun.stunned(p);
+        if(!s.evade(now,forward,side,held))return false;
+        if(held)HitStun.release(p.getUuid());
+        s.evadeYaw=p.getYaw();s.driven=driven;
+        p.clearActiveItem();p.setSprinting(false);if(p.currentScreenHandler!=p.playerScreenHandler)p.closeHandledScreen();
+        speed(p,s,now);sync(p,s);
+        soundFor(p,SoundEvents.ENTITY_ILLUSIONER_MIRROR_MOVE,.7f,1.35f);soundFor(p,SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP,.45f,1.55f);
+        dev.sangwoo.celestialfall.engine.EngineNet.evaded(p,now,p.getPos(),s.evadeYaw,s.evadeForward,s.evadeSide);
+        return true;
     }
     private static void tick(MinecraftServer server) {
+        // (2.157.0) where everything near a player stands this tick, for blows judged as their striker saw it (Rewind)
+        dev.sangwoo.celestialfall.engine.Rewind.record(server,dev.sangwoo.celestialfall.boss.Bosses.withBosses(server.getPlayerManager().getPlayerList()));
         // (the bosses too, 2.69.0: their guard, dash and what holds them run as a player's)
         for(var p:dev.sangwoo.celestialfall.boss.Bosses.withBosses(server.getPlayerManager().getPlayerList())) {
             if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld())){leave(p);continue;}
@@ -355,6 +468,8 @@ public final class CombatManager {
                 // Vertical velocity and flight permission are preserved; a wall or water ends the dash, and its cooldown
                 // runs from there (2.44.0).
                 if(p.horizontalCollision||p.isTouchingWater()) {s.stopDash(now);dirty=true;}
+                // (2.157.0) a client of the engine's runs its own dash: nothing pushed (its particles still go up here)
+                else if(s.driven){if((now-s.dashStart)%2==0)p.getServerWorld().spawnParticles(ParticleTypes.CLOUD,p.getX(),p.getY()+.1,p.getZ(),2,.13,.02,.13,.005);}
                 else {
                     double yaw=Math.toRadians(s.dashYaw),v=CombatState.dashSpeed((int)(now-s.dashStart));
                     Vec3d direction=new Vec3d(-Math.sin(yaw)*s.dashForward+Math.cos(yaw)*s.dashSide,0,Math.cos(yaw)*s.dashForward+Math.sin(yaw)*s.dashSide);
@@ -363,6 +478,14 @@ public final class CombatManager {
                     if((now-s.dashStart)%2==0)p.getServerWorld().spawnParticles(ParticleTypes.CLOUD,p.getX(),p.getY()+.1,p.getZ(),2,.13,.02,.13,.005);
                 }
             }
+            // (2.157.0) the evasive's dash: a boss's pushed here (a client of the engine's runs its own); stopped by a wall
+            if(s.evading(now)&&!s.driven&&!p.horizontalCollision) {
+                double yaw=Math.toRadians(s.evadeYaw),v=dev.sangwoo.celestialfall.engine.Defense.evadeSpeed((int)(now-s.evadeStart));
+                Vec3d direction=new Vec3d(-Math.sin(yaw)*s.evadeForward+Math.cos(yaw)*s.evadeSide,0,Math.cos(yaw)*s.evadeForward+Math.sin(yaw)*s.evadeSide);
+                p.setVelocity(direction.multiply(v).add(0,p.getVelocity().y,0));p.velocityModified=true;
+                p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
+            }
+            if(s.evading(now-1)&&!s.evading(now))dirty=true;
             // an incapacitation over (2.60.0), or a stagger (2.68.0): told at once, so the client lets its keys go on the
             // tick it ends
             if(s.disabled(now-1)&&!s.disabled(now)||s.staggered(now-1)&&!s.staggered(now))dirty=true;
@@ -393,15 +516,24 @@ public final class CombatManager {
     private static void hit(ServerPlayerEntity p,CombatState s) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return;
         int strike=s.attack;
-        var world=p.getServerWorld();Vec3d eye=p.getEyePos(),end=eye.add(Vec3d.fromPolar(p.getPitch(),p.getYaw()).multiply(3.15));
+        // (2.157.0) the strike as the engine's chain has it (Moves.BARE): its ray, judged against where its targets stood
+        // as this player saw them, wound back s.seen ticks (Rewind)
+        var move=dev.sangwoo.celestialfall.engine.Moves.BARE.move(strike);var shape=(dev.sangwoo.celestialfall.engine.Hitbox.Ray)move.first().shape();
+        var world=p.getServerWorld();long now=world.getTime(),then=now-s.seen;
+        Vec3d eye=p.getEyePos(),end=eye.add(Vec3d.fromPolar(p.getPitch(),p.getYaw()).multiply(shape.reach()));
         var wall=world.raycast(new RaycastContext(eye,end,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p));
         if(wall.getType()!=HitResult.Type.MISS)end=wall.getPos();
-        LivingEntity target=null;double distance=eye.squaredDistanceTo(end);
-        for(var e:world.getEntitiesByClass(LivingEntity.class,p.getBoundingBox().stretch(end.subtract(eye)).expand(1),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit())) {
+        LivingEntity target=null;double distance=eye.distanceTo(end);
+        // (those it may meet: near the ray now, or near it where they stood then; a body goes at most a few blocks in the ticks wound back)
+        List<LivingEntity> judged=new ArrayList<>();
+        for(var e:world.getEntitiesByClass(LivingEntity.class,p.getBoundingBox().stretch(end.subtract(eye)).expand(1+.6*s.seen),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit())) {
             if(e instanceof PlayerEntity other && !p.shouldDamagePlayer(other)||!p.canSee(e))continue;
-            var intersection=e.getBoundingBox().expand(.14).raycast(eye,end);
-            if(intersection.isPresent()&&eye.squaredDistanceTo(intersection.get())<=distance) {target=e;distance=eye.squaredDistanceTo(intersection.get());}
+            judged.add(e);
+            var along=dev.sangwoo.celestialfall.engine.Hitbox.along(shape,eye,end,dev.sangwoo.celestialfall.engine.Rewind.boxAt(e,then));
+            if(along.isPresent()&&along.getAsDouble()<=distance) {target=e;distance=along.getAsDouble();}
         }
+        dev.sangwoo.celestialfall.engine.EngineDebug.ray(p,dev.sangwoo.celestialfall.engine.Moves.number(move),0,now,s.seen,eye,end,shape.pad(),target,judged);
+        distance*=distance;
         // (2.151.0) Gold Experience's fly hovering in front of whom it belongs to meets their punch on the way, as far as
         // whom it would strike (GoldExperienceRules.swatWay: a body's width at either hand, not this punch's own line)
         Vec3d reached=target==null?end:eye.add(end.subtract(eye).normalize().multiply(Math.sqrt(distance)));
@@ -412,12 +544,12 @@ public final class CombatManager {
         if(!damaged)return;
         // the blow staggers them a moment (2.68.0, Stagger: until the next strike would land at full speed)
         if(s.attack==strike&&p.isAlive())HitStun.landed(p,s,target);
-        if(strike==4) {
-            double yaw=Math.toRadians(p.getYaw());target.takeKnockback(.95,Math.sin(yaw),-Math.cos(yaw));
-            target.velocityModified=true;
-            if(target instanceof ServerPlayerEntity other)other.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(target));
+        if(move.first().knock()>0) {
+            // (2.157.0) told once (Launch): it was sent a second time here besides, and a client that moved between was thrown twice
+            double yaw=Math.toRadians(p.getYaw());dev.sangwoo.celestialfall.engine.Launch.knock(target,move.first().knock(),Math.sin(yaw),-Math.cos(yaw));
         }
         p.onAttacking(target);p.addExhaustion(.1f);
+        // (heard by the striker too: whether it landed is the server's to say)
         sound(p,strike==4?SoundEvents.ENTITY_PLAYER_ATTACK_KNOCKBACK:SoundEvents.ENTITY_PLAYER_ATTACK_STRONG,.7f,strike==4?.75f:1.1f);
         world.spawnParticles(ParticleTypes.CRIT,target.getX(),target.getBodyY(.6),target.getZ(),strike==4?12:5,.18,.18,.18,.08);
         var e=STATES.get(target.getUuid());if(e!=null) {e.state.combatUntil=world.getTime()+100;}
@@ -443,6 +575,7 @@ public final class CombatManager {
      */
     public static boolean breakGuard(LivingEntity target,int ticks) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld()))return false;
+        if(untouchable(target))return false;
         if(target instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity dummy)return dummy.breakGuard(ticks);
         if(!(target instanceof ServerPlayerEntity p))return false;
         var e=STATES.get(p.getUuid());long now=p.getWorld().getTime();
@@ -461,6 +594,7 @@ public final class CombatManager {
      */
     public static void seal(LivingEntity target,int ticks) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld())||!target.isAlive())return;
+        if(untouchable(target))return;
         if(target instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity dummy){dummy.seal(ticks);return;}
         if(!(target instanceof ServerPlayerEntity p))return;
         long now=p.getWorld().getTime();var s=state(p);
@@ -477,6 +611,8 @@ public final class CombatManager {
         Vec3d origin=source.getPosition();if(origin==null)return false;
         Vec3d toward=origin.subtract(p.getPos()).multiply(1,0,1);
         if(toward.lengthSquared()<1e-6||Vec3d.fromPolar(p.getPitch(),p.getYaw()).multiply(1,0,1).normalize().dotProduct(toward.normalize())<.2)return false;
+        // (2.157.0) a guard just raised takes it perfectly (Defense): nothing on the guard, and its striker turned back
+        if(e.state.perfect(now)){perfect(p,e.state,source,now);return true;}
         boolean broken=e.state.guardHit(amount,now,source.isOf(UNARMED));
         if(broken){p.clearActiveItem();p.setSprinting(false);if(p.currentScreenHandler!=p.playerScreenHandler)p.closeHandledScreen();}
         speed(p,e.state,now);sync(p,e.state);
@@ -485,8 +621,29 @@ public final class CombatManager {
         p.getServerWorld().spawnParticles(broken?ParticleTypes.CRIT:ParticleTypes.ELECTRIC_SPARK,effect.x,effect.y,effect.z,broken?24:9,.25,.22,.15,.07);
         return true;
     }
-    private static void swing(ServerPlayerEntity p,CombatState s) {sound(p,SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP,.23f,1.0f+(4-s.attack)*.13f);}
+    /**
+     * (2.157.0) A perfect guard of {@code p}'s took a blow (Defense): its pressure eased, its striker turned back if near
+     * (Defense.parries), a bright clang heard by everyone near and the guard's flash seen (EngineNet.PERFECT, DefenseFx).
+     */
+    private static void perfect(ServerPlayerEntity p,CombatState s,DamageSource source,long now) {
+        s.perfectHit(now);speed(p,s,now);sync(p,s);
+        LivingEntity striker=source.getAttacker() instanceof LivingEntity l&&l!=p&&l.isAlive()?l:null;
+        boolean parried=striker!=null&&striker.getWorld()==p.getWorld()&&dev.sangwoo.celestialfall.engine.Defense.parries(striker.getPos().distanceTo(p.getPos()));
+        if(parried)parry(striker,p);
+        Vec3d at=p.getPos().add(0,1.2,0).add(Vec3d.fromPolar(0,p.getYaw()).multiply(.55));
+        var world=p.getServerWorld();
+        world.playSound(null,p.getX(),p.getY(),p.getZ(),SoundEvents.ITEM_SHIELD_BLOCK,SoundCategory.PLAYERS,1f,1.6f);
+        world.playSound(null,p.getX(),p.getY(),p.getZ(),SoundEvents.BLOCK_ANVIL_LAND,SoundCategory.PLAYERS,.3f,2f);
+        world.spawnParticles(ParticleTypes.ELECTRIC_SPARK,at.x,at.y,at.z,16,.2,.2,.2,.18);
+        dev.sangwoo.celestialfall.engine.EngineNet.perfect(p,striker,parried,at,now);
+    }
+    private static void swing(ServerPlayerEntity p,CombatState s) {soundFor(p,SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP,.23f,1.0f+(4-s.attack)*.13f);}
     private static void sound(ServerPlayerEntity p,SoundEvent sound,float volume,float pitch) {p.getWorld().playSound(null,p.getX(),p.getY(),p.getZ(),sound,SoundCategory.PLAYERS,volume,pitch);}
+    /**
+     * (2.157.0) A sound of {@code p}'s own move: for everyone near but them when their client runs the engine (it played it
+     * as it predicted the move, EngineClient), for everyone when it does not (a boss).
+     */
+    private static void soundFor(ServerPlayerEntity p,SoundEvent sound,float volume,float pitch) {p.getWorld().playSound(ownClient(p)?p:null,p.getX(),p.getY(),p.getZ(),sound,SoundCategory.PLAYERS,volume,pitch);}
     private static void sync(ServerPlayerEntity p,CombatState s) {
         for(var viewer:p.getServerWorld().getPlayers())if(viewer==p||viewer.squaredDistanceTo(p)<128*128) {
             if(!ServerPlayNetworking.canSend(viewer,STATE))continue;
@@ -497,6 +654,9 @@ public final class CombatManager {
             b.writeLong(s.brokenAt);b.writeLong(s.disabledUntil);b.writeLong(s.disabledAt);b.writeLong(s.staggerUntil);
             // 2.134.0: until when they are glitched and can raise no guard (X Chara's great X slash)
             b.writeLong(s.sealedUntil);
+            // 2.157.0: the engine's: the guard's going up and its perfect window, the evasive, the last input gone through
+            b.writeLong(s.guardUpAt);b.writeLong(s.perfectAt);b.writeLong(s.evadeStart);b.writeLong(s.evadeReady);
+            b.writeFloat(s.evadeForward);b.writeFloat(s.evadeSide);b.writeInt(viewer==p?s.ackSeq:-1);b.writeBoolean(viewer==p&&s.ackOk);
             ServerPlayNetworking.send(viewer,STATE,b);
         }
     }

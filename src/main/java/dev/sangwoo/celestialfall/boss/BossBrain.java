@@ -47,6 +47,8 @@ public class BossBrain {
     protected ServerPlayerEntity target;private ServerPlayerEntity lastStriker;
     /** Its guard is held up until this tick, facing this one. */
     private long guardUntil=-1;private Entity guardFacing;
+    /** (2.157.0) Whether the guard it raises now means a perfect guard (Defense); since when a hold has held it, and whether it has made up its mind about the evasive this hold. */
+    private boolean perfectNext;private long heldSince=-1;private boolean evadeWeighed;
     /** Its circling way while it waits (1 or -1), and when it turns. */
     private int circle=1;private long circleUntil;
     // this tick's keys and look
@@ -121,6 +123,7 @@ public class BossBrain {
         lonely=-1;
         target=BossRules.choose(candidates,target,committed(now),12f);
         if(target!=null&&!StandSummon.out(boss)&&StandSummon.canBeOut(boss)&&!CombatManager.incapacitated(boss))StandSummon.toggle(boss);
+        if(!free()&&evade(now))return;
         if(!free()){if(target!=null)face(target,30);doing=bound();return;}
         if(defend(now))return;
         if(guarding()&&now>=guardUntil)guard(false,now);
@@ -148,6 +151,27 @@ public class BossBrain {
     }
     /** Held where it is or kept from acting (for its poise). */
     private boolean held(){return boss.isAlive()&&(CombatManager.incapacitated(boss)||HitStun.stunned(boss));}
+    /**
+     * (2.157.0) A combo or a blow holds it: once held EVADE_AFTER ticks without a break, or with EVADE_LONG ticks of a hold
+     * still on it, it gets out by its evasive (Defense), away from whom it fights, now and then (EVADE_CHANCE, weighed once a
+     * hold). Whether it did.
+     */
+    private boolean evade(long now){
+        if(!held()){heldSince=-1;evadeWeighed=false;return false;}
+        if(heldSince<0)heldSince=now;
+        if(evadeWeighed||!CombatManager.evadeReady(boss))return false;
+        var s=CombatManager.peek(boss);
+        long left=s==null?0:Math.max(Math.max(s.staggerUntil,s.disabledUntil),s.brokenUntil)-now;
+        if(now-heldSince<BossRules.EVADE_AFTER&&left<BossRules.EVADE_LONG)return false;
+        evadeWeighed=true;
+        if(random.nextFloat()>=BossRules.EVADE_CHANCE)return false;
+        var away=target==null?Vec3d.fromPolar(0,boss.getYaw()+180):boss.getPos().subtract(target.getPos()).multiply(1,0,1);
+        if(away.lengthSquared()<1e-4)away=Vec3d.fromPolar(0,boss.getYaw()+180);
+        away=away.normalize();
+        var f=Vec3d.fromPolar(0,boss.getYaw());var leftOf=new Vec3d(f.z,0,-f.x);
+        if(!CombatManager.evadeInput(boss,(float)away.dotProduct(f),(float)away.dotProduct(leftOf)))return false;
+        heldSince=-1;doing="회피";return true;
+    }
 
     /** Whether something of its own holds it where it stands this tick (a player's client holds their keys then; 2.137.0): it does not walk. */
     protected boolean rooted(){return false;}
@@ -187,6 +211,8 @@ public class BossBrain {
         if(urgent.guardable()&&canGuard(now)){
             releaseKeys();
             guardFacing=urgent.from();guardUntil=Math.max(urgent.hitAt(),Math.min(urgent.until(),now+30))+3;
+            // (2.157.0) a guard raised just as the blow comes may be meant to take it perfectly (Defense), now and then
+            perfectNext=!guarding()&&left<dev.sangwoo.celestialfall.engine.Defense.PERFECT_WINDOW&&random.nextFloat()<BossRules.PERFECT;
             doing="가드 "+urgent.what();return holdGuard(now);
         }
         if(canDash&&left>=2){var dir=escape(urgent,left,true);if(dir!=null&&dash(dir,now)){doing="대시 회피 "+urgent.what();return true;}}
@@ -253,7 +279,7 @@ public class BossBrain {
     }
     private boolean holdGuard(long now){
         if(guardFacing!=null&&guardFacing.isAlive())face(guardFacing,90);
-        return CombatManager.guardInput(boss,true);
+        return CombatManager.guardInput(boss,true,perfectNext);
     }
     protected void guard(boolean up,long now){
         if(up)CombatManager.guardInput(boss,true);

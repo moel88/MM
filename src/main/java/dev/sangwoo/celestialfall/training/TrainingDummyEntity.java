@@ -125,8 +125,8 @@ public final class TrainingDummyEntity extends PathAwareEntity implements Monste
         if(!damaged)return;
         if(combat.attack==strike&&isAlive())HitStun.landed(this,combat,target);
         if(strike==4) {
-            double yaw=Math.toRadians(getYaw());target.takeKnockback(.95,Math.sin(yaw),-Math.cos(yaw));target.velocityModified=true;
-            if(target instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket(p));
+            // (2.157.0) told once (the engine's Launch)
+            double yaw=Math.toRadians(getYaw());dev.sangwoo.celestialfall.engine.Launch.knock(target,.95,Math.sin(yaw),-Math.cos(yaw));
         }
         getWorld().playSound(null,getX(),getY(),getZ(),strike==4?SoundEvents.ENTITY_PLAYER_ATTACK_KNOCKBACK:SoundEvents.ENTITY_PLAYER_ATTACK_STRONG,SoundCategory.HOSTILE,.65f,strike==4?.75f:1.1f);
         ((ServerWorld)getWorld()).spawnParticles(ParticleTypes.CRIT,target.getX(),target.getBodyY(.6),target.getZ(),strike==4?12:5,.18,.18,.18,.08);

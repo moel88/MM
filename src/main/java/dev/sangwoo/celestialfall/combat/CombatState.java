@@ -1,9 +1,15 @@
 package dev.sangwoo.celestialfall.combat;
 
-/** Server-clock combat transitions; deliberately independent of rendering and networking. */
+/**
+ * Server-clock combat transitions; deliberately independent of rendering and networking. Since 2.157.0 the combat
+ * engine's: bare hands' strikes are its chain (Moves.BARE, the same numbers), what may be done when is its table
+ * (Actions), and it keeps the perfect guard's and the evasive's ticks (Defense). The client runs one of these too, its
+ * prediction of its own player (EngineClient).
+ */
 public final class CombatState {
-    public static final int[] WINDUP={0,3,4,5,6}, DURATION={0,10,11,13,19};
-    public static final float[] DAMAGE={0,3,3,4,6};
+    /** Bare hands' strikes' startups, lengths and harm, by strike from 1 (the engine's chain, Moves.BARE). */
+    public static final int[] WINDUP=dev.sangwoo.celestialfall.engine.Moves.BARE.windups(), DURATION=dev.sangwoo.celestialfall.engine.Moves.BARE.durations();
+    public static final float[] DAMAGE=dev.sangwoo.celestialfall.engine.Moves.BARE.damages();
     public static final int DASH_TICKS=7, DASH_COOLDOWN=24, BREAK_TICKS=20;
     public int combo, attack, serial;
     public long attackStart=-1000, comboUntil, dashStart=-1000, dashReady, brokenUntil, combatUntil;
@@ -24,6 +30,22 @@ public final class CombatState {
     public long sealedUntil;
     public boolean guarding, queued, hitDone;
     public float pressure, dashForward=1, dashSide,dashYaw;
+    /**
+     * (2.157.0) When the guard last went up, and when its last perfect window opened (Defense: a blow within its first
+     * ticks is taken perfectly; a window opens at most once a second).
+     */
+    public long guardUpAt=-1000, perfectAt=-1000;
+    /** (2.157.0) The evasive (Defense): when it started, when it is ready again, which way it goes and the way they faced. */
+    public long evadeStart=-1000, evadeReady;
+    public float evadeForward=-1, evadeSide, evadeYaw;
+    /** (2.157.0) The dash or evasive moving them is their own client's (it runs it as it predicts it; the server pushes none). */
+    public boolean driven;
+    /** (2.157.0) The last of the client's inputs the server has gone through (its number), for the client's prediction to check itself against. */
+    public int ackSeq=-1;
+    /** (2.157.0) Whether that input went through (an attack started or kept, a dash or evasive begun, the guard as asked). */
+    public boolean ackOk;
+    /** (2.157.0) Ticks the targets of the attack under way are wound back for (lag compensation, Rewind.offset). */
+    public int seen;
     public boolean broken(long now) { return now<brokenUntil; }
     /** (2.134.0) Glitched: no guard can be raised (the rest as ever). */
     public boolean sealed(long now) { return now<sealedUntil; }
@@ -55,21 +77,30 @@ public final class CombatState {
     /** The strongest of those slows still on at {@code now} (0 for none). */
     public double extraSlow(long now) { double m=0;for(int i=0;i<extraSlow.length;i++)if(extraUntil[i]>now)m=Math.max(m,extraSlow[i]);return m; }
     public boolean dashing(long now) { return now>=dashStart && now<dashStart+DASH_TICKS; }
+    /** (2.157.0) Under way with the evasive's dash. */
+    public boolean evading(long now) { return now>=evadeStart && now<evadeStart+dev.sangwoo.celestialfall.engine.Defense.EVADE_TICKS; }
+    /** (2.157.0) Untouchable from the evasive: no blow, hold or stagger reaches them. */
+    public boolean untouchable(long now) { return now>=evadeStart && now<evadeStart+dev.sangwoo.celestialfall.engine.Defense.EVADE_SAFE; }
+    /** (2.157.0) Whether a blow reaching the guard at {@code now} is taken perfectly (Defense.perfect; not a broken guard). */
+    public boolean perfect(long now) { return !broken(now)&&dev.sangwoo.celestialfall.engine.Defense.perfect(guarding,guardUpAt,perfectAt,now); }
     public boolean attacking(long now) { return attack>0 && now<attackStart+DURATION[attack]; }
     public boolean requestAttack(long now) {
-        if(now-lastRequest<3)return false;
+        var chain=dev.sangwoo.celestialfall.engine.Moves.BARE;
+        if(now-lastRequest<chain.every)return false;
         lastRequest=now;
-        if(locked(now)||guarding||dashing(now))return false;
-        if(attacking(now)) {
-            if(attack<4 && now>=attackStart+DURATION[attack]-6)queued=true;
+        // (2.157.0) what may be done now is the engine's table: an attack under way keeps a press near its end instead
+        if(dev.sangwoo.celestialfall.engine.Actions.phase(this,now)==dev.sangwoo.celestialfall.engine.Actions.Phase.ATTACKING) {
+            if(chain.keeps(attack,attackStart,now))queued=true;
             return false;
         }
+        if(!dev.sangwoo.celestialfall.engine.Actions.may(this,now,dev.sangwoo.celestialfall.engine.Actions.Act.ATTACK))return false;
         startAttack(now);return true;
     }
     private void startAttack(long now) {
-        combo=now>comboUntil||combo>=4?1:combo+1;
+        var chain=dev.sangwoo.celestialfall.engine.Moves.BARE;
+        combo=chain.next(combo,now,comboUntil);
         attack=combo;attackStart=now;hitDone=false;queued=false;serial++;
-        comboUntil=now+DURATION[attack]+14;combatUntil=now+100;
+        comboUntil=chain.until(attack,now);combatUntil=now+100;
     }
     public boolean hitDue(long now) {
         if(attack==0||hitDone||now<attackStart+WINDUP[attack])return false;
@@ -87,12 +118,27 @@ public final class CombatState {
         if(!broken(now)&&now-lastGuardHit>=30&&pressure>0)pressure=Math.max(0,pressure-(guarding?.22f:.85f));
         return changed;
     }
-    public boolean guard(boolean hold,long now) {
+    public boolean guard(boolean hold,long now) {return guard(hold,now,true);}
+    /**
+     * The guard key held ({@code hold}) or let go at {@code now}. (2.157.0) As the guard goes up a perfect window opens if
+     * none opened within the last second and {@code mayPerfect} (a boss chooses when it means to: BossBrain).
+     */
+    public boolean guard(boolean hold,long now,boolean mayPerfect) {
         guardHeartbeat=now;
-        boolean next=hold&&!locked(now)&&!attacking(now)&&!dashing(now)&&!sealed(now);
-        boolean changed=next!=guarding;guarding=next;
+        boolean next=hold&&dev.sangwoo.celestialfall.engine.Actions.may(this,now,dev.sangwoo.celestialfall.engine.Actions.Act.GUARD);
+        boolean changed=next!=guarding;
+        if(next&&!guarding){guardUpAt=now;if(mayPerfect&&dev.sangwoo.celestialfall.engine.Defense.opens(perfectAt,now))perfectAt=now;}
+        guarding=next;
         if(next) {combatUntil=now+100;queued=false;}
         return changed;
+    }
+    /**
+     * (2.157.0) A blow taken perfectly at {@code now}: it put no pressure on the guard and takes some off
+     * (Defense.PERFECT_EASE); the window stays as it was (one blow does not close it for the next of a flurry).
+     */
+    public void perfectHit(long now) {
+        lastGuardHit=now;combatUntil=now+100;
+        pressure=Math.max(0,pressure-dev.sangwoo.celestialfall.engine.Defense.PERFECT_EASE);
     }
     public boolean guardHit(float damage,long now) { return guardHit(damage,now,false); }
     public boolean guardHit(float damage,long now,boolean unarmed) {
@@ -153,10 +199,29 @@ public final class CombatState {
         return changed;
     }
     public boolean dash(long now,float forward,float side) {
-        if(now<dashReady||locked(now)||attacking(now)||guarding||dashing(now))return false;
+        if(!dev.sangwoo.celestialfall.engine.Actions.may(this,now,dev.sangwoo.celestialfall.engine.Actions.Act.DASH))return false;
         float length=(float)Math.hypot(forward,side);
         dashForward=length<.1f?1:forward/length;dashSide=length<.1f?0:side/length;
         dashStart=now;dashReady=now+DASH_TICKS+DASH_COOLDOWN;combatUntil=now+100;combo=0;serial++;return true;
+    }
+    /**
+     * (2.157.0) The evasive (Defense): out of what holds them (a stagger, an incapacitation and its slow, a broken guard)
+     * and a dash {@code forward}, {@code side} (back if neither), untouchable a moment. False if it is not ready or
+     * nothing holds them. (A barrage's hold, a cutscene's and a grab's are the combat manager's to check.)
+     */
+    public boolean evade(long now,float forward,float side) {return evade(now,forward,side,false);}
+    /** As {@link #evade(long,float,float)}; {@code heldBesides}: something the server knows of holds them too (a barrage's hold). */
+    public boolean evade(long now,float forward,float side,boolean heldBesides) {
+        boolean held=dev.sangwoo.celestialfall.engine.Actions.held(dev.sangwoo.celestialfall.engine.Actions.phase(this,now))||heldBesides&&!evading(now);
+        if(!held||now<evadeReady||evading(now))return false;
+        float length=(float)Math.hypot(forward,side);
+        evadeForward=length<.1f?-1:forward/length;evadeSide=length<.1f?0:side/length;
+        staggerUntil=Math.min(staggerUntil,now);disabledUntil=Math.min(disabledUntil,now);slowUntil=Math.min(slowUntil,now);
+        if(broken(now))brokenUntil=now;
+        attack=combo=0;queued=guarding=false;dashStart=-1000;
+        evadeStart=now;evadeReady=now+dev.sangwoo.celestialfall.engine.Defense.EVADE_TICKS+dev.sangwoo.celestialfall.engine.Defense.EVADE_COOLDOWN;
+        combatUntil=Math.max(combatUntil,now+100);serial++;
+        return true;
     }
     /**
      * The dash ends short (a wall, water, a blow): its cooldown runs from now. Every cooldown runs once its move is over,

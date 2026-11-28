@@ -41,6 +41,8 @@ public abstract class LivingCombatMixin {
     private float botand$soulless(float amount,DamageSource source){return dev.sangwoo.celestialfall.stand.GoldExperienceOverdrive.scale((LivingEntity)(Object)this,source,amount);}
     @Inject(method="damage",at=@At("HEAD"),cancellable=true)
     private void botand$guard(DamageSource source,float amount,CallbackInfoReturnable<Boolean> cir) {
+        // (2.157.0) untouchable from the evasive (Defense.EVADE_SAFE): no blow lands on them (the void and /kill still do)
+        if(CombatManager.untouchable((LivingEntity)(Object)this)&&!source.isIn(net.minecraft.registry.tag.DamageTypeTags.BYPASSES_INVULNERABILITY)){cir.setReturnValue(false);return;}
         if((Object)this instanceof ServerPlayerEntity p && dev.sangwoo.celestialfall.AtomicManager.invulnerable(p) && !source.isIn(net.minecraft.registry.tag.DamageTypeTags.BYPASSES_INVULNERABILITY)){cir.setReturnValue(false);return;}
         // Star Platinum's beatdown's cutscene (2.64.0): nothing but its own blows harms its user or the one struck
         if(dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.shielded((LivingEntity)(Object)this,source)){cir.setReturnValue(false);return;}

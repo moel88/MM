@@ -563,6 +563,8 @@ public final class SkillShots implements ClientModInitializer {
     private volatile float inBedAt=-1;
     private final StringBuilder bossLog=new StringBuilder();private String bossDoing="";
     private final Set<String> tried=new HashSet<>();private final Map<Integer,Integer> tryRelease=new HashMap<>();
+    /** (2.157.0) "EVADE@n": the tick each such step first saw the player held. */
+    private final Map<String,Integer> evadeSeen=new HashMap<>();
     /**
      * SUMMON with a boss (2.69.0): this tick's row of boss.csv, read on the server: his health, his anger, what he does,
      * whom he fights, how far from the player, where, which way he faces, whether his stand is out, his guard and dash,
@@ -699,6 +701,15 @@ public final class SkillShots implements ClientModInitializer {
             if(sd instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity t){dummyStaggered=t.combatState().staggered(mc.getServer().getOverworld().getTime());dummyStrike=t.combatState().attack;}}
         standLog.append(String.format(Locale.ROOT,",%d,%d,%d,%d",dev.sangwoo.celestialfall.client.CombatClient.actionLocked()?1:0,staggered?1:0,dummyStaggered?1:0,dummyStrike));
         if(staggered!=playerStaggered){log.append("  player ").append(staggered?"staggered":"free again").append(" at ").append(age).append(String.format(Locale.ROOT," (until %d)%n",snap.staggerUntil()));playerStaggered=staggered;}
+        // (2.157.0, the combat engine) the evasive as this client began it (its prediction) and as the server did, and a
+        // perfect guard of the player's as this client heard of it (its sound and the HUD's PERFECT then): the sound
+        // runs are laid by these (tools/kageno/shots/mux_engine.py)
+        if(snap.evadeStart()!=evadeLogged&&snap.evadeStart()>0){log.append(String.format(Locale.ROOT,"  evaded at %d (client world %d, logged at %d, way %.2f %.2f)%n",age-(int)(mc.world.getTime()-snap.evadeStart()),snap.evadeStart(),age,snap.evadeForward(),snap.evadeSide()));evadeLogged=snap.evadeStart();}
+        if(mc.getServer()!=null){var sp=mc.getServer().getPlayerManager().getPlayer(mc.player.getUuid());
+            if(sp!=null){var ss=dev.sangwoo.celestialfall.combat.CombatManager.peek(sp);if(ss!=null&&ss.evadeStart!=serverEvadeLogged&&ss.evadeStart>0){log.append(String.format(Locale.ROOT,"  the server's evasive at %d (server world %d, ready again %d)%n",age,ss.evadeStart,ss.evadeReady));serverEvadeLogged=ss.evadeStart;}}}
+        int perfectAgo=Math.round(dev.sangwoo.celestialfall.client.engine.DefenseFx.perfectAgo(0)*20);
+        if(perfectAgoLogged>=0&&perfectAgo<perfectAgoLogged)log.append(String.format(Locale.ROOT,"  perfect guard at %d (heard %d ticks before the line at %d)%n",age-perfectAgo,perfectAgo,age));
+        perfectAgoLogged=perfectAgo;
         if(dummyStaggered!=dummyStaggeredLogged){log.append("  dummy ").append(dummyStaggered?"staggered":"free of its stagger").append(" at ").append(age).append('\n');dummyStaggeredLogged=dummyStaggered;}
         // 2.70.0: the stand arrow: the stab (its age, what it chose, the arrow's glow, how far down the body is, how far the
         // arrow has been drawn in, cut short), the player's stand (the server's) and how many arrows the main hand holds
@@ -971,6 +982,8 @@ public final class SkillShots implements ClientModInitializer {
     private volatile UUID fakeId;
     private net.minecraft.server.network.ServerPlayerEntity fakePlayer;private String stopLogged="";private boolean stillLogged;private int keptLogged;private float playerHealth=-1;private float fakeRunYaw;
     private boolean playerStaggered,dummyStaggeredLogged,playerDeadLogged;
+    /** (2.157.0) The last evasive logged (the client's and the server's start) and the ticks since the last perfect guard heard, last tick. */
+    private long evadeLogged=-1,serverEvadeLogged=-1;private int perfectAgoLogged=-1;
     /** 2.112.0: X Chara's G's state last logged. */
     private String danceLogged="";
     /** (2.114.0) X Chara's basic attack's swing last logged. */
@@ -1412,7 +1425,7 @@ public final class SkillShots implements ClientModInitializer {
                 int lead=opts.containsKey("far")||opts.containsKey("track")||opts.containsKey("orbit")||opts.containsKey("bcam")?90:30;
                 if(opts.containsKey("walk")&&age==Math.max(3,lead-(int)opt("walk",10)))key(GLFW_KEY_W,true);
                 if(AUDIO&&age==Math.max(3,lead-20)){markerNanos=System.nanoTime();mc.getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.BLOCK_NOTE_BLOCK_PLING.value(),2f,1f));soundRows.setLength(0);tickRows.setLength(0);}
-                if(age>=lead){camera();castPos=mc.player.getPos();castYaw=mc.player.getYaw();castTick=mc.world.getTime()+1;shotIndex=0;serverStart=-1;actorLog.setLength(0);shakeLog.setLength(0);motionLog.setLength(0);soundLog.setLength(0);sounded.clear();tried.clear();tryRelease.clear();filming=true;trigger(current);phase=4;age=0;}}
+                if(age>=lead){camera();castPos=mc.player.getPos();castYaw=mc.player.getYaw();castTick=mc.world.getTime()+1;shotIndex=0;serverStart=-1;actorLog.setLength(0);shakeLog.setLength(0);motionLog.setLength(0);soundLog.setLength(0);sounded.clear();tried.clear();tryRelease.clear();evadeSeen.clear();evadeLogged=serverEvadeLogged=perfectAgoLogged=-1;filming=true;trigger(current);phase=4;age=0;}}
             case 4->{
                 logTick();
                 if(current.equals("M1")){
@@ -1429,6 +1442,35 @@ public final class SkillShots implements ClientModInitializer {
                 if(opts.containsKey("then"))for(String step:opts.get("then").split("/")){String[] sa=step.split("@");if(sa.length!=2)continue;int at=Integer.parseInt(sa[1].trim());String what=sa[0].trim();
                     // "DASH@n": the dash key (C) is pressed for a tick, through the client's own input
                     if(what.equals("DASH")){if(age==at)key(GLFW_KEY_C,true);if(age==at+1)key(GLFW_KEY_C,false);continue;}
+                    // (2.157.0, the combat engine) "PGUARD@n": the perfect guard: from tick n, the guard key (F) goes down when the
+                    // training dummy's next blow is 3 server ticks off (its strike's start and startup as the server has them):
+                    // the server raises the guard a tick after, 1 or 2 ticks before the blow, within its window (Defense.
+                    // PERFECT_WINDOW, 5), and the key comes up "pghold" ticks (16) later. "GUARDAT@n" is a plain guard from
+                    // tick n for "pghold" ticks (it opens a window too: to be held through the blow, raise it 6 ticks or more before)
+                    if(what.equals("PGUARD")){String id=what+"@"+at;
+                        if(age>=at&&!tried.contains(id)&&mc.getServer()!=null&&mc.getServer().getOverworld().getEntityById(dummyId) instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity t&&t.combatState().attack>0){
+                            var cs=t.combatState();long lands=cs.attackStart+dev.sangwoo.celestialfall.combat.CombatState.WINDUP[cs.attack],sNow=mc.getServer().getOverworld().getTime();
+                            if(lands>=sNow&&lands-sNow<=3){tried.add(id);key(GLFW_KEY_F,true);tryRelease.put(GLFW_KEY_F,age+(int)opt("pghold",16));
+                                log.append(String.format(Locale.ROOT,"  guard up for a perfect one at %d: the dummy's strike %d lands on server tick %d, the server at %d%n",age,cs.attack,lands,sNow));}
+                        }
+                        continue;}
+                    if(what.equals("GUARDAT")){if(age==at){key(GLFW_KEY_F,true);tryRelease.put(GLFW_KEY_F,age+(int)opt("pghold",16));log.append("  guard up at ").append(age).append('\n');}continue;}
+                    // (2.157.0) "EVADE@n": the evasive: from tick n, the dash key (C) for a tick, "edelay" ticks (1) after the first
+                    // tick this client knows something holds the player (EngineClient.evades: a combo's stagger as the server
+                    // said); "KEYDOWN_A" and the like held through it choose its way (back if none)
+                    if(what.equals("EVADE")){String id=what+"@"+at;
+                        if(age>=at&&!tried.contains(id)){
+                            if(!evadeSeen.containsKey(id)&&dev.sangwoo.celestialfall.client.engine.EngineClient.evades())evadeSeen.put(id,age);
+                            Integer seen=evadeSeen.get(id);
+                            if(seen!=null&&age>=seen+(int)opt("edelay",1)){tried.add(id);key(GLFW_KEY_C,true);tryRelease.put(GLFW_KEY_C,age+1);
+                                log.append(String.format(Locale.ROOT,"  dash key for the evasive at %d (held from %d)%n",age,seen));}
+                            else if(age>=at+200){tried.add(id);log.append("  evasive gave up at ").append(age).append('\n');}
+                        }
+                        continue;}
+                    // (2.157.0) "ENGINEDEBUG@n": the combat engine's debug view for the player ("/botand engine debug on"; "ENGINEDEBUGOFF@n" off)
+                    if(what.equals("ENGINEDEBUG")||what.equals("ENGINEDEBUGOFF")){if(age==at)server(p->{String command="botand engine debug "+(what.equals("ENGINEDEBUG")?"on":"off");
+                            int n=p.getServer().getCommandManager().executeWithPrefix(p.getCommandSource(),command);
+                            log.append("  /").append(command).append(" at ").append(age).append(n>0?"":" (refused)").append('\n');});continue;}
                     // the UI shot's keys and mouse
                     // "TRY_R@n" (also T, E, M1; 2.69.0): from tick n, the key at the first tick the player is free to act
                     // (CombatClient.actionLocked) with the boss within its reach (R 3.8, T 2.4 to 4.8, E 3, M1 3.2 blocks),

@@ -202,7 +202,8 @@ public final class GoldExperienceBeatdown {
         if(CombatManager.breakGuard(e,StarPlatinumRules.HEAVY_BREAK)){send(p,s,LANDED,e,true);return;}
         var source=world.getDamageSources().playerAttack(p);
         // (Lee So-sang's H's dodge keeps its blow from her, as any other's: no cutscene)
-        if(e.isInvulnerableTo(source)||dev.sangwoo.celestialfall.isosang.IsosangAttack.dodges(e,source)||!begin(p,e,s.start,s.yaw)){send(p,s,LANDED,e,false);return;}
+        // (2.157.0: nor one untouchable from their evasive)
+        if(e.isInvulnerableTo(source)||dev.sangwoo.celestialfall.combat.CombatManager.untouchable(e)||dev.sangwoo.celestialfall.isosang.IsosangAttack.dodges(e,source)||!begin(p,e,s.start,s.yaw)){send(p,s,LANDED,e,false);return;}
         p.onAttacking(e);
         // it lands without harm (the cutscene's blows deal it): a hit all the same, and the count is held open to its landing
         dev.sangwoo.celestialfall.combat.HitCounter.struck(p,e);

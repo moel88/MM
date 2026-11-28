@@ -36,6 +36,13 @@ public final class BossRules {
      * still taken, user request: "보스 ai는 매우 좋게"; two players taking turns could keep it down otherwise).
      */
     public static final int POISE_WINDOW=60,POISE_HELD=46,POISE_TICKS=30;
+    /**
+     * (2.157.0, the combat engine's perfect guard and evasive) How often a boss raising its guard just as a blow comes
+     * means to take it perfectly; after how long held without a break by a combo, or with how long a hold still on it, it
+     * gets out by its evasive, and how often it does then (once a hold).
+     */
+    public static final float PERFECT=.3f,EVADE_CHANCE=.7f;
+    public static final int EVADE_AFTER=10,EVADE_LONG=30;
     /** The skills whose cooldowns a boss may have its own of (BossKind.cooldown). */
     public static final String TIME_STOP="time_stop",BEATDOWN="beatdown";
     private BossRules(){}

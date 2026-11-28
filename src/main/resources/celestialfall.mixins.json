@@ -5,6 +5,7 @@
   "refmap": "celestialfall.refmap.json",
   "mixins": [
     "LivingCombatMixin",
+    "EngineLagMixin",
     "GoldFlySightMixin",
     "GuardBreakNetworkMixin",
     "GuardBreakInteractionMixin",

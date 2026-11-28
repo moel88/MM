@@ -347,6 +347,21 @@ public final class MotionClips {
         p.elbow[0]=-65;p.elbow[1]=-73;p.lean=.28f*hold;return p;
     }
     /**
+     * (2.157.0) Turned back by a perfect guard ({@code age} ticks after, {@code left} ticks still to go): thrown back off
+     * the guard in two ticks, the arms flung up and out, the head back, rocked back on the heels; held so a moment, and
+     * coming back to itself over its last five ticks.
+     */
+    public static MotionPose parried(float age,float left) {
+        MotionPose p=ready(age);
+        float k=smooth(age/2)*smooth(left/5),shake=(float)Math.sin(age*1.9f)*(float)Math.exp(-Math.max(0,age)*.25f);
+        // on top of the stand: nothing of it at the start and the end (k 0), so it comes out of and back to itself exactly
+        float[][] j=p.joint;
+        p.rot(BODY,j[BODY][0]-21*k,j[BODY][1]+4*k*shake,j[BODY][2]+3*k).rot(HEAD,j[HEAD][0]-17*k,j[HEAD][1]-5*k,j[HEAD][2]+2*k*shake);
+        p.rot(RIGHT_ARM,j[RIGHT_ARM][0]-128*k,j[RIGHT_ARM][1]+14*k,j[RIGHT_ARM][2]+38*k).rot(LEFT_ARM,j[LEFT_ARM][0]-112*k,j[LEFT_ARM][1]-14*k,j[LEFT_ARM][2]-42*k);
+        p.elbow[0]-=26*k;p.elbow[1]-=34*k;p.lean+=.55f*k;
+        return p;
+    }
+    /**
      * The dash (2.141.0, new; CombatState.DASH_TICKS long): a push off, a low stretched flight and a braking step, by
      * the way it goes ({@code forward} 1 ahead and -1 back, {@code side} to the side; between them the poses are
      * mixed). Ahead: the body thrown low and forward, one knee driven up and the other leg stretched out behind, the

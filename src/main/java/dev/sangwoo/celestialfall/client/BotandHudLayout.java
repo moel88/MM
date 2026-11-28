@@ -55,7 +55,9 @@ public final class BotandHudLayout {
     /** The frame, with {@code disabled} (2.60.0) the incapacitation's word over the guard bar, as BREAK over a broken guard. */
     public static Frame frame(float health,float maxHealth,float guard,ProgressProfile profile,boolean broken,boolean disabled) {return frame(health,maxHealth,guard,profile,broken,disabled,false);}
     /** (2.134.0) The frame, with {@code sealed} the glitch's word over the guard bar ("가드 불가": X Chara's great X slash shut it), under BREAK's and the incapacitation's. */
-    public static Frame frame(float health,float maxHealth,float guard,ProgressProfile profile,boolean broken,boolean disabled,boolean sealed) {
+    public static Frame frame(float health,float maxHealth,float guard,ProgressProfile profile,boolean broken,boolean disabled,boolean sealed) {return frame(health,maxHealth,guard,profile,broken,disabled,sealed,false);}
+    /** (2.157.0) The frame, with {@code perfect} the perfect guard's word over the guard bar a moment after one (over all the others). */
+    public static Frame frame(float health,float maxHealth,float guard,ProgressProfile profile,boolean broken,boolean disabled,boolean sealed,boolean perfect) {
         var q=new ArrayList<Quad>();var text=new ArrayList<Label>();
         double hp=Float.isFinite(health)&&maxHealth>0?Math.max(0,Math.min(1,health/maxHealth)):0;
         double shield=Float.isFinite(guard)?Math.max(0,Math.min(1,guard/100)):0;
@@ -73,7 +75,8 @@ public final class BotandHudLayout {
         text.add(new Label(profile.level()==50?"[MAX]":"[LV]",232,403,5.1,-29,173,0xfff4faff,0xff172e55));
         text.add(new Label(Integer.toString(profile.rebirths()),223,493,8.2,-29,75,0xffffd273,0xff855213));
         text.add(new Label(Integer.toString(profile.transcendence()),325,440,8.2,-29,75,0xff8edbff,0xff126fbb));
-        if(broken)text.add(new Label("BREAK",1190,441,3.5,0,400,0xffffb2c2,0xff3c1833));
+        if(perfect)text.add(new Label("PERFECT",1190,441,3.5,0,400,0xffe9fbff,0xff0f4f8f));
+        else if(broken)text.add(new Label("BREAK",1190,441,3.5,0,400,0xffffb2c2,0xff3c1833));
         else if(disabled)text.add(new Label("무력화",1190,441,3.5,0,400,0xffd7c8ff,0xff2a1846));
         else if(sealed)text.add(new Label("가드 불가",1190,441,3.5,0,400,0xffe2b8ff,0xff34085e));
         return new Frame(q,text);

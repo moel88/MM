@@ -93,6 +93,9 @@ public final class CooldownHud {
     /** (2.143.0) The samurai's G, the one flash ('일섬'): three minutes from its end, or from when it was blocked or called off. */
     static final int SAMURAI_G=42;
     private static long samuraiGSeen;
+    /** (2.157.0) The combat engine's evasive ('회피', Defense): fifteen seconds from its end. Everyone's, as the dash is. */
+    static final int EVADE=43;
+    private static long evadeSeen;
     private static final CooldownList LIST=new CooldownList();
     private static final long[] SEEN=new long[9];
     private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen,timeStopSeen,atomicSeen,isosangSeen,isosangESeen,isosangRSeen,isosangHSeen,isosangGSeen,isosangZSeen,isosangVSeen,isosangTSeen,isosangYSeen,xcharaGSeen,xcharaESeen,xcharaJabSeen,xcharaSlamSeen,xcharaCutterSeen,xcharaShotSeen,xcharaKnivesSeen,xcharaSeen,xcharaCloneSeen,xcharaWeakenSeen,xcharaPullSeen,xcharaEraseSeen,xcharaXSeen,xcharaZSeen;
@@ -109,7 +112,7 @@ public final class CooldownHud {
     }
     /** The list's clock on this frame (ticks). */
     static double clock(float delta){return ticks+delta;}
-    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);samuraiGSeen=0;dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=atomicSeen=isosangSeen=isosangESeen=isosangRSeen=isosangHSeen=isosangGSeen=isosangZSeen=isosangVSeen=isosangTSeen=isosangYSeen=xcharaGSeen=xcharaESeen=xcharaCloneSeen=xcharaWeakenSeen=xcharaPullSeen=xcharaJabSeen=xcharaSlamSeen=xcharaCutterSeen=xcharaShotSeen=xcharaKnivesSeen=xcharaEraseSeen=xcharaXSeen=xcharaZSeen=xcharaSeen=0;atomic=false;owner=null;world=null;}
+    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);samuraiGSeen=0;evadeSeen=0;dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=atomicSeen=isosangSeen=isosangESeen=isosangRSeen=isosangHSeen=isosangGSeen=isosangZSeen=isosangVSeen=isosangTSeen=isosangYSeen=xcharaGSeen=xcharaESeen=xcharaCloneSeen=xcharaWeakenSeen=xcharaPullSeen=xcharaJabSeen=xcharaSlamSeen=xcharaCutterSeen=xcharaShotSeen=xcharaKnivesSeen=xcharaEraseSeen=xcharaXSeen=xcharaZSeen=xcharaSeen=0;atomic=false;owner=null;world=null;}
     /**
      * The server has just set {@code world}'s clock (its time packet, WorldTimeMixin). Until it first does, a world just
      * joined counts from 0, and a ready tick read against it (the long cooldowns are told as the player joins: Fabric
@@ -168,6 +171,9 @@ public final class CooldownHud {
         // the dash (C): the combat state's tick it is ready again
         long dash=CombatClient.snapshot(p.getUuid()).dashReady();
         if(dash!=dashSeen){show(DASH,dashName(),dash-time,CombatState.DASH_COOLDOWN,now);dashSeen=dash;}
+        // (2.157.0) the evasive: the combat state's tick it is ready again
+        long evade=CombatClient.snapshot(p.getUuid()).evadeReady();
+        if(evade!=evadeSeen){show(EVADE,"회피",evade-time,dev.sangwoo.celestialfall.engine.Defense.EVADE_COOLDOWN,now);evadeSeen=evade;}
         // Star Platinum's punches (2.54.0): only their rest after a combo, as Kageno's attack (the server's ready tick)
         // (2.154.0) the punches' box is Gold Experience's basic attack's too (its rest after a combo; its own name)
         if(!"gold_experience".equals(stand))dev.sangwoo.celestialfall.client.stand.GoldCombo.forget(p.getUuid());
@@ -292,7 +298,7 @@ public final class CooldownHud {
      * the stand again (the arrow, the gacha) begins its long ones in full.
      */
     static boolean shows(int slot,String stand){
-        if(slot==DASH)return true;
+        if(slot==DASH||slot==EVADE)return true;
         // (2.77.0) Lee So-sang's to theirs
         if(slot==ISOSANG||slot==ISOSANG_E||slot==ISOSANG_R||slot==ISOSANG_H||slot==ISOSANG_G||slot==ISOSANG_Z||slot==ISOSANG_VOLLEY||slot==ISOSANG_T||slot==ISOSANG_Y)return "isosang".equals(stand);
         // (2.143.0) the samurai's to theirs

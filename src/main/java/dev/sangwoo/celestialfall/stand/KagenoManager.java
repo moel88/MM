@@ -187,6 +187,8 @@ public final class KagenoManager {
         // (2.110.0) not one in their vanilla mode (VanillaMode): nobody's skills take them
         return world.getEntitiesByClass(LivingEntity.class,new Box(origin,origin).expand(radius+1),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
             &&!(e instanceof PlayerEntity q&&dev.sangwoo.celestialfall.map.VanillaMode.on(q))
+            // (2.157.0) nor one untouchable from their evasive
+            &&!dev.sangwoo.celestialfall.combat.CombatManager.untouchable(e)
             &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity)&&inside(e.getPos().squaredDistanceTo(origin),radius)&&(!sight||p.canSee(e)));
     }
     public static List<LivingEntity> radiusTargets(ServerPlayerEntity p,double radius){return near(p.getServerWorld(),p.getPos(),radius,p,false);}
@@ -325,15 +327,14 @@ public final class KagenoManager {
             // M1 hit 4: the thrust sends whoever it strikes flying along it (2.37.0: no hold and no rising cut).
             if(c.skill==M1&&c.combo==4&&!frozen(e)){
                 c.targets.put(e,e.getPos());
-                e.setVelocity(Vec3d.fromPolar(0,c.yaw).multiply(M1_FLY).add(0,M1_FLY_UP,0));e.velocityModified=true;
-                if(e instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
+                // (2.157.0) told once (the engine's Launch): sent a second time here besides, a client moving between was thrown twice
+                dev.sangwoo.celestialfall.engine.Launch.at(e,Vec3d.fromPolar(0,c.yaw).multiply(M1_FLY).add(0,M1_FLY_UP,0));
             }
             // R strikes without knockback (user request, 2.37.0): its targets stay where they stand when the release hits.
             // T+'s spin cut throws everyone it strikes out away from the caster.
             if(c.skill==RUSH&&age==RUSH_FINISH&&!frozen(e)){
                 Vec3d away=e.getPos().subtract(c.player.getPos()).multiply(1,0,1);if(away.lengthSquared()<1e-4)away=Vec3d.fromPolar(0,c.yaw);
-                e.setVelocity(away.normalize().multiply(.75).add(0,.32,0));e.velocityModified=true;
-                if(e instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
+                dev.sangwoo.celestialfall.engine.Launch.at(e,away.normalize().multiply(.75).add(0,.32,0));
             }
         }
     }
