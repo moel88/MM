@@ -64,14 +64,14 @@ public final class GoldBeatdownFx {
         float size=armSize(s.b,t);double a=0,rt=0,up=0,sum=0;
         for(int st:new int[]{GUARD,OVER_WIND,OVER_PUNCH}){
             if(w[st]<=0)continue;
-            float[] f=GoldRush.grown(st,1,size);a+=f[0]*w[st];rt+=f[1]*w[st];up+=f[2]*w[st];sum+=w[st];
+            float[] f=GoldRush.grown(s.b.skin,st,1,size);a+=f[0]*w[st];rt+=f[1]*w[st];up+=f[2]*w[st];sum+=w[st];
         }
         if(sum<=.2)return null;
         a/=sum;rt/=sum;up/=sum;
         // tipped as the stand leans about its waist
-        double l=Math.toRadians(-lean(s.b,t)),q=up-WAIST;
+        double waist=s.b.skin.waist,l=Math.toRadians(-lean(s.b,t)),q=up-waist;
         Vec3d f=StandPunchFx.way(body.yaw()),r=StandPunchFx.right(f);
-        return body.at().add(f.multiply(a*Math.cos(l)+q*Math.sin(l))).add(r.multiply(rt)).add(0,WAIST+q*Math.cos(l)-a*Math.sin(l),0);
+        return body.at().add(f.multiply(a*Math.cos(l)+q*Math.sin(l))).add(r.multiply(rt)).add(0,waist+q*Math.cos(l)-a*Math.sin(l),0);
     }
     /** Where the rush's fist {@code k} lands on the one struck: on their front at their face, chest or belly, a little to the side it comes in on, as they are when it lands. */
     static Vec3d spot(Beat b,int k){

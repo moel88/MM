@@ -20,8 +20,9 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class GoldLifeTest {
     static final float FRAME=1/60f;
-    private static List<String> bones()throws Exception{
-        try(var in=GoldLifeTest.class.getResourceAsStream("/assets/celestialfall/geo/entity/gold_experience.geo.json")){
+    /** The bones of a skin's skeleton (2.156.0: each skin its own, GoldSkin). */
+    private static List<String> bones(GoldSkin skin)throws Exception{
+        try(var in=GoldLifeTest.class.getResourceAsStream(skin.geo())){
             var list=new ArrayList<String>();
             for(var b:JsonParser.parseReader(new InputStreamReader(in,StandardCharsets.UTF_8)).getAsJsonObject().getAsJsonArray("minecraft:geometry").get(0).getAsJsonObject().getAsJsonArray("bones"))
                 list.add(b.getAsJsonObject().get("name").getAsString());
@@ -32,7 +33,13 @@ class GoldLifeTest {
     static GoldLife.Life punch(float aim){return new GoldLife.Life(false,0,0,0,30,aim,5,null);}
     /** Runs it frame by frame from the stand at rest beside its user; no bone, arm or place jumps, and it is at rest again after. */
     private void watch(GoldLife.Life l,float until,String what)throws Exception{
-        var names=bones();var poses=new GoldExperiencePoses();var look=new GoldExperienceLook();var shape=new GoldRush.Shape();
+        // (2.156.0) in every skin, each with its own skeleton, stances and fists
+        for(var skin:GoldSkin.values()){l.skin=skin;watch(skin,l,until,what);}
+        l.skin=GoldSkin.ORIGINAL;
+    }
+    private void watch(GoldSkin skin,GoldLife.Life l,float until,String what)throws Exception{
+        what=skin+": "+what;
+        var names=bones(skin);var poses=new GoldExperiencePoses(skin);var look=new GoldExperienceLook();var shape=new GoldRush.Shape();
         float[] scratch=new float[NAMES.size()],q=new float[6];float[][] last=new float[names.size()][];
         float armL=1,armR=1,engage=0,side=Float.NaN,ahead=Float.NaN,raise=Float.NaN;boolean shown=false;
         for(float t=0;t<=until;t+=FRAME){
@@ -109,14 +116,17 @@ class GoldLifeTest {
             float step=GoldLife.strike(t)-GoldLife.strike(t-FRAME);
             assertTrue(step>=last-1e-4,"it slows at "+t);last=step;
         }
-        // its fist BITE into the one it lands on, wherever they stand (within reach)
-        float reach=GoldRush.grown(OVER_PUNCH,1,GoldLife.ARMS)[0];
-        for(float aim:new float[]{GoldLife.NEAR+reach-GoldLife.BITE+.05f,2.8f,GoldLife.FAR+reach-GoldLife.BITE-.05f}){
-            float place=GoldLife.place(punch(aim));
-            assertEquals(aim+GoldLife.BITE,place+GoldRush.grown(OVER_PUNCH,1,GoldLife.ARMS)[0],1e-4,"its fist into them at "+aim);
+        // its fist BITE into the one it lands on, wherever they stand (within reach; 2.156.0: in every skin)
+        for(var skin:GoldSkin.values()){
+            float reach=GoldRush.grown(skin,OVER_PUNCH,1,GoldLife.ARMS)[0];
+            for(float aim:new float[]{GoldLife.NEAR+reach-GoldLife.BITE+.05f,2.8f,skin.far+reach-GoldLife.BITE-.05f}){
+                var l=punch(aim);l.skin=skin;
+                assertEquals(aim+GoldLife.BITE,GoldLife.place(l)+reach,1e-4,skin+": its fist into them at "+aim);
+            }
+            var near=punch(.2f);near.skin=skin;var far=punch(9);far.skin=skin;
+            assertEquals(GoldLife.NEAR,GoldLife.place(near),1e-6,"never on top of its user");
+            assertEquals(skin.far,GoldLife.place(far),1e-6,"nor far from them");
         }
-        assertEquals(GoldLife.NEAR,GoldLife.place(punch(.2f)),1e-6,"never on top of its user");
-        assertEquals(GoldLife.FAR,GoldLife.place(punch(9)),1e-6,"nor far from them");
     }
     @Test void theItemBecomesTheFrogAndTheFrogTheItemWithoutABlankOrAJump(){
         var l=frog();

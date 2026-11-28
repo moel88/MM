@@ -124,7 +124,7 @@ public final class GoldTreeFx {
         if(s.body==null)return;
         var t=s.tree;float a=s.t;
         float k=GoldTree.kneel(t,a);if(k<=.02f)return;
-        Vec3d palm=GoldTree.palm(s.body);
+        Vec3d palm=GoldTree.palm(t.skin,s.body);
         float near=clear(m,palm);
         // light gathering into its palm as it goes down
         float g=Ease.smooth(a,.05f,GoldTree.TOUCH)*(1-Ease.smooth(a,burstAt(t),burstAt(t)+.25f));
@@ -292,7 +292,7 @@ public final class GoldTreeFx {
     static void frame(FxFrame f,Vec3d camera){
         for(var s:FRAME){
             var t=s.tree;
-            if(s.body!=null){float k=GoldTree.kneel(t,s.t)*(1-Ease.smooth(s.t,burstAt(t),burstAt(t)+.3f));if(k>0)f.light(GoldTree.palm(s.body),0xffd890,4,1.2f*k);}
+            if(s.body!=null){float k=GoldTree.kneel(t,s.t)*(1-Ease.smooth(s.t,burstAt(t),burstAt(t)+.3f));if(k>0)f.light(GoldTree.palm(t.skin,s.body),0xffd890,4,1.2f*k);}
             if(!grows(t))continue;
             float since=s.t-burstAt(t);
             if(since>=0&&since<.9f)f.light(t.spot.add(0,1,0),0xffe0a0,11,3.6f*FxLib.kick(since,0,.25f));

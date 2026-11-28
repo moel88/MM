@@ -20,8 +20,9 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class GoldRushTest {
     static final float FRAME=1/60f;
-    private static List<String> bones()throws Exception{
-        try(var in=GoldRushTest.class.getResourceAsStream("/assets/celestialfall/geo/entity/gold_experience.geo.json")){
+    /** The bones of a skin's skeleton (2.156.0: each skin its own, GoldSkin). */
+    private static List<String> bones(GoldSkin skin)throws Exception{
+        try(var in=GoldRushTest.class.getResourceAsStream(skin.geo())){
             var list=new ArrayList<String>();
             for(var b:JsonParser.parseReader(new InputStreamReader(in,StandardCharsets.UTF_8)).getAsJsonObject().getAsJsonArray("minecraft:geometry").get(0).getAsJsonObject().getAsJsonArray("bones"))
                 list.add(b.getAsJsonObject().get("name").getAsString());
@@ -39,7 +40,13 @@ class GoldRushTest {
     }
     /** Runs a rush frame by frame from the stand at rest beside its user; no bone, arm or place jumps. */
     private void watch(StandRush.Rush r,float until,String what)throws Exception{
-        var names=bones();var poses=new GoldExperiencePoses();var look=new GoldExperienceLook();var shape=new GoldRush.Shape();
+        // (2.156.0) in every skin, each with its own skeleton, stances and fists
+        for(var skin:GoldSkin.values()){r.skin=skin;watch(skin,r,until,what);}
+        r.skin=GoldSkin.ORIGINAL;
+    }
+    private void watch(GoldSkin skin,StandRush.Rush r,float until,String what)throws Exception{
+        what=skin+": "+what;
+        var names=bones(skin);var poses=new GoldExperiencePoses(skin);var look=new GoldExperienceLook();var shape=new GoldRush.Shape();
         float[] scratch=new float[NAMES.size()],p=new float[6];float[][] last=new float[names.size()][];
         float armL=1,armR=1,engage=0;boolean shown=false;
         for(float t=0;t<=until;t+=FRAME){
@@ -115,20 +122,27 @@ class GoldRushTest {
         clock(r.ends()+.2f);for(int i=0;i<GoldRush.PHANTOMS.length;i++)assertEquals(0,GoldRush.phantom(r,i,0,look),1e-6,"gone as it ends");
         assertTrue(GoldRush.GREEN<GoldRush.RED&&GoldRush.BLUE<GoldRush.GREEN,"golden");
     }
+    /** (2.156.0) In every skin: each skin's fists are where its own stances put them (GoldSkin). */
     @Test void itsFistsAreWhereItsStancesPutThem(){
-        for(int s:new int[]{RUSH_L,RUSH_L_HI,RUSH_L_LO}){
-            float[] out=GoldRush.FISTS[s][0],back=GoldRush.FISTS[s][1];
-            assertTrue(out[0]>.85f,NAMES.get(s)+": the left fist out in front, "+out[0]);
-            assertTrue(back[0]<out[0]-.4f,NAMES.get(s)+": the right one drawn back");
-            // the mirror on the other side
-            float[] other=GoldRush.FISTS[s+3][1];
-            assertEquals(out[0],other[0],1e-3);assertEquals(-out[1],other[1],1e-3);assertEquals(out[2],other[2],1e-3);
+        for(var skin:GoldSkin.values()){
+            var fists=skin.fists();
+            for(int s:new int[]{RUSH_L,RUSH_L_HI,RUSH_L_LO}){
+                float[] out=fists[s][0],back=fists[s][1];
+                assertTrue(out[0]>.85f,skin+" "+NAMES.get(s)+": the left fist out in front, "+out[0]);
+                assertTrue(back[0]<out[0]-.4f,skin+" "+NAMES.get(s)+": the right one drawn back");
+                // the mirror on the other side
+                float[] other=fists[s+3][1];
+                assertEquals(out[0],other[0],1e-3);assertEquals(-out[1],other[1],1e-3);assertEquals(out[2],other[2],1e-3);
+            }
+            assertTrue(fists[RUSH_L_HI][0][2]>fists[RUSH_L][0][2]+.1f&&fists[RUSH_L][0][2]>fists[RUSH_L_LO][0][2]+.1f,skin+": high, middle and low");
+            // bigger arms reach further, out from the shoulder
+            float[] grown=GoldRush.grown(skin,RUSH_L,0,GoldRush.ARMS*(1+GoldRush.STRETCH));
+            assertTrue(grown[0]>fists[RUSH_L][0][0]+.05f);assertEquals(grown[0],GoldRush.fistReach(skin),1e-6);
+            assertTrue(GoldRush.fistReach(skin)>1&&GoldRush.fistReach(skin)<1.9f,skin+": its reach: "+GoldRush.fistReach(skin));
+            assertEquals(GoldExperienceStance.NAMES.size(),fists.length);
+            // its fists strike a player's face and the top of their chest, in front of its user (the box-built figure's
+            // heights, and the body the user sent's aimed down to them, 2.155.1)
+            for(int s:new int[]{RUSH_L,RUSH_L_HI,RUSH_L_LO}){float up=fists[s][0][2]+GoldRush.RAISE+(float)StandPresence.UP;assertTrue(up>1.3f&&up<1.8f,skin+" "+NAMES.get(s)+" "+up+" blocks up");}
         }
-        assertTrue(GoldRush.FISTS[RUSH_L_HI][0][2]>GoldRush.FISTS[RUSH_L][0][2]+.1f&&GoldRush.FISTS[RUSH_L][0][2]>GoldRush.FISTS[RUSH_L_LO][0][2]+.1f,"high, middle and low");
-        // bigger arms reach further, out from the shoulder
-        float[] grown=GoldRush.grown(RUSH_L,0,GoldRush.ARMS*(1+GoldRush.STRETCH));
-        assertTrue(grown[0]>GoldRush.FISTS[RUSH_L][0][0]+.05f);assertEquals(grown[0],GoldRush.fistReach(),1e-6);
-        assertTrue(GoldRush.fistReach()>1&&GoldRush.fistReach()<1.9f,"its reach: "+GoldRush.fistReach());
-        assertEquals(GoldExperienceStance.NAMES.size(),GoldRush.FISTS.length);
     }
 }

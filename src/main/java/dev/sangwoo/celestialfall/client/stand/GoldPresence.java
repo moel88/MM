@@ -58,6 +58,8 @@ public final class GoldPresence {
         var d=s.body.at().subtract(p.getLerpedPos(delta));double r=Math.toRadians(p.getHeadYaw()),fx=-Math.sin(r),fz=Math.cos(r);int arms=0;for(var a:s.arms)if(a!=null)arms++;
         return String.format(java.util.Locale.ROOT,"stand drawn %.2f ahead, %.2f to the right, %.2f up, %d arms' bodies",d.x*fx+d.z*fz,-d.x*fz+d.z*fx,d.y,arms);
     }
+    /** For the capture tools: the skin this player's stand was last drawn in (null when none is drawn; 2.156.0). */
+    public static GoldSkin drawnIn(UUID owner){var s=ALL.get(owner);return s==null||!s.drawn?null:s.puppet.skin;}
     /** How many are out or going back in this client's sight (for the capture tools' logs). */
     public static int count(){return ALL.size();}
 
@@ -128,7 +130,7 @@ public final class GoldPresence {
                     float a=GoldRush.phantom(rush,i,delta,arm.look)*look.alpha;if(a<.02f)continue;
                     arm.look.armsOnly=true;arm.look.alpha=a;arm.look.out=1;arm.look.scale=look.scale;arm.look.shadow=0;arm.look.glow=0;arm.look.lean=arm.look.roll=0;
                     arm.look.red=GoldRush.RED;arm.look.green=GoldRush.GREEN;arm.look.blue=GoldRush.BLUE;
-                    arm.age=s.puppet.age;
+                    arm.age=s.puppet.age;arm.skin=s.puppet.skin;
                     var b=GoldRush.phantomBody(s.body,i);arm.place(b.at(),b.yaw());
                     dispatcher.render(arm,b.at().x-cam.x,b.at().y-cam.y,b.at().z-cam.z,b.yaw(),delta,c.matrixStack(),c.consumers(),dispatcher.getLight(arm,delta));
                 }
@@ -141,7 +143,7 @@ public final class GoldPresence {
                     float a=GoldBeatdown.phantom(s.beat,i,delta,arm.look)*look.alpha;if(a<.02f)continue;
                     arm.look.armsOnly=true;arm.look.alpha=a;arm.look.out=1;arm.look.scale=look.scale;arm.look.shadow=0;arm.look.glow=0;arm.look.lean=look.lean;arm.look.roll=0;
                     arm.look.red=GoldRush.RED;arm.look.green=GoldRush.GREEN;arm.look.blue=GoldRush.BLUE;
-                    arm.age=s.puppet.age;
+                    arm.age=s.puppet.age;arm.skin=s.puppet.skin;
                     var b=GoldRush.phantomBody(s.body,i);arm.place(b.at(),b.yaw());
                     dispatcher.render(arm,b.at().x-cam.x,b.at().y-cam.y,b.at().z-cam.z,b.yaw(),delta,c.matrixStack(),c.consumers(),dispatcher.getLight(arm,delta));
                 }
@@ -157,7 +159,7 @@ public final class GoldPresence {
                 if(!GoldCombo.pose(s.owner,delta,GoldCombo.GHOST_BACK[i],gl,s.ghostShape,s.scratch))continue;
                 gl.alpha=strike*GoldCombo.GHOST_ALPHA[i];gl.out=look.out;gl.scale=look.scale;gl.shadow=0;gl.glow=0;gl.lean=look.lean;gl.roll=look.roll;
                 gl.red=GoldRush.RED;gl.green=GoldRush.GREEN;gl.blue=GoldRush.BLUE;
-                ghostPuppet.age=s.puppet.age;
+                ghostPuppet.age=s.puppet.age;ghostPuppet.skin=s.puppet.skin;
                 var b=s.where(p,delta,gl,s.ghostShape);ghostPuppet.place(b.at(),b.yaw());
                 dispatcher.render(ghostPuppet,b.at().x-cam.x,b.at().y-cam.y,b.at().z-cam.z,b.yaw(),delta,c.matrixStack(),c.consumers(),dispatcher.getLight(ghostPuppet,delta));
             }
@@ -264,6 +266,10 @@ final float[] scratch=new float[dev.sangwoo.celestialfall.stand.GoldExperienceSt
             var rush=StandRush.of(owner);if(rush!=null&&(!rush.gold()||!out))rush=null;
             var punch=out?GoldPunch.of(owner):null;
             heal=out?GoldHeal.of(owner):null;beat=out?GoldBeatdown.of(owner):null;life=out?GoldLife.of(owner):null;tree=out?GoldTree.of(owner):null;
+            // (2.156.0) the skin its user's stand is drawn in, as the server says: its body and its skills' fists go by it
+            var skin=GoldSkin.of(p);puppet.skin=skin;
+            if(rush!=null)rush.skin=skin;if(punch!=null)punch.skin=skin;if(heal!=null)heal.skin=skin;if(beat!=null)beat.skin=skin;if(life!=null)life.skin=skin;if(tree!=null)tree.skin=skin;
+            GoldCombo.skin(owner,skin);
             float[] ages={rush==null?Float.NaN:rush.age(delta),punch==null?Float.NaN:punch.age(delta),heal==null?Float.NaN:heal.age(delta),
                 beat==null?Float.NaN:beat.age(delta),life==null?Float.NaN:life.age(delta),tree==null?Float.NaN:tree.age(delta),out?GoldCombo.newest(owner,delta):Float.NaN};
             Integer[] order={0,1,2,3,4,5,6};

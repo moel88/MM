@@ -27,6 +27,8 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  */
 public class GoldExperienceEntity extends MobEntity implements GeoEntity {
     private static final TrackedData<Integer> STANCE=DataTracker.registerData(GoldExperienceEntity.class,TrackedDataHandlerRegistry.INTEGER);
+    /** (2.156.0) The skin the figure is drawn in (its number among Gold Experience's skins, StandSkins: 0 its own look). */
+    private static final TrackedData<Byte> SKIN=DataTracker.registerData(GoldExperienceEntity.class,TrackedDataHandlerRegistry.BYTE);
     private final AnimatableInstanceCache cache=GeckoLibUtil.createInstanceCache(this);
     /** The client's crossfade: the stance last drawn, the one before it and when (its age in ticks) the change came. */
     private int shownStance=-1,previousStance;private float changedAt=-1000;
@@ -35,7 +37,10 @@ public class GoldExperienceEntity extends MobEntity implements GeoEntity {
         super(type,world);setNoGravity(true);setInvulnerable(true);setSilent(true);setAiDisabled(true);setPersistent();
     }
     public static DefaultAttributeContainer.Builder attributes(){return MobEntity.createMobAttributes().add(EntityAttributes.GENERIC_MAX_HEALTH,20);}
-    @Override protected void initDataTracker(){super.initDataTracker();dataTracker.startTracking(STANCE,0);}
+    @Override protected void initDataTracker(){super.initDataTracker();dataTracker.startTracking(STANCE,0);dataTracker.startTracking(SKIN,(byte)0);}
+    /** The skin it is drawn in (2.156.0): its number among Gold Experience's skins (StandSkins), 0 its own look. */
+    public int skin(){return dataTracker.get(SKIN);}
+    public void setSkin(int number){dataTracker.set(SKIN,(byte)Math.max(0,Math.min(StandSkins.MOST,number)));}
     public int stance(){return dataTracker.get(STANCE);}
     public void setStance(int stance){dataTracker.set(STANCE,Math.floorMod(stance,GoldExperienceStance.NAMES.size()));}
     /**
@@ -51,8 +56,11 @@ public class GoldExperienceEntity extends MobEntity implements GeoEntity {
     public int previousStance(){return previousStance;}
     /** Its look as a stand beside its user (2.146.0, the client's body of one: GoldPuppet), or null for the figure, which goes by its stance. */
     public GoldExperienceLook look(float delta){return null;}
-    @Override public void writeCustomDataToNbt(NbtCompound nbt){super.writeCustomDataToNbt(nbt);nbt.putString("Stance",GoldExperienceStance.NAMES.get(stance()));}
-    @Override public void readCustomDataFromNbt(NbtCompound nbt){super.readCustomDataFromNbt(nbt);setStance(Math.max(0,GoldExperienceStance.NAMES.indexOf(nbt.getString("Stance"))));}
+    @Override public void writeCustomDataToNbt(NbtCompound nbt){super.writeCustomDataToNbt(nbt);nbt.putString("Stance",GoldExperienceStance.NAMES.get(stance()));nbt.putString("Skin",StandSkins.skin("gold_experience",skin()));}
+    @Override public void readCustomDataFromNbt(NbtCompound nbt){
+        super.readCustomDataFromNbt(nbt);setStance(Math.max(0,GoldExperienceStance.NAMES.indexOf(nbt.getString("Stance"))));
+        setSkin(Math.max(0,StandSkins.number("gold_experience",nbt.getString("Skin"))));
+    }
     /** Only what gets past invulnerability (/kill, the void) removes it; "/botand gold clear" is the usual way. */
     @Override public boolean isInvulnerableTo(DamageSource source){return !source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY);}
     @Override public boolean isPushable(){return false;}

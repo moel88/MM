@@ -36,6 +36,37 @@ public final class ProgressCommands {
             .then(literal("on").executes(c->awaken(c.getSource(),EntityArgumentType.getPlayers(c,"targets"),true)))
             .then(literal("off").executes(c->awaken(c.getSource(),EntityArgumentType.getPlayers(c,"targets"),false)));
         root.then(admin.then(stand.then(targets)).then(awaken.then(awakened)));
+        // (2.156.0) stand skins (StandSkins): for now an operator applies them ("/botand skin <targets> <skin>"; with no
+        // skin, says which each has); the stand keeps the skin until it changes
+        var skin=literal("skin").requires(s->s.hasPermissionLevel(2));var skinned=argument("targets",EntityArgumentType.players());
+        skinned.executes(c->skins(c.getSource(),EntityArgumentType.getPlayers(c,"targets")));
+        for(String id:dev.sangwoo.celestialfall.stand.StandSkins.all())skinned.then(literal(id).executes(c->skin(c.getSource(),EntityArgumentType.getPlayers(c,"targets"),id)));
+        root.then(skin.then(skinned));
+    }
+    /** Gives the players the skin, if each one's stand has it (none is given if one's has not). */
+    private static int skin(ServerCommandSource source,java.util.Collection<net.minecraft.server.network.ServerPlayerEntity> players,String skin) {
+        for(var p:players)if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld())){source.sendError(Text.translatable("message.botand.map_only"));return 0;}
+        for(var p:players){
+            String stand=ProgressManager.profile(p).stand();
+            if(dev.sangwoo.celestialfall.stand.StandSkins.number(stand,skin)<0){
+                source.sendError(Text.translatable("message.botand.skin_missing",p.getDisplayName(),Text.translatable(StandStats.get(stand).translation()),skin));return 0;
+            }
+        }
+        for(var p:players)ProgressManager.skin(p,skin);
+        String first=players.isEmpty()?"none":ProgressManager.profile(players.iterator().next()).stand();
+        source.sendFeedback(()->Text.translatable("message.botand.skin_set",players.size(),Text.translatable(dev.sangwoo.celestialfall.stand.StandSkins.translation(first,skin))),true);
+        return players.size();
+    }
+    /** Says each player's stand, the skin it is in and the skins it has (each by its name and the word the command takes). */
+    private static int skins(ServerCommandSource source,java.util.Collection<net.minecraft.server.network.ServerPlayerEntity> players) {
+        for(var p:players){
+            String stand=ProgressManager.profile(p).stand(),skin=ProgressManager.skin(p);
+            var list=Text.empty();var all=dev.sangwoo.celestialfall.stand.StandSkins.of(stand);
+            for(int i=0;i<all.size();i++){if(i>0)list.append(", ");list.append(Text.translatable(dev.sangwoo.celestialfall.stand.StandSkins.translation(stand,all.get(i)))).append(" ("+all.get(i)+")");}
+            source.sendFeedback(()->Text.translatable("message.botand.skin_status",p.getDisplayName(),Text.translatable(StandStats.get(stand).translation()),
+                Text.translatable(dev.sangwoo.celestialfall.stand.StandSkins.translation(stand,skin)),list),false);
+        }
+        return players.size();
     }
     private static int awaken(ServerCommandSource source,java.util.Collection<net.minecraft.server.network.ServerPlayerEntity> players,boolean value) {
         for(var p:players)if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld())){source.sendError(Text.translatable("message.botand.map_only"));return 0;}

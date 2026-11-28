@@ -89,12 +89,12 @@ public final class GoldBeatdown {
     static final float ARMS=1.2f;
     /** How far in front of its user it stands for its punch with no one in its way, and no nearer or further than; how deep its fists go into whom they meet. */
     static final float AHEAD=1.05f,NEAR=.75f,FAR=2.1f,BITE=.15f;
-    /** The height it leans about (GoldExperienceRenderer.WAIST). */
-    static final double WAIST=GoldExperienceRenderer.WAIST;
 
     /** A beatdown as this client heard of it: its opening punch, and the cutscene if one came of it. */
     public static final class Beat {
         public final UUID user;public final long start;final long serverAge,received;public final float yaw,aim;final int seed;
+        /** (2.156.0) The skin its user's Gold Experience is drawn in (GoldSkin: its fists and size go by it); set as it begins and every frame it is drawn. */
+        public GoldSkin skin=GoldSkin.ORIGINAL;
         /** Its way and its right. */
         public final Vec3d f,r;
         /** The punch stopped short (its clock then; NaN: not), landed (NaN: not yet), whom it met (-1 no one) and whether it broke their guard. */
@@ -109,7 +109,7 @@ public final class GoldBeatdown {
         /** The world tick G is ready again (0: not known, the cutscene still on). */
         long ready;
         Beat(UUID user,long start,long serverAge,float yaw,float aim){
-            this.user=user;this.start=start;this.serverAge=serverAge;received=ticks;this.yaw=yaw;this.aim=aim;
+            this.user=user;this.start=start;this.serverAge=serverAge;received=ticks;this.yaw=yaw;this.aim=aim;skin=GoldSkin.of(user);
             f=Vec3d.fromPolar(0,yaw);r=new Vec3d(-f.z,0,f.x);
             seed=(int)(start*31+user.getLeastSignificantBits()&0x7fffffff);
         }
@@ -446,17 +446,17 @@ public final class GoldBeatdown {
     /** How much of the way under the one struck there is room for (0 to 1): they must be high enough over the ground for the stand to float beneath them. */
     static float room(Beat b,float t){return smooth((float)((height(b,Math.min(t,FINAL-1e-4f))-.6)/1.2));}
     /** Where a fist at full stretch is from the stand's feet as it leans {@code lean} degrees back: {ahead, up} (blocks). */
-    static double[] reach(float lean,float size,int stance,int side){
-        float[] g=GoldRush.grown(stance,side,size);
-        double l=Math.toRadians(-lean),q=g[2]-WAIST;
-        return new double[]{g[0]*Math.cos(l)+q*Math.sin(l),WAIST+q*Math.cos(l)-g[0]*Math.sin(l)};
+    static double[] reach(GoldSkin skin,float lean,float size,int stance,int side){
+        float[] g=GoldRush.grown(skin,stance,side,size);double waist=skin.waist;
+        double l=Math.toRadians(-lean),q=g[2]-waist;
+        return new double[]{g[0]*Math.cos(l)+q*Math.sin(l),waist+q*Math.cos(l)-g[0]*Math.sin(l)};
     }
     /** Where on the one struck its fists land (their chest's front, a little into them), as they are held at {@code t} without the fists' jolts. */
     static Vec3d target(Beat b,float t){return point(b,victim(b,Math.min(t,FINAL-1e-4f),false),-.3+BITE,1.2);}
     /** The stand's feet at {@code t} through a cutscene: where its fist at full stretch lands on the one struck (never under the ground its user stands on), its dash into the last blow on top. */
     static Vec3d standFeet(Beat b,float t){
         float lean=lean(b,t),size=ARMS*(1+GoldRush.STRETCH);
-        double[] reach=reach(lean,size,RUSH_L,0);
+        double[] reach=reach(b.skin,lean,size,RUSH_L,0);
         Vec3d to=target(b,t);
         double ahead=to.subtract(b.from).dotProduct(b.f)-reach[0]-FINAL_BACK*smooth((t-(WIND+.05f))/.35f)*(1-ease(2,(t-(FINAL-.17f))/.17f));
         double y=Math.max(b.from.y+.05,to.y-reach[1]);
@@ -467,13 +467,13 @@ public final class GoldBeatdown {
     static float lunge(float t){return .45f*kick(t,FINAL,.4f);}
     /** A point of the stand's body at {@code t}: {@code ahead} of its feet and {@code up} over them as it stands, tipped as it leans about its waist. */
     static Vec3d standPoint(Beat b,float t,double ahead,double up){
-        double l=Math.toRadians(-lean(b,t)),q=up-WAIST;
-        return standFeet(b,t).add(0,WAIST+q*Math.cos(l)-ahead*Math.sin(l),0).add(b.f.multiply(ahead*Math.cos(l)+q*Math.sin(l)));
+        double waist=b.skin.waist,l=Math.toRadians(-lean(b,t)),q=up-waist;
+        return standFeet(b,t).add(0,waist+q*Math.cos(l)-ahead*Math.sin(l),0).add(b.f.multiply(ahead*Math.cos(l)+q*Math.sin(l)));
     }
     /** How far in front of its user it stands for its punch (the overdrive punch's way: its fist goes BITE into the first one in its way). */
     static float place(Beat b){
         if(Float.isNaN(b.aim))return AHEAD;
-        return MathHelper.clamp(b.aim+BITE-GoldPunch.fistReach(),NEAR,FAR);
+        return MathHelper.clamp(b.aim+BITE-GoldPunch.fistReach(b.skin),NEAR,FAR);
     }
     /**
      * Beatdown {@code b} this frame on a look that already holds the stand's pose: its stances take over (and give way

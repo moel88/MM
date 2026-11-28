@@ -18,8 +18,9 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class GoldHealTest {
     static final float FRAME=1/60f;
-    private static List<String> bones()throws Exception{
-        try(var in=GoldHealTest.class.getResourceAsStream("/assets/celestialfall/geo/entity/gold_experience.geo.json")){
+    /** The bones of a skin's skeleton (2.156.0: each skin its own, GoldSkin). */
+    private static List<String> bones(GoldSkin skin)throws Exception{
+        try(var in=GoldHealTest.class.getResourceAsStream(skin.geo())){
             var list=new ArrayList<String>();
             for(var b:JsonParser.parseReader(new InputStreamReader(in,StandardCharsets.UTF_8)).getAsJsonObject().getAsJsonArray("minecraft:geometry").get(0).getAsJsonObject().getAsJsonArray("bones"))
                 list.add(b.getAsJsonObject().get("name").getAsString());
@@ -30,7 +31,13 @@ class GoldHealTest {
     static GoldHeal.Heal hold(){return new GoldHeal.Heal(true,0,0,0,30,Float.NaN,5);}
     /** Runs a healing frame by frame from the stand at rest beside its user; no bone, arm or place jumps, and it is at rest again after. */
     private void watch(GoldHeal.Heal h,float until,String what)throws Exception{
-        var names=bones();var poses=new GoldExperiencePoses();var look=new GoldExperienceLook();var shape=new GoldRush.Shape();
+        // (2.156.0) in every skin, each with its own skeleton, stances and fists
+        for(var skin:GoldSkin.values()){h.skin=skin;watch(skin,h,until,what);}
+        h.skin=GoldSkin.ORIGINAL;
+    }
+    private void watch(GoldSkin skin,GoldHeal.Heal h,float until,String what)throws Exception{
+        what=skin+": "+what;
+        var names=bones(skin);var poses=new GoldExperiencePoses(skin);var look=new GoldExperienceLook();var shape=new GoldRush.Shape();
         float[] scratch=new float[NAMES.size()],q=new float[6];float[][] last=new float[names.size()][];
         float armL=1,armR=1,engage=0;boolean shown=false;
         for(float t=0;t<=until;t+=FRAME){
@@ -79,14 +86,17 @@ class GoldHealTest {
             float step=GoldHeal.reach(t)-GoldHeal.reach(t-FRAME);
             assertTrue(step>=last-1e-4,"it slows at "+t);last=step;
         }
-        // the fist is out at a body's chest, and it stands so that the fist is well into the first one in its way
-        float[] out=GoldHeal.fist(h,GoldHeal.TOUCH);
-        // (2.155.0: the body the user sent has shorter arms than the box-built one, which had 1.2)
-        assertTrue(out[0]>1.05f,"out: "+out[0]);assertTrue(out[2]>1.0f&&out[2]<1.7f,"at a body's chest: "+out[2]);
-        assertEquals(GoldHeal.fistReach(),out[0],1e-4);
-        for(float aim:new float[]{2.0f,2.8f,3.6f}){
-            float place=GoldHeal.place(tap(aim));
-            assertEquals(aim+GoldHeal.PRESS,place+GoldHeal.fistReach(),1e-4,"its fist into them at "+aim);
+        // the fist is out at a body's chest, and it stands so that the fist is well into the first one in its way (2.156.0: in every skin)
+        for(var skin:GoldSkin.values()){
+            var s=tap(Float.NaN);s.skin=skin;
+            float[] out=GoldHeal.fist(s,GoldHeal.TOUCH);
+            // (2.155.0: the body the user sent has shorter arms than the box-built one, which reaches past 1.2)
+            assertTrue(out[0]>(skin==GoldSkin.ORIGINAL?1.2f:1.05f),skin+": out: "+out[0]);assertTrue(out[2]>1.0f&&out[2]<1.7f,skin+": at a body's chest: "+out[2]);
+            assertEquals(GoldHeal.fistReach(skin),out[0],1e-4);
+            for(float aim:new float[]{2.0f,2.8f,3.6f}){
+                var a=tap(aim);a.skin=skin;
+                assertEquals(aim+GoldHeal.PRESS,GoldHeal.place(a)+GoldHeal.fistReach(skin),1e-4,skin+": its fist into them at "+aim);
+            }
         }
         assertTrue(GoldHeal.PRESS>=.15f,"driven in, not laid on");
         assertEquals(GoldHeal.NEAR,GoldHeal.place(tap(.3f)),1e-6,"never on top of its user");
@@ -115,8 +125,11 @@ class GoldHealTest {
         for(int s:GoldRush.LEFT){float[] v=new float[NAMES.size()];GoldHeal.stances(h,.4f,v);assertEquals(0,v[s],1e-6,"no fist of the rush");}
         // it stands at its user's front right with its knuckles well inside their body
         assertTrue(GoldHeal.SIDE>20&&GoldHeal.SIDE<80,"at their front right");
-        assertEquals(GoldHeal.DEPTH,GoldHeal.selfPlace()-GoldHeal.fistReach(),1e-5);assertTrue(GoldHeal.DEPTH<.13f,"inside a player's body (half as deep as .125)");
-        assertTrue(GoldHeal.selfPlace()>StandPresence.GAP,"never nearer than a stand keeps");
+        assertTrue(GoldHeal.DEPTH<.13f,"inside a player's body (half as deep as .125)");
+        for(var skin:GoldSkin.values()){
+            assertEquals(GoldHeal.DEPTH,GoldHeal.selfPlace(skin)-GoldHeal.fistReach(skin),1e-5);
+            assertTrue(GoldHeal.selfPlace(skin)>StandPresence.GAP,skin+": never nearer than a stand keeps");
+        }
         // its light is on while the fist is in, and out as it is drawn out
         assertEquals(0,GoldHeal.on(h,GoldHeal.TOUCH-.05f),1e-6);assertEquals(1,GoldHeal.on(h,.4f),1e-6);assertEquals(0,GoldHeal.on(h,GoldHeal.STAYS+.12f),1e-6);
     }

@@ -175,6 +175,9 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * far the arrow has been drawn in, whether it was cut short), the player's stand and how many arrows they hold, and
  * the log when the stab starts, what it chose and when, when the player dies and when their stand comes out.
  * "clearchat=1" empties the chat as the entry starts (the last entries' lines, such as a warm-up's awakening, gone).
+ * "skin=hq" (2.156.0) puts the entry's stand (and a Gold Experience figure) in that skin (StandSkins), its own look without;
+ * "SKIN@t" runs the operator's "/botand skin @s <skinto>" as the player, its answer in their chat ("skinto=status" asks;
+ * "SKIN_hq@t", "SKIN_original@t" and "SKIN_status@t" name it in the step).
  * Star Platinum's call (2.72.0): "AWAKEN@n" runs "/botand progress awaken @s" as the player (its answer in their chat;
  * Star Platinum's time stop is the awakened's) and "UNAWAKEN@n" takes it back; stand.csv gets whether the player is
  * awakened (their client's word, the server's), the call sound playing ("star_platinum_summon" as the stand comes out at
@@ -887,7 +890,7 @@ public final class SkillShots implements ClientModInitializer {
                 log.append(String.format(Locale.ROOT,"  tree at %d: age %.1f (the world's %d), standing %b, withers at %d, facing %.1f, trunk %.3f, twig %.3f%n",age,g.clientAge(0),g.age(),g.standing(),g.witherAt()-g.born(),g.facing(),
                     dev.sangwoo.celestialfall.client.stand.GoldTreeGrowth.size(g.clientAge(0),g.witherAt()-g.born(),0,0),dev.sangwoo.celestialfall.client.stand.GoldTreeGrowth.size(g.clientAge(0),g.witherAt()-g.born(),3,5)));
             var stand=u==null?null:dev.sangwoo.celestialfall.client.stand.GoldPresence.lastDrawn(u);
-            if(t!=null&&stand!=null&&age%4==0&&t.age(0)<1.6f){var palm=dev.sangwoo.celestialfall.client.stand.GoldTree.palmAt(stand);
+            if(t!=null&&stand!=null&&age%4==0&&t.age(0)<1.6f){var palm=dev.sangwoo.celestialfall.client.stand.GoldTree.palmAt(t,stand);
                 log.append(String.format(Locale.ROOT,"  stand at %d: kneel %.2f, at %.2f %.2f %.2f (%.2f from where its user stood), palm %.2f over the ground%n",age,dev.sangwoo.celestialfall.client.stand.GoldTree.kneel(t,t.age(0)),stand.at().x,stand.at().y,stand.at().z,
                     Math.hypot(stand.at().x-t.spot.x,stand.at().z-t.spot.z),palm.y-t.spot.y));}
         }
@@ -1101,6 +1104,10 @@ public final class SkillShots implements ClientModInitializer {
         // "stand=none" (2.70.0): no stand (the stand arrow is only for one without)
         if(opts.containsKey("stand"))stand=opts.get("stand");
         if(!stand.equals(ProgressManager.profile(p).stand()))ProgressManager.set(p,ProgressManager.profile(p).withStand(stand));
+        // 2.156.0: "skin=hq" the stand in that skin from the start (StandSkins), its own look without
+        {String skin=opts.getOrDefault("skin",dev.sangwoo.celestialfall.stand.StandSkins.ORIGINAL);
+            if(dev.sangwoo.celestialfall.stand.StandSkins.number(stand,skin)<0)skin=dev.sangwoo.celestialfall.stand.StandSkins.ORIGINAL;
+            ProgressManager.skin(p,skin);log.append("  stand ").append(stand).append(" in its skin ").append(ProgressManager.skin(p)).append('\n');}
         ((StandHolder)p).botand$setStandOut(false);
         // (2.115.0) and X Chara's hack off: every entry starts without it
         ((StandHolder)p).botand$setHacking(false);
@@ -1678,6 +1685,12 @@ public final class SkillShots implements ClientModInitializer {
                             var g=dev.sangwoo.celestialfall.gacha.GachaState.get(p.getServer());var c=g.get(p.getUuid());
                             g.set(p.getUuid(),new dev.sangwoo.celestialfall.gacha.GachaRules.Count(dev.sangwoo.celestialfall.gacha.GachaRules.SSR_PITY-1,c.sinceSr(),c.pulls()));
                             log.append("  next gacha pull made an SSR at ").append(age).append('\n');});continue;}
+                    // 2.156.0: "SKIN" runs the operator's stand skin command as the player ("skinto": the skin, "status" asks), its answer in their chat
+                    if(what.equals("SKIN")||what.startsWith("SKIN_")){if(age==at)server(p->{
+                            String to=what.startsWith("SKIN_")?what.substring(5):opts.getOrDefault("skinto","hq");String command="botand skin @s"+("status".equals(to)?"":" "+to);
+                            int n=p.getServer().getCommandManager().executeWithPrefix(p.getCommandSource(),command);
+                            log.append("  /").append(command).append(" at ").append(age).append(n>0?"":" (refused)").append(" (server: ").append(ProgressManager.skin(p))
+                                .append(", tracked ").append(((StandHolder)p).botand$standSkin()).append(")\n");});continue;}
                     if(what.equals("NOSTAND")){if(age==at)server(p->{
                             int n=p.getServer().getCommandManager().executeWithPrefix(p.getCommandSource(),"botand progress stand @s none");
                             log.append("  stand taken off at ").append(age).append(n>0?"":" (refused)").append(" (server: ").append(ProgressManager.profile(p).stand()).append(")\n");});continue;}
@@ -1962,17 +1975,31 @@ public final class SkillShots implements ClientModInitializer {
                 // 2.145.0: "figure=gold" stands Gold Experience's figure there instead (stance=idle|hero|stand)
                 // 2.146.1: "figure=both" stands the two side by side ("gap" blocks apart, 2.4), Gold Experience on the camera's left
                 boolean both="both".equals(opts.get("figure"));
+                // 2.156.0: "figure=golds" stands Gold Experience's figure in each of its skins side by side ("gap" blocks
+                // apart), its own look on the camera's left
+                if("golds".equals(opts.get("figure"))){var side=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw()+90).multiply(opt("gap",2.4f)/2);
+                    var skins=dev.sangwoo.celestialfall.stand.StandSkins.of("gold_experience");
+                    for(int i=0;i<skins.size();i++){var g=at.add(side.multiply(skins.size()==1?0:2.0*i/(skins.size()-1)-1));
+                        var gold=dev.sangwoo.celestialfall.stand.GoldExperience.TYPE.create(w);
+                        gold.refreshPositionAndAngles(g.x,g.y,g.z,yaw,0);gold.setHeadYaw(yaw);gold.setBodyYaw(yaw);
+                        gold.setStance(Math.max(0,dev.sangwoo.celestialfall.stand.GoldExperienceStance.NAMES.indexOf(opts.getOrDefault("stance","idle"))));
+                        gold.setSkin(i);
+                        log.append("  gold figure ").append(w.spawnEntity(gold)?"stands":"refused").append(" in its skin ").append(skins.get(i)).append(String.format(Locale.ROOT," at (%.2f, %.2f, %.2f) facing %.0f%n",g.x,g.y,g.z,yaw));}
+                    return;}
                 if(both){var side=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw()+90).multiply(opt("gap",2.4f)/2);
                     var gold=dev.sangwoo.celestialfall.stand.GoldExperience.TYPE.create(w);var g=at.subtract(side);
                     gold.refreshPositionAndAngles(g.x,g.y,g.z,yaw,0);gold.setHeadYaw(yaw);gold.setBodyYaw(yaw);
                     gold.setStance(Math.max(0,dev.sangwoo.celestialfall.stand.GoldExperienceStance.NAMES.indexOf(opts.getOrDefault("stance","idle"))));
+                    gold.setSkin(Math.max(0,dev.sangwoo.celestialfall.stand.StandSkins.number("gold_experience",opts.getOrDefault("skin","original"))));
                     log.append("  gold figure ").append(w.spawnEntity(gold)?"stands":"refused").append(String.format(Locale.ROOT," at (%.2f, %.2f, %.2f) facing %.0f%n",g.x,g.y,g.z,yaw));
                     at=at.add(side);}
                 else if("gold".equals(opts.get("figure"))){
                     var gold=dev.sangwoo.celestialfall.stand.GoldExperience.TYPE.create(w);
                     gold.refreshPositionAndAngles(at.x,at.y,at.z,yaw,0);gold.setHeadYaw(yaw);gold.setBodyYaw(yaw);
                     gold.setStance(Math.max(0,dev.sangwoo.celestialfall.stand.GoldExperienceStance.NAMES.indexOf(opts.getOrDefault("stance","idle"))));
-                    log.append("  gold figure ").append(w.spawnEntity(gold)?"stands":"refused").append(String.format(Locale.ROOT," at (%.2f, %.2f, %.2f) facing %.0f%n",at.x,at.y,at.z,yaw));return;
+                    // 2.156.0: "skin=hq" stands it in that skin (StandSkins), its own look without
+                    gold.setSkin(Math.max(0,dev.sangwoo.celestialfall.stand.StandSkins.number("gold_experience",opts.getOrDefault("skin","original"))));
+                    log.append("  gold figure ").append(w.spawnEntity(gold)?"stands":"refused").append(" in its skin ").append(gold.skin()).append(String.format(Locale.ROOT," at (%.2f, %.2f, %.2f) facing %.0f%n",at.x,at.y,at.z,yaw));return;
                 }
                 var figure=dev.sangwoo.celestialfall.stand.StarPlatinum.TYPE.create(w);var here=at;
                 figure.refreshPositionAndAngles(here.x,here.y,here.z,yaw,0);figure.setHeadYaw(yaw);figure.setBodyYaw(yaw);

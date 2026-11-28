@@ -24,8 +24,9 @@ class GoldBeatdownTest {
     static final float FRAME=1/60f;
     static final UUID USER=new UUID(1,2),VICTIM=new UUID(3,4);
     static float clock(float t){long whole=(long)Math.floor(t*20+1e-4);GoldBeatdown.ticks=whole;StandRush.ticks=whole;return Math.max(0,t*20-whole);}
-    private static List<String> bones()throws Exception{
-        try(var in=GoldBeatdownTest.class.getResourceAsStream("/assets/celestialfall/geo/entity/gold_experience.geo.json")){
+    /** The bones of a skin's skeleton (2.156.0: each skin its own, GoldSkin). */
+    private static List<String> bones(GoldSkin skin)throws Exception{
+        try(var in=GoldBeatdownTest.class.getResourceAsStream(skin.geo())){
             var list=new ArrayList<String>();
             for(var b:JsonParser.parseReader(new InputStreamReader(in,StandardCharsets.UTF_8)).getAsJsonObject().getAsJsonArray("minecraft:geometry").get(0).getAsJsonObject().getAsJsonArray("bones"))
                 list.add(b.getAsJsonObject().get("name").getAsString());
@@ -45,7 +46,13 @@ class GoldBeatdownTest {
 
     /** Runs a beatdown frame by frame from the stand at rest beside its user: no bone, arm or place jumps, and it is at rest again after. */
     private void watch(Beat b,float until,String what)throws Exception{
-        var names=bones();var poses=new GoldExperiencePoses();var look=new GoldExperienceLook();var shape=new GoldRush.Shape();
+        // (2.156.0) in every skin, each with its own skeleton, stances and fists
+        for(var skin:GoldSkin.values()){b.skin=skin;watch(skin,b,until,what);}
+        b.skin=GoldSkin.ORIGINAL;
+    }
+    private void watch(GoldSkin skin,Beat b,float until,String what)throws Exception{
+        what=skin+": "+what;
+        var names=bones(skin);var poses=new GoldExperiencePoses(skin);var look=new GoldExperienceLook();var shape=new GoldRush.Shape();
         float[] scratch=new float[NAMES.size()],q=new float[6];float[][] last=new float[names.size()][];
         float armL=1,armR=1,engage=0,ahead=0,raise=0,lean=0;boolean shown=false,was=false;
         for(float t=0;t<=until;t+=FRAME){
@@ -128,12 +135,16 @@ class GoldBeatdownTest {
         var v0=victim(b,rec(10),false);var v1=victim(b,rec(18.5f),false);
         assertTrue(Math.abs(before.y-v0.feet().y)<.5,"face to face: "+(before.y-v0.feet().y));
         assertTrue(v1.feet().y-under.y>1.0,"under them: "+(v1.feet().y-under.y));
-        // its fist at full stretch lands on them, in front of them and under them
-        for(float t:new float[]{rec(5),rec(10),rec(17),rec(22),rec(27)}){
-            double[] reach=reach(lean(b,t),ARMS*(1+GoldRush.STRETCH),RUSH_L,0);
-            Vec3d fist=standFeet(b,t).add(b.f.multiply(reach[0])).add(0,reach[1],0);
-            assertTrue(fist.distanceTo(target(b,t))<.05,"its fist on them at "+t+": "+fist.distanceTo(target(b,t)));
+        // its fist at full stretch lands on them, in front of them and under them (2.156.0: in every skin)
+        for(var skin:GoldSkin.values()){
+            b.skin=skin;
+            for(float t:new float[]{rec(5),rec(10),rec(17),rec(22),rec(27)}){
+                double[] reach=reach(skin,lean(b,t),ARMS*(1+GoldRush.STRETCH),RUSH_L,0);
+                Vec3d fist=standFeet(b,t).add(b.f.multiply(reach[0])).add(0,reach[1],0);
+                assertTrue(fist.distanceTo(target(b,t))<.05,skin+": its fist on them at "+t+": "+fist.distanceTo(target(b,t)));
+            }
         }
+        b.skin=GoldSkin.ORIGINAL;
         // no room to get under them: it does not lean, and never goes under the ground
         var low=scene(2.6,.5,.5,5);
         assertEquals(0,lean(low,rec(18)),1e-3);

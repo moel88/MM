@@ -1,11 +1,7 @@
 package dev.sangwoo.celestialfall.client.stand;
 
-import com.google.gson.JsonParser;
 import dev.sangwoo.celestialfall.client.kageno.Ease;
 import dev.sangwoo.celestialfall.stand.GoldExperienceLook;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.Objects;
 import net.minecraft.util.math.MathHelper;
 import static dev.sangwoo.celestialfall.stand.GoldExperienceStance.*;
 
@@ -41,8 +37,6 @@ public final class GoldRush {
     static final float[][] PHANTOMS=StandRush.PHANTOMS;
     /** The afterimages' colour: gold. */
     static final float RED=1f,GREEN=.84f,BLUE=.34f;
-    /** The fists' knuckles and the shoulders in the rush's stances (blocks ahead, to its right and up from its feet, at its size 1). */
-    static final float[][][] FISTS=points(""),SHOULDERS=points("_shoulder");
     private GoldRush(){}
 
     static float smooth(float v){v=v<0?0:v>1?1:v;return v*v*(3-2*v);}
@@ -147,29 +141,15 @@ public final class GoldRush {
         return new StandPresence.Body(body.at().add(-fz*right,PHANTOMS[i][2],fx*right),body.yaw()+PHANTOMS[i][3],body.scale());
     }
 
-    /** Where fist {@code side} (0 left, 1 right) is in stance {@code stance} with its arm drawn {@code size} times its size, out from its shoulder that much further. */
-    static float[] grown(int stance,int side,float size){
-        float[] f=FISTS[stance][side],s=SHOULDERS[stance][side];
+    /**
+     * Where fist {@code side} (0 left, 1 right) is in stance {@code stance} with its arm drawn {@code size} times its size,
+     * out from its shoulder that much further (blocks ahead, to its right and up from its feet, at its size 1), in the
+     * skin it is drawn in (2.156.0: each skin's fists are where its own stances put them, GoldSkin).
+     */
+    static float[] grown(GoldSkin skin,int stance,int side,float size){
+        float[] f=skin.fists()[stance][side],s=skin.shoulders()[stance][side];
         return new float[]{s[0]+(f[0]-s[0])*size,s[1]+(f[1]-s[1])*size,s[2]+(f[2]-s[2])*size};
     }
     /** How far ahead of the stand's feet its fists reach at full stretch through the rush (blocks, at its size 1). */
-    static float fistReach(){return grown(RUSH_L,0,ARMS*(1+STRETCH))[0];}
-    /** The knuckles in the rush's stances, or (with {@code "_shoulder"}) the shoulders' joints, from the file the generator writes with the poses. */
-    private static float[][][] points(String what){
-        float[][][] out=new float[NAMES.size()][2][3];float unit=GoldExperienceRenderer.SCALE/16f;
-        try(var in=GoldRush.class.getResourceAsStream("/assets/celestialfall/stands/gold_experience_fists.json")){
-            var root=JsonParser.parseReader(new InputStreamReader(Objects.requireNonNull(in,"fists"),StandardCharsets.UTF_8)).getAsJsonObject();
-            for(int s=0;s<NAMES.size();s++){
-                var stance=root.getAsJsonObject(NAMES.get(s));if(stance==null)continue;
-                for(int side=0;side<2;side++){
-                    var p=stance.getAsJsonArray((side==0?"left":"right")+what);
-                    // model units (front -z, its right -x, up +y) to blocks ahead, to its right and up
-                    out[s][side][0]=-p.get(2).getAsFloat()*unit;out[s][side][1]=-p.get(0).getAsFloat()*unit;out[s][side][2]=p.get(1).getAsFloat()*unit;
-                }
-            }
-        }catch(Exception e){
-            dev.sangwoo.celestialfall.CelestialFall.LOGGER.error("Gold Experience's fists could not be read",e);
-        }
-        return out;
-    }
+    static float fistReach(GoldSkin skin){return grown(skin,RUSH_L,0,ARMS*(1+STRETCH))[0];}
 }

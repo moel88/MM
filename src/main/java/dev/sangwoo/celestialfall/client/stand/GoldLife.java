@@ -72,8 +72,8 @@ public final class GoldLife {
     static final float LINGER=.1f,RETURN=.4f,TAKE=.1f;
     /** The punch (seconds): wound up, loaded until, lands (the server's FLY_CONTACT), held out until, back in the guard; stopped short, back in it. */
     static final float WOUND=.2f,LOAD=.27f,CONTACT=GoldExperienceRules.FLY_CONTACT/20f,HELD=.62f,PUNCH_GUARDED=.86f,CUT=.15f;
-    /** How deep the punch's wind-up goes (of the overdrive's), how big its arms are, how far in front its user it stands with no one known and no nearer or further, and how deep its fist goes in. */
-    static final float WIND_DEPTH=.6f,ARMS=1.08f,AHEAD=1.05f,NEAR=.75f,FAR=2.2f,BITE=.15f;
+    /** How deep the punch's wind-up goes (of the overdrive's), how big its arms are, how far in front its user it stands with no one known and no nearer (no further than its skin's {@link GoldSkin#far}), and how deep its fist goes in. */
+    static final float WIND_DEPTH=.6f,ARMS=1.08f,AHEAD=1.05f,NEAR=.75f,BITE=.15f;
     /** Where the raised hand holds the item (blocks: ahead, to the side of the hand, up, for a body 1.8 tall). */
     static final double HAND_AHEAD=.7,HAND_SIDE=.33,HAND_UP=1.58;
     /** Swatted: whom the fly belonged to falls on their back, lies, and is up again (seconds). */
@@ -95,6 +95,8 @@ public final class GoldLife {
     /** A T as heard. */
     public static final class Life {
         public final boolean frog;public final long start;final long serverAge,received;final float yaw,aim;final int seed;
+        /** (2.156.0) The skin its user's Gold Experience is drawn in (GoldSkin: its fists and size go by it); set as it begins and every frame it is drawn. */
+        public GoldSkin skin=GoldSkin.ORIGINAL;
         /** The frog: the item it is (what the event carried) and its look (the frog's skin: 0 temperate, 1 warm, 2 cold). */
         final ItemStack item;final int variant;
         /** The frog: its clock when it ended early (NaN: it did not), and the blows it turned back. */
@@ -157,7 +159,7 @@ public final class GoldLife {
             case GoldExperienceLife.FROG,GoldExperienceLife.PUNCH->{
                 if(l!=null)l.sound.cut();
                 l=new Life(type==GoldExperienceLife.FROG,start,serverNow-start,StandRush.ticks,yaw,aim,(int)(start*31+id.getLeastSignificantBits()),item);
-                l.ready=ready;LIVES.put(id,l);
+                l.ready=ready;l.skin=GoldSkin.of(id);LIVES.put(id,l);
                 if(l.frog)GoldFrog.born(id);
             }
             case GoldExperienceLife.FROG_GONE->{
@@ -303,7 +305,7 @@ public final class GoldLife {
     /** How far in front of its user it stands for the punch: its fist at full stretch BITE into the first one in its way. */
     static float place(Life l){
         if(Float.isNaN(l.aim))return AHEAD;
-        return MathHelper.clamp(l.aim+BITE-GoldRush.grown(OVER_PUNCH,1,ARMS)[0],NEAR,FAR);
+        return MathHelper.clamp(l.aim+BITE-GoldRush.grown(l.skin,OVER_PUNCH,1,ARMS)[0],NEAR,l.skin.far);
     }
     /** Where its right fist's knuckles are (ahead, right, up from its feet, at its size 1). */
     static float[] fist(Life l,float t){
@@ -311,7 +313,7 @@ public final class GoldLife {
         float size=arms(l,t);float[] out=new float[3];
         for(int s:new int[]{GUARD,OVER_WIND,OVER_PUNCH}){
             if(w[s]<=0)continue;
-            float[] f=GoldRush.grown(s,1,size);
+            float[] f=GoldRush.grown(l.skin,s,1,size);
             for(int i=0;i<3;i++)out[i]+=f[i]*w[s];
         }
         return out;

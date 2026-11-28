@@ -106,6 +106,8 @@ public final class GoldCombo {
     /** A punch as heard: when it began, the server's age of it when it was sent and this client's tick then, which, its way, how far ahead its target stood. */
     public static final class Punch {
         public final long start;final long serverAge,received;public final int combo;final float yaw,aim;
+        /** (2.156.0) The skin its user's Gold Experience is drawn in (GoldSkin: its fists go by it); set as it begins and every frame it is drawn. */
+        public GoldSkin skin=GoldSkin.ORIGINAL;
         /** Its clock (seconds) when it was stopped short (NaN: it was not) and when it landed (NaN: not yet). */
         float stopped=Float.NaN,landedAt=Float.NaN;
         /** Whom it struck and where they stood (their chest), whose guard took it. */
@@ -157,7 +159,7 @@ public final class GoldCombo {
         switch(type){
             case GoldExperienceAttack.PUNCH->{
                 if(combo<1)return;
-                user.punches.addLast(new Punch(start,serverNow-start,StandRush.ticks,combo,yaw,Float.isFinite(aim)?aim:Float.NaN));
+                var punch=new Punch(start,serverNow-start,StandRush.ticks,combo,yaw,Float.isFinite(aim)?aim:Float.NaN);punch.skin=GoldSkin.of(id);user.punches.addLast(punch);
                 while(user.punches.size()>3)user.punches.removeFirst();
             }
             case GoldExperienceAttack.LANDED->{
@@ -276,7 +278,7 @@ public final class GoldCombo {
     static float lunge(Punch p){
         float min=LUNGE_MIN[p.combo],max=LUNGE_MAX[p.combo];
         if(Float.isNaN(p.aim))return min;
-        float need=p.aim+BITE-(AHEAD+GoldRush.FISTS[STRIKES[p.combo]][RIGHT[p.combo]?1:0][0]);
+        float need=p.aim+BITE-(AHEAD+p.skin.fists()[STRIKES[p.combo]][RIGHT[p.combo]?1:0][0]);
         return Math.max(min,Math.min(max,need));
     }
     /** The shove of a blow as it lands (blocks): in over two frames, gone in a few more (none for a punch stopped before it landed). */
@@ -350,7 +352,7 @@ public final class GoldCombo {
         float[] w=new float[NAMES.size()];stances(p,t,w,1);float[] out=new float[3];int side=RIGHT[p.combo]?1:0;
         for(int s=0;s<w.length;s++){
             if(w[s]<=0)continue;
-            float[] f=GoldRush.FISTS[s][side];
+            float[] f=p.skin.fists()[s][side];
             for(int i=0;i<3;i++)out[i]+=f[i]*w[s];
         }
         return out;
@@ -376,5 +378,7 @@ public final class GoldCombo {
     /** For the tests: a punch heard {@code serverAge} ticks after it began, at this client's tick {@code received}. */
     static Punch heard(int combo,long received,float yaw,float aim){return new Punch(0,0,received,combo,yaw,aim);}
     /** For the tests: this player's punches as heard. */
+    /** (2.156.0) This player's punches go by the skin their stand is drawn in now (GoldPresence, every frame it is drawn). */
+    static void skin(UUID id,GoldSkin skin){var u=USERS.get(id);if(u!=null)for(var p:u.punches)p.skin=skin;}
     static void put(UUID id,Punch... punches){var u=USERS.computeIfAbsent(id,k->new User());u.punches.clear();u.punches.addAll(Arrays.asList(punches));}
 }

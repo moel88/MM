@@ -43,14 +43,16 @@ public final class GoldPunch {
     static final float TAKE=.1f;
     /** How much higher than at its user's shoulder it floats in front (the rush's: its fist lands on a body's chest), and how big its arms are through it. */
     static final float RAISE=GoldRush.RAISE,ARMS=1.12f;
-    /** How far in front of its user it stands with no one in its way, and no nearer or further than (blocks); how deep its fist goes into whom it meets. */
-    static final float AHEAD=1.05f,NEAR=.75f,FAR=2.2f,BITE=.15f;
+    /** How far in front of its user it stands with no one in its way, and no nearer than (blocks: no further than its skin's {@link GoldSkin#far}); how deep its fist goes into whom it meets. */
+    static final float AHEAD=1.05f,NEAR=.75f,BITE=.15f;
     /** Where the shout's second syllable is in its file (seconds: tools/stand/cut_gold_sounds.py's DA_AT), so when it is played: that syllable as the fist lands. */
     static final float DA_AT=.2f,SOUND_AT=CONTACT-DA_AT;
     static final GoldSounds.Cue[] SOUND={new GoldSounds.Cue(SOUND_AT,"gold_experience_overdrive",1)};
     /** A punch as heard. */
     public static final class Punch {
         public final long start;final long serverAge,received;final float yaw,aim;final int seed;
+        /** (2.156.0) The skin its user's Gold Experience is drawn in (GoldSkin: its fists and size go by it); set as it begins and every frame it is drawn. */
+        public GoldSkin skin=GoldSkin.ORIGINAL;
         /** Its clock (seconds) when it was stopped short (NaN: it was not) and when its blow landed (NaN: not yet). */
         float stopped=Float.NaN,landedAt=Float.NaN;
         /** Whom its blow met (entity id, -1 no one), whether their guard took it, whether it landed, and where they stood (their middle). */
@@ -112,7 +114,7 @@ public final class GoldPunch {
         switch(type){
             case GoldExperienceOverdrive.PUNCH->{
                 p=new Punch(start,serverNow-start,StandRush.ticks,yaw,aim,(int)(start*31+id.getLeastSignificantBits()));
-                p.ready=ready;PUNCHES.put(id,p);
+                p.ready=ready;p.skin=GoldSkin.of(id);PUNCHES.put(id,p);
             }
             case GoldExperienceOverdrive.LANDED->{
                 if(p==null||p.start!=start)return;
@@ -163,17 +165,17 @@ public final class GoldPunch {
     /** How far in front of its user it stands for this punch (blocks): so that its fist at full stretch goes BITE into the first one in its way. */
     static float place(Punch p){
         if(Float.isNaN(p.aim))return AHEAD;
-        return MathHelper.clamp(p.aim+BITE-fistReach(),NEAR,FAR);
+        return MathHelper.clamp(p.aim+BITE-fistReach(p.skin),NEAR,p.skin.far);
     }
     /** How far ahead of the stand's feet its right fist reaches as the blow lands (blocks, at its size 1). */
-    static float fistReach(){return GoldRush.grown(OVER_PUNCH,1,ARMS)[0];}
+    static float fistReach(GoldSkin skin){return GoldRush.grown(skin,OVER_PUNCH,1,ARMS)[0];}
     /** Where its right fist's knuckles are {@code t} seconds in (blocks ahead, to its right and up from its feet, at its size 1). */
     static float[] fist(Punch p,float t){
         float[] w=new float[NAMES.size()];stances(t,p.stopped,w);
         float size=arms(p,t);float[] out=new float[3];
         for(int s:new int[]{GUARD,OVER_WIND,OVER_PUNCH}){
             if(w[s]<=0)continue;
-            float[] f=GoldRush.grown(s,1,size);
+            float[] f=GoldRush.grown(p.skin,s,1,size);
             for(int i=0;i<3;i++)out[i]+=f[i]*w[s];
         }
         return out;

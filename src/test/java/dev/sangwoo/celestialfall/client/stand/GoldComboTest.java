@@ -25,8 +25,9 @@ import static org.junit.jupiter.api.Assertions.*;
 class GoldComboTest {
     static final float FRAME=1/60f;
     static final UUID USER=UUID.randomUUID();
-    private static List<String> bones()throws Exception{
-        try(var in=GoldComboTest.class.getResourceAsStream("/assets/celestialfall/geo/entity/gold_experience.geo.json")){
+    /** The bones of a skin's skeleton (2.156.0: each skin its own, GoldSkin). */
+    private static List<String> bones(GoldSkin skin)throws Exception{
+        try(var in=GoldComboTest.class.getResourceAsStream(skin.geo())){
             var list=new ArrayList<String>();
             for(var b:JsonParser.parseReader(new InputStreamReader(in,StandardCharsets.UTF_8)).getAsJsonObject().getAsJsonArray("minecraft:geometry").get(0).getAsJsonObject().getAsJsonArray("bones"))
                 list.add(b.getAsJsonObject().get("name").getAsString());
@@ -37,8 +38,15 @@ class GoldComboTest {
     private float watch(String what,float until,GoldCombo.Punch... punches)throws Exception{return watch(what,until,IDLE,punches);}
     /** The same from the stand held in stance {@code base} (beside its user at rest, or as it is summoned). */
     private float watch(String what,float until,int base,GoldCombo.Punch... punches)throws Exception{
+        // (2.156.0) in every skin, each with its own skeleton, stances and fists
+        float end=0;
+        for(var skin:GoldSkin.values()){for(var p:punches)p.skin=skin;end=watch(skin,skin+": "+what,until,base,punches);}
+        for(var p:punches)p.skin=GoldSkin.ORIGINAL;
+        return end;
+    }
+    private float watch(GoldSkin skin,String what,float until,int base,GoldCombo.Punch... punches)throws Exception{
         GoldCombo.put(USER,punches);
-        var names=bones();var poses=new GoldExperiencePoses();var look=new GoldExperienceLook();var shape=new GoldRush.Shape();
+        var names=bones(skin);var poses=new GoldExperiencePoses(skin);var look=new GoldExperienceLook();var shape=new GoldRush.Shape();
         float[] scratch=new float[NAMES.size()],q=new float[6];float[][] last=new float[names.size()][];
         float engage=0,ahead=Float.NaN;boolean shown=false;float t=0;
         for(;t<=until;t+=FRAME){
@@ -65,6 +73,7 @@ class GoldComboTest {
         return t;
     }
     static GoldCombo.Punch punch(int combo,long tick,float aim){return GoldCombo.heard(combo,tick,0,aim);}
+    static GoldCombo.Punch punch(int combo,long tick,float aim,GoldSkin skin){var p=punch(combo,tick,aim);p.skin=skin;return p;}
     @Test void thrownAtFullSpeedTheFourPunchesMoveWithoutAJumpAt60fps()throws Exception{
         // each as soon as it may: 0, 7, 14 and 28 ticks in
         watch("the combo at full speed",4f,punch(1,0,Float.NaN),punch(2,7,Float.NaN),punch(3,14,Float.NaN),punch(4,28,Float.NaN));
@@ -107,25 +116,30 @@ class GoldComboTest {
         assertTrue(GoldCombo.strikeFrom(3)>GoldCombo.strikeFrom(1)&&GoldCombo.strikeFrom(4)>GoldCombo.strikeFrom(3));
     }
     @Test void itsFistLandsWhereWhoeverItIsForStands(){
-        // the stand dashes on into each blow so that its fist sinks BITE into the near side of whoever it is for (within bounds)
-        for(int c=1;c<=4;c++){
-            float fist=GoldCombo.fist(punch(c,0,Float.NaN),GoldCombo.HIT[c])[0];
+        // the stand dashes on into each blow so that its fist sinks BITE into the near side of whoever it is for (within
+        // bounds; 2.156.0: in every skin, by its own fists)
+        for(var skin:GoldSkin.values())for(int c=1;c<=4;c++){
+            float fist=GoldCombo.fist(punch(c,0,Float.NaN,skin),GoldCombo.HIT[c])[0];
             for(float aim=1;aim<=4;aim+=.25f){
-                var p=punch(c,0,aim);float lunge=GoldCombo.lunge(p);
-                assertTrue(lunge>=GoldCombo.LUNGE_MIN[c]-1e-6&&lunge<=GoldCombo.LUNGE_MAX[c]+1e-6,"punch "+c+" dashes "+lunge);
+                var p=punch(c,0,aim,skin);float lunge=GoldCombo.lunge(p);
+                assertTrue(lunge>=GoldCombo.LUNGE_MIN[c]-1e-6&&lunge<=GoldCombo.LUNGE_MAX[c]+1e-6,skin+": punch "+c+" dashes "+lunge);
                 if(lunge>GoldCombo.LUNGE_MIN[c]+1e-6&&lunge<GoldCombo.LUNGE_MAX[c]-1e-6)
-                    assertEquals(aim+GoldCombo.BITE,GoldCombo.AHEAD+lunge+fist,1e-4,"punch "+c+" meets a target "+aim+" off");
+                    assertEquals(aim+GoldCombo.BITE,GoldCombo.AHEAD+lunge+fist,1e-4,skin+": punch "+c+" meets a target "+aim+" off");
             }
             // with no one there it dashes the least
-            assertEquals(GoldCombo.LUNGE_MIN[c],GoldCombo.lunge(punch(c,0,Float.NaN)),1e-6);
+            assertEquals(GoldCombo.LUNGE_MIN[c],GoldCombo.lunge(punch(c,0,Float.NaN,skin)),1e-6);
         }
         // the jab and the hook are the left fist's, the cross and the fourth the right's; the hook crosses the front
         assertFalse(GoldCombo.RIGHT[1]);assertTrue(GoldCombo.RIGHT[2]);assertFalse(GoldCombo.RIGHT[3]);assertTrue(GoldCombo.RIGHT[4]);
-        float[] hook=GoldRush.FISTS[HOOK][0],wound=GoldRush.FISTS[HOOK_WIND][0];
-        assertTrue(wound[1]<-.35f&&hook[1]>.2f&&wound[0]<hook[0]-.8f,"the hook comes round from out wide on its left ("+wound[1]+", "+wound[0]+" ahead) across to its right ("+hook[1]+", "+hook[0]+" ahead)");
-        // the straights at full stretch further out than the hook; every blow about a body's head or chest high
-        assertTrue(GoldRush.FISTS[JAB][0][0]>hook[0]&&GoldRush.FISTS[CROSS][1][0]>hook[0]);
-        for(int s:new int[]{JAB,CROSS,HOOK,FINISH}){float up=(float)(GoldRush.FISTS[s][s==JAB||s==HOOK?0:1][2]+GoldCombo.RAISE+StandPresence.UP);assertTrue(up>1.2f&&up<1.75f,NAMES.get(s)+" "+up+" blocks up");}
+        // (2.156.0) in every skin's stances
+        for(var skin:GoldSkin.values()){
+            var fists=skin.fists();
+            float[] hook=fists[HOOK][0],wound=fists[HOOK_WIND][0];
+            assertTrue(wound[1]<-.35f&&hook[1]>.2f&&wound[0]<hook[0]-.8f,skin+": the hook comes round from out wide on its left ("+wound[1]+", "+wound[0]+" ahead) across to its right ("+hook[1]+", "+hook[0]+" ahead)");
+            // the straights at full stretch further out than the hook; every blow about a body's head or chest high
+            assertTrue(fists[JAB][0][0]>hook[0]&&fists[CROSS][1][0]>hook[0]);
+            for(int s:new int[]{JAB,CROSS,HOOK,FINISH}){float up=(float)(fists[s][s==JAB||s==HOOK?0:1][2]+GoldCombo.RAISE+StandPresence.UP);assertTrue(up>1.2f&&up<1.75f,skin+": "+NAMES.get(s)+" "+up+" blocks up");}
+        }
     }
     @Test void afterimagesShowOnlyThroughTheStrikes(){
         for(int c=1;c<=4;c++){

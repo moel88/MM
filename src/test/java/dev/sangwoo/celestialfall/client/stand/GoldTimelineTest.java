@@ -66,13 +66,16 @@ class GoldTimelineTest {
     }
     /** The stances weighed together move no bone further in a frame than turning between them would. */
     @Test void theStancesBlendWithoutAJump(){
-        var poses=new GoldExperiencePoses();var l=new GoldExperienceLook();
-        float[] p=new float[6],last=new float[6];
-        for(String bone:new String[]{"right_arm","left_arm","right_leg","left_shin","torso","head","right_forearm"}){
-            for(int f=0;f<=150;f++){
-                GoldTimeline.summon(f/60f,l);poses.blend(bone,l.weights,0,p);
-                if(f>0)for(int i=0;i<3;i++)assertTrue(Math.abs(p[i]-last[i])<30,bone+" turns "+(p[i]-last[i])+" degrees in a frame at "+f/60f);
-                System.arraycopy(p,0,last,0,6);
+        // (2.156.0) in every skin's stances
+        for(var skin:GoldSkin.values()){
+            var poses=new GoldExperiencePoses(skin);var l=new GoldExperienceLook();
+            float[] p=new float[6],last=new float[6];
+            for(String bone:new String[]{"right_arm","left_arm","right_leg","left_shin","torso","head","right_forearm"}){
+                for(int f=0;f<=150;f++){
+                    GoldTimeline.summon(f/60f,l);poses.blend(bone,l.weights,0,p);
+                    if(f>0)for(int i=0;i<3;i++)assertTrue(Math.abs(p[i]-last[i])<30,skin+": "+bone+" turns "+(p[i]-last[i])+" degrees in a frame at "+f/60f);
+                    System.arraycopy(p,0,last,0,6);
+                }
             }
         }
     }

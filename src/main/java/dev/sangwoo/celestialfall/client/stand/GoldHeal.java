@@ -64,6 +64,8 @@ public final class GoldHeal {
     /** A healing as heard. */
     public static final class Heal {
         public final boolean self;public final long start;final long serverAge,received;final float yaw,aim;final int seed;
+        /** (2.156.0) The skin its user's Gold Experience is drawn in (GoldSkin: its fists and size go by it); set as it begins and every frame it is drawn. */
+        public GoldSkin skin=GoldSkin.ORIGINAL;
         /** Its clock (seconds) when it ended (NaN: still on), when it was stopped short (NaN: not), and when its fist went in (NaN: not yet). */
         float ended=Float.NaN,stopped=Float.NaN,touchedAt=Float.NaN;
         /** Whom the fist went into (entity id, -1 no one: its user for their own), what it healed them, where they stood (their middle) and how tall and wide they are. */
@@ -109,7 +111,7 @@ public final class GoldHeal {
         switch(type){
             case GoldExperienceHeal.MENDING,GoldExperienceHeal.SELFING->{
                 h=new Heal(type==GoldExperienceHeal.SELFING,start,serverNow-start,StandRush.ticks,yaw,aim,(int)(start*31+id.getLeastSignificantBits()));
-                h.ready=ready;HEALS.put(id,h);
+                h.ready=ready;h.skin=GoldSkin.of(id);HEALS.put(id,h);
             }
             case GoldExperienceHeal.MENDED->{
                 if(h==null||h.start!=start||h.self)return;
@@ -190,24 +192,24 @@ public final class GoldHeal {
     /** How far in front of its user it stands for this tap (blocks): so that its fist at full stretch is PRESS into whom it is for. */
     static float place(Heal h){
         if(Float.isNaN(h.aim))return AHEAD;
-        return MathHelper.clamp(h.aim+PRESS-fistReach(),NEAR,FAR);
+        return MathHelper.clamp(h.aim+PRESS-fistReach(h.skin),NEAR,FAR);
     }
     /** How far ahead of the stand's feet its right fist reaches driven in (blocks, at its size 1). */
-    static float fistReach(){return GoldRush.grown(MEND,1,ARMS)[0];}
+    static float fistReach(GoldSkin skin){return GoldRush.grown(skin,MEND,1,ARMS)[0];}
     /** How far from its user it stands through the hold (blocks): its knuckles DEPTH from their middle, the fist well in them. */
-    static float selfPlace(){return fistReach()+DEPTH;}
+    static float selfPlace(GoldSkin skin){return fistReach(skin)+DEPTH;}
     /** How big its arm is {@code t} seconds into healing {@code h}. */
     static float arms(Heal h,float t){return 1+(ARMS-1)*smooth(t/StandRush.RISE)*(1-back(h,t));}
     /** Where its right fist's knuckles are {@code t} seconds in (blocks ahead, to its right and up from its feet, at its size 1). */
     static float[] fist(Heal h,float t){
         float[] w=new float[NAMES.size()];stances(h,t,w);float size=arms(h,t);
-        float[] a=GoldRush.grown(GUARD,1,size),b=GoldRush.grown(MEND,1,size);
+        float[] a=GoldRush.grown(h.skin,GUARD,1,size),b=GoldRush.grown(h.skin,MEND,1,size);
         return new float[]{a[0]*w[GUARD]+b[0]*w[MEND],a[1]*w[GUARD]+b[1]*w[MEND],a[2]*w[GUARD]+b[2]*w[MEND]};
     }
     /** Where its right shoulder is then (the same way). */
     static float[] shoulder(Heal h,float t){
         float[] w=new float[NAMES.size()];stances(h,t,w);
-        float[] a=GoldRush.SHOULDERS[GUARD][1],b=GoldRush.SHOULDERS[MEND][1];
+        float[] a=h.skin.shoulders()[GUARD][1],b=h.skin.shoulders()[MEND][1];
         return new float[]{a[0]*w[GUARD]+b[0]*w[MEND],a[1]*w[GUARD]+b[1]*w[MEND],a[2]*w[GUARD]+b[2]*w[MEND]};
     }
     /** How much the fist's light is on {@code t} seconds in (0 to 1): up as it winds, on while it is in, out as it is drawn out. */
@@ -231,7 +233,7 @@ public final class GoldHeal {
         float size=arms(h,t);
         look.armL=look.armL*(1-in)+size*in;look.armR=look.armR*(1-in)+size*in;
         shape.engage=StandPunch.burst(t/StandRush.RISE)*(1-smooth((t-end-LINGER)/RETURN));shape.raise=GoldRush.RAISE;
-        if(h.self){shape.yaw=facing;shape.ahead=selfPlace();shape.side=SIDE;shape.inward=1;shape.raise=GoldRush.RAISE-LOWER;}
+        if(h.self){shape.yaw=facing;shape.ahead=selfPlace(h.skin);shape.side=SIDE;shape.inward=1;shape.raise=GoldRush.RAISE-LOWER;}
         else{shape.yaw=h.yaw;shape.ahead=place(h);shape.side=0;shape.inward=0;}
         return true;
     }

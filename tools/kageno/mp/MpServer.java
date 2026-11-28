@@ -61,6 +61,9 @@ public final class MpServer implements ModInitializer {
         ground=w.getTopY(Heightmap.Type.MOTION_BLOCKING,0,0);
         for(int x=-30;x<=30;x++)for(int z=-30;z<=30;z++)w.setBlockState(new BlockPos(x,ground-1,z),((x>>2)+(z>>2)&1)==0?Blocks.LIGHT_GRAY_CONCRETE.getDefaultState():Blocks.POLISHED_ANDESITE.getDefaultState());
         note(server,"started ground="+ground+" map="+MapGate.enabled(w)+" dedicated="+server.isDedicated());
+        // (2.156.0, MP_ONLY=standskin) what is saved for the caster (a server started again: MP_RESTART=1)
+        if(STANDSKIN_ONLY){var id=net.minecraft.util.Uuids.getOfflinePlayerUuid("Caster");var state=dev.sangwoo.celestialfall.progression.ProgressState.get(server);
+            note(server,"saved for the caster: stand "+state.profile(id).stand()+", skin "+state.skin(id));}
     }
     private boolean bossPlaced;
     /**
@@ -80,7 +83,7 @@ public final class MpServer implements ModInitializer {
         p.changeGameMode(GameMode.SURVIVAL);
         // (2.67.0: the time stop's own check keeps the caster's cooldowns, to see a second H refused)
         // (2.73.0, MP_ONLY=cooldowns: the caster keeps its cooldowns, and coming back keeps the stand it had; 2.74.3 the same for MP_ONLY=fresh)
-        if(caster(p)){if(!COOLDOWNS_ONLY&&!FRESH_ONLY||casterJoins++==0)ProgressManager.set(p,new ProgressProfile(1,0,0,ARROW_ONLY?"none":"kageno",10,0));
+        if(caster(p)){if(!COOLDOWNS_ONLY&&!FRESH_ONLY&&!STANDSKIN_ONLY||casterJoins++==0)ProgressManager.set(p,new ProgressProfile(1,0,0,ARROW_ONLY?"none":"kageno",10,0));
             NoCooldownState.get(p.getServer()).set(p.getUuid(),!TIMESTOP_ONLY&&!COOLDOWNS_ONLY&&!SWAP_ONLY&&!FRESH_ONLY&&!ISOSANG_ONLY&&!XCHARA_ONLY&&!SAMURAI_ONLY);p.getServer().getPlayerManager().addToOperators(p.getGameProfile());}
         // (2.107.0, MP_ONLY=death) one who joins dead waits where it fell: its five seconds count from now
         if(DEATH_ONLY&&!p.isAlive()){deadAt.put(p.getUuid(),p.getServer().getOverworld().getTime());note(p.getServer(),String.format(java.util.Locale.ROOT,"%s joined dead at tick %d at %.2f %.2f %.2f",p.getGameProfile().getName(),p.getServer().getOverworld().getTime(),p.getX(),p.getY(),p.getZ()));}
@@ -89,6 +92,12 @@ public final class MpServer implements ModInitializer {
     }
     private void home(ServerPlayerEntity p){boolean c=caster(p);p.setVelocity(0,0,0);p.networkHandler.requestTeleport(.5,ground,c?.5:3,c?0:180,0);}
     private void tick(MinecraftServer server){
+        // (2.156.0, MP_ONLY=standskin) every player's stand and skin as the server has them, as they change
+        if(STANDSKIN_ONLY)for(var p:server.getPlayerManager().getPlayerList()){
+            var h=(dev.sangwoo.celestialfall.stand.StandHolder)p;
+            String now="stand "+ProgressManager.profile(p).stand()+", skin "+ProgressManager.skin(p)+", tracked "+h.botand$standSkin()+", out "+h.botand$isStandOut()+", alive "+p.isAlive();
+            if(!now.equals(skinsLogged.put(p.getUuid(),now)))note(server,p.getGameProfile().getName()+": "+now);
+        }
         boolean busy=false;var seen=new HashSet<UUID>();
         for(var c:KagenoManager.casts()){
             seen.add(c.id);int[] info=live.get(c.id);
@@ -778,6 +787,9 @@ public final class MpServer implements ModInitializer {
     private static String at(long ready,long now){return ready<=0?"none":ready<=now?"over ("+ready+")":String.format(java.util.Locale.ROOT,"%d (%.1f s)",ready,(ready-now)/20.);}
     /** Only the script of the long cooldowns begun in full whatever they were (2.74.3, MP_ONLY=fresh). */
     static final boolean FRESH_ONLY="fresh".equals(System.getProperty("botand.mp.only"));
+    /** Only the stand skins' script (2.156.0, MP_ONLY=standskin): the caster keeps their profile coming back, and the server logs every player's stand and skin. */
+    static final boolean STANDSKIN_ONLY="standskin".equals(System.getProperty("botand.mp.only"));
+    private final Map<UUID,String> skinsLogged=new HashMap<>();
     /** Only the script of another stand's cooldowns gone (2.74.2, MP_ONLY=swap). */
     static final boolean SWAP_ONLY="swap".equals(System.getProperty("botand.mp.only"));
     /** Only the long cooldowns' script (2.73.0, MP_ONLY=cooldowns). */

@@ -70,6 +70,41 @@ class ProgressionTest {
         // never in the profile's rows: an awakened player with no profile yet is saved as well
         var lone=new ProgressState();lone.awaken(b,true);assertTrue(ProgressState.read(lone.writeNbt(new NbtCompound())).awakened(b));
     }
+    @Test void aStandSkinIsItsStandsKeptThroughASaveAndGoneWithTheStand() {
+        // (2.156.0) Gold Experience's own look is the box-built figure, its skin "고퀄리티" (hq) the model the user sent;
+        // the numbers every client learns: 0 its own look, 1 on its skins (three bits of the stand's tracked byte)
+        assertEquals(java.util.List.of("original","hq"),dev.sangwoo.celestialfall.stand.StandSkins.of("gold_experience"));
+        assertEquals(java.util.List.of("original"),dev.sangwoo.celestialfall.stand.StandSkins.of("star_platinum"),"no skins of its own yet");
+        assertEquals(0,dev.sangwoo.celestialfall.stand.StandSkins.number("gold_experience","original"));
+        assertEquals(1,dev.sangwoo.celestialfall.stand.StandSkins.number("gold_experience","hq"));
+        assertEquals(-1,dev.sangwoo.celestialfall.stand.StandSkins.number("star_platinum","hq"),"a skin is its stand's");
+        assertEquals("hq",dev.sangwoo.celestialfall.stand.StandSkins.skin("gold_experience",1));
+        assertEquals("original",dev.sangwoo.celestialfall.stand.StandSkins.skin("gold_experience",5),"a number it has no skin for: its own look");
+        assertEquals("original",dev.sangwoo.celestialfall.stand.StandSkins.skin("star_platinum",1));
+        for(String id:StandStats.ids())assertTrue(dev.sangwoo.celestialfall.stand.StandSkins.of(id).size()-1<=dev.sangwoo.celestialfall.stand.StandSkins.MOST,id);
+        assertTrue(dev.sangwoo.celestialfall.stand.StandSkins.MOST<=7,"three bits");
+        assertEquals("skin.botand.gold_experience.hq",dev.sangwoo.celestialfall.stand.StandSkins.translation("gold_experience","hq"));
+        assertEquals("skin.botand.original",dev.sangwoo.celestialfall.stand.StandSkins.translation("kageno","original"));
+        // each player's own, its own look at first; kept through a save and a change that keeps their stand
+        var a=UUID.randomUUID();var b=UUID.randomUUID();var state=new ProgressState();
+        assertEquals("original",state.skin(a));
+        state.set(a,new ProgressProfile(10,0,0,"gold_experience"));state.set(b,new ProgressProfile(10,0,0,"gold_experience"));
+        var clean=ProgressState.read(state.writeNbt(new NbtCompound()));
+        clean.skin(a,"hq");assertTrue(clean.isDirty());assertEquals("hq",clean.skin(a));assertEquals("original",clean.skin(b));
+        var restored=ProgressState.read(clean.writeNbt(new NbtCompound()));
+        assertEquals("hq",restored.skin(a));assertEquals("original",restored.skin(b));
+        restored.set(a,restored.profile(a).addLevels(3));assertEquals("hq",restored.skin(a),"a level does not take it");
+        // the stand they lose takes its skin with it: the next is in its own look ("원본으로 돌아감"), even the same stand again
+        restored.set(a,restored.profile(a).withStand("none"));assertEquals("original",restored.skin(a));
+        restored.set(a,restored.profile(a).withStand("gold_experience"));assertEquals("original",restored.skin(a),"got again: its own look");
+        assertEquals("original",ProgressState.read(restored.writeNbt(new NbtCompound())).skin(a));
+        // back to its own look is no skin kept
+        var back=new ProgressState();back.set(b,new ProgressProfile(1,0,0,"gold_experience"));back.skin(b,"hq");back.skin(b,"original");
+        assertEquals("original",back.skin(b));
+        assertFalse(back.writeNbt(new NbtCompound()).getList("Skins",NbtElement.COMPOUND_TYPE).size()>0,"none saved");
+        // an old save has none
+        var old=new NbtCompound();old.putInt("Version",2);old.put("Players",new NbtList());assertEquals("original",ProgressState.read(old).skin(a));
+    }
     @Test void corruptCountersCannotCreateNegativeOrOverCapState() {
         var id=UUID.randomUUID();var nbt=new NbtCompound();var list=new NbtList();list.add(new NbtCompound());
         var row=new NbtCompound();row.putUuid("Id",id);row.putInt("Level",999);row.putInt("Rebirths",-2);row.putInt("Transcendence",Integer.MAX_VALUE);row.putString("Stand","not_a_stand");list.add(row);nbt.put("Players",list);

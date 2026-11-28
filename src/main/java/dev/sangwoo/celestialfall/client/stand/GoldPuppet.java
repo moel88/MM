@@ -14,8 +14,11 @@ final class GoldPuppet extends GoldExperienceEntity {
     /** Ids no server entity has (GeckoLib keeps each body's animation by its id), apart from Star Platinum's puppets'. */
     private static int next=-6_000_000;
     final GoldExperienceLook look=new GoldExperienceLook();
+    /** (2.156.0) The skin it is drawn in: its user's (GoldPresence sets it every frame). */
+    GoldSkin skin=GoldSkin.ORIGINAL;
     GoldPuppet(World world){super(GoldExperience.TYPE,world);setId(next--);}
     @Override public GoldExperienceLook look(float delta){return look;}
+    @Override public int skin(){return skin.number();}
     @Override public boolean canHit(){return false;}
     /** Puts it where it is drawn this frame, facing {@code yaw} (no motion between ticks: it is placed every frame). */
     void place(net.minecraft.util.math.Vec3d where,float yaw){

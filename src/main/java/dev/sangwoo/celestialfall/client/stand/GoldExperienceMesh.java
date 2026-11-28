@@ -11,8 +11,8 @@ import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 
 /**
- * Gold Experience's body (2.155.0): the model the user sent (their .glb's Gold Experience, tools/stand/
- * import_gold_experience.py), as triangles, each vertex carried by up to four of the GeckoLib model's bones. GeckoLib
+ * Gold Experience's body in its skin "고퀄리티" (2.156.0, GoldSkin.HQ; its own body from 2.155.0 to 2.155.1): the model
+ * the user sent (their .glb's Gold Experience, tools/stand/import_gold_experience_hq.py), as triangles, each vertex carried by up to four of the GeckoLib model's bones. GeckoLib
  * draws only boxes; its model here is the skeleton, which the stances turn as they always have, and every frame each
  * vertex goes where its bones take it, as much with each as its weight (linear blend skinning, as the model's own skin
  * moves it). The file holds every vertex where it is in the rest pose, in the model's frame as GeckoLib bakes it
@@ -37,7 +37,7 @@ final class GoldExperienceMesh {
 
     static GoldExperienceMesh get(){
         if(loaded==null){
-            try(var in=GoldExperienceMesh.class.getResourceAsStream("/assets/celestialfall/stands/gold_experience_mesh.bin")){
+            try(var in=GoldExperienceMesh.class.getResourceAsStream("/assets/celestialfall/"+GoldSkin.HQ.mesh)){
                 loaded=read(Objects.requireNonNull(in,"Gold Experience's body"));
             }catch(Exception ex){throw new IllegalStateException("Gold Experience's body could not be read",ex);}
         }

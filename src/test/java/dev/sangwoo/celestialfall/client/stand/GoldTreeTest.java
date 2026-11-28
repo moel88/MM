@@ -22,8 +22,9 @@ import static org.junit.jupiter.api.Assertions.*;
 class GoldTreeTest {
     static final float FRAME=1/60f;
     static GoldTree.Tree tree(){return new GoldTree.Tree(0,0,0,30,new Vec3d(0,64,0));}
-    private static List<String> bones()throws Exception{
-        try(var in=GoldTreeTest.class.getResourceAsStream("/assets/celestialfall/geo/entity/gold_experience.geo.json")){
+    /** The bones of a skin's skeleton (2.156.0: each skin its own, GoldSkin). */
+    private static List<String> bones(GoldSkin skin)throws Exception{
+        try(var in=GoldTreeTest.class.getResourceAsStream(skin.geo())){
             var list=new ArrayList<String>();
             for(var b:JsonParser.parseReader(new InputStreamReader(in,StandardCharsets.UTF_8)).getAsJsonObject().getAsJsonArray("minecraft:geometry").get(0).getAsJsonObject().getAsJsonArray("bones"))
                 list.add(b.getAsJsonObject().get("name").getAsString());
@@ -32,7 +33,13 @@ class GoldTreeTest {
     }
     /** Runs a tree's stand frame by frame from at rest beside its user; no bone or place jumps, and it is at rest again after. */
     private void watch(GoldTree.Tree t,float until,String what)throws Exception{
-        var names=bones();var poses=new GoldExperiencePoses();var look=new GoldExperienceLook();var shape=new GoldRush.Shape();
+        // (2.156.0) in every skin, each with its own skeleton, stances and fists
+        for(var skin:GoldSkin.values()){t.skin=skin;watch(skin,t,until,what);}
+        t.skin=GoldSkin.ORIGINAL;
+    }
+    private void watch(GoldSkin skin,GoldTree.Tree t,float until,String what)throws Exception{
+        what=skin+": "+what;
+        var names=bones(skin);var poses=new GoldExperiencePoses(skin);var look=new GoldExperienceLook();var shape=new GoldRush.Shape();
         float[] scratch=new float[NAMES.size()],q=new float[6];float[][] last=new float[names.size()][];
         float engage=0,pin=1;boolean shown=false;
         for(float a=0;a<=until;a+=FRAME){

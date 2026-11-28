@@ -1,18 +1,18 @@
-# Gold Experience's body (2.155.0)
+# Gold Experience's skin "고퀄리티" (high quality; its body from 2.155.0 to 2.155.1, a skin since 2.156.0)
 
-Gold Experience's 3D body in the game is taken from:
+Gold Experience's 3D body in its skin "고퀄리티" (`hq`) is taken from (its own look, the original, is the mod's own box-built model):
 
 - **"Giorno Giovanna & gold experience"** by **shamus** (https://sketchfab.com/super_sonic_agncies_BETA)
 - Source: https://sketchfab.com/3d-models/giorno-giovanna-gold-experience-39f6d565da584521b7b5939fadb76dbb
 - Licence (as given on the model's page and in the file): **CC BY 4.0**, http://creativecommons.org/licenses/by/4.0/
 
-What was changed (tools/stand/import_gold_experience.py, from the .glb the user sent; the file itself is not kept in
+What was changed (tools/stand/import_gold_experience_hq.py, from the .glb the user sent; the file itself is not kept in
 this repository):
 
 - only Gold Experience is used (the file's figure `Mesh_0112.rip`; Giorno, `Mesh_0113.rip`, and the backdrop are left out);
 - its arms and legs are turned from the T-pose it is bound in to the game's rest pose (arms down, palms in, legs straight)
   and its trunk stood upright from side to side, by its own skin;
-- it is scaled to 40.49 units (2.0 blocks in the game) to the top of its helmet and set in the game's frame;
+- it is scaled to 40.49 units to the top of its helmet (drawn 2.24 blocks tall in the game) and set in the game's frame;
 - its skin is handed from its Mixamo skeleton to the game's skeleton (each joint's weight to the bone it moves with);
 - its texture is cropped to the upper half of the file's (Gold Experience's half).
 

@@ -19,8 +19,9 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class GoldPunchTest {
     static final float FRAME=1/60f;
-    private static List<String> bones()throws Exception{
-        try(var in=GoldPunchTest.class.getResourceAsStream("/assets/celestialfall/geo/entity/gold_experience.geo.json")){
+    /** The bones of a skin's skeleton (2.156.0: each skin its own, GoldSkin). */
+    private static List<String> bones(GoldSkin skin)throws Exception{
+        try(var in=GoldPunchTest.class.getResourceAsStream(skin.geo())){
             var list=new ArrayList<String>();
             for(var b:JsonParser.parseReader(new InputStreamReader(in,StandardCharsets.UTF_8)).getAsJsonObject().getAsJsonArray("minecraft:geometry").get(0).getAsJsonObject().getAsJsonArray("bones"))
                 list.add(b.getAsJsonObject().get("name").getAsString());
@@ -28,9 +29,16 @@ class GoldPunchTest {
         }
     }
     static GoldPunch.Punch punch(float aim){return new GoldPunch.Punch(0,0,0,30,aim,5);}
+    static GoldPunch.Punch punch(float aim,GoldSkin skin){var p=punch(aim);p.skin=skin;return p;}
     /** Runs a punch frame by frame from the stand at rest beside its user; no bone, arm or place jumps. */
     private void watch(GoldPunch.Punch p,String what)throws Exception{
-        var names=bones();var poses=new GoldExperiencePoses();var look=new GoldExperienceLook();var shape=new GoldRush.Shape();
+        // (2.156.0) in every skin, each with its own skeleton, stances and fists
+        for(var skin:GoldSkin.values()){p.skin=skin;watch(skin,p,what);}
+        p.skin=GoldSkin.ORIGINAL;
+    }
+    private void watch(GoldSkin skin,GoldPunch.Punch p,String what)throws Exception{
+        what=skin+": "+what;
+        var names=bones(skin);var poses=new GoldExperiencePoses(skin);var look=new GoldExperienceLook();var shape=new GoldRush.Shape();
         float[] scratch=new float[NAMES.size()],q=new float[6];float[][] last=new float[names.size()][];
         float arm=1,engage=0;boolean shown=false;
         for(float t=0;t<=GoldPunch.LENGTH+GoldPunch.LINGER+GoldPunch.RETURN+.3f;t+=FRAME){
@@ -86,20 +94,23 @@ class GoldPunchTest {
         assertEquals(0,GoldPunch.charge(p,0),1e-5);assertTrue(GoldPunch.charge(p,GoldPunch.LOAD)>.95f);assertEquals(0,GoldPunch.charge(p,GoldPunch.CONTACT),1e-5);
     }
     @Test void itsFistGoesFromBehindItsHipToFullStretchAndMeetsWhoeverIsInItsWay(){
-        var p=punch(Float.NaN);
-        float[] wound=GoldPunch.fist(p,GoldPunch.LOAD),out=GoldPunch.fist(p,GoldPunch.CONTACT);
-        assertTrue(wound[0]<.1f,"drawn back behind its shoulder: "+wound[0]);
-        assertTrue(out[0]>1.3f,"out at full stretch: "+out[0]);
-        assertEquals(GoldPunch.fistReach(),out[0],1e-4);
-        assertTrue(out[2]>1.0f&&out[2]<1.7f,"at a body's chest: "+out[2]);
-        // it stands so that its fist goes a little into the first one in its way
-        for(float aim:new float[]{2.7f,3.1f,3.5f}){
-            float place=GoldPunch.place(punch(aim));
-            assertEquals(aim+GoldPunch.BITE,place+GoldPunch.fistReach(),1e-4,"its fist into them at "+aim);
+        // (2.156.0) in every skin, each with its own fists and the furthest it stands
+        for(var skin:GoldSkin.values()){
+            var p=punch(Float.NaN,skin);
+            float[] wound=GoldPunch.fist(p,GoldPunch.LOAD),out=GoldPunch.fist(p,GoldPunch.CONTACT);
+            assertTrue(wound[0]<.1f,skin+": drawn back behind its shoulder: "+wound[0]);
+            assertTrue(out[0]>1.3f,skin+": out at full stretch: "+out[0]);
+            assertEquals(GoldPunch.fistReach(skin),out[0],1e-4);
+            assertTrue(out[2]>1.0f&&out[2]<1.7f,skin+": at a body's chest: "+out[2]);
+            // it stands so that its fist goes a little into the first one in its way
+            for(float aim:new float[]{2.7f,3.1f,3.5f}){
+                float place=GoldPunch.place(punch(aim,skin));
+                assertEquals(aim+GoldPunch.BITE,place+GoldPunch.fistReach(skin),1e-4,skin+": its fist into them at "+aim);
+            }
+            assertEquals(GoldPunch.NEAR,GoldPunch.place(punch(.4f,skin)),1e-6,"never on top of its user");
+            assertEquals(skin.far,GoldPunch.place(punch(4.4f,skin)),1e-6,"never far off");
+            assertEquals(GoldPunch.AHEAD,GoldPunch.place(punch(Float.NaN,skin)),1e-6);
         }
-        assertEquals(GoldPunch.NEAR,GoldPunch.place(punch(.4f)),1e-6,"never on top of its user");
-        assertEquals(GoldPunch.FAR,GoldPunch.place(punch(4.4f)),1e-6,"never far off");
-        assertEquals(GoldPunch.AHEAD,GoldPunch.place(punch(Float.NaN)),1e-6);
     }
     /** Flat ground at y=0 and a wall whose near face is at x=5. */
     static Vec3d ground(Vec3d feet,Vec3d want){

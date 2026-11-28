@@ -1,0 +1,344 @@
+{
+ "format_version": "1.12.0",
+ "minecraft:geometry": [
+  {
+   "description": {
+    "identifier": "geometry.botand.gold_experience",
+    "texture_width": 1024,
+    "texture_height": 512,
+    "visible_bounds_width": 5,
+    "visible_bounds_height": 4,
+    "visible_bounds_offset": [
+     0,
+     1.5,
+     0
+    ]
+   },
+   "bones": [
+    {
+     "name": "root",
+     "pivot": [
+      0.0,
+      0.0,
+      -0.0
+     ]
+    },
+    {
+     "name": "hips",
+     "pivot": [
+      0.0,
+      26.054,
+      -0.0841
+     ],
+     "parent": "root"
+    },
+    {
+     "name": "torso",
+     "pivot": [
+      0.0,
+      27.8459,
+      0.144
+     ],
+     "parent": "hips"
+    },
+    {
+     "name": "chest",
+     "pivot": [
+      0.0,
+      32.3295,
+      0.7148
+     ],
+     "parent": "torso"
+    },
+    {
+     "name": "neck",
+     "pivot": [
+      0.0,
+      35.0196,
+      1.0573
+     ],
+     "parent": "chest"
+    },
+    {
+     "name": "head",
+     "pivot": [
+      0.0,
+      35.3966,
+      0.9261
+     ],
+     "parent": "neck"
+    },
+    {
+     "name": "right_arm",
+     "pivot": [
+      -4.3707,
+      34.196,
+      1.087
+     ],
+     "parent": "chest"
+    },
+    {
+     "name": "right_forearm",
+     "pivot": [
+      -4.3707,
+      28.34,
+      1.087
+     ],
+     "parent": "right_arm"
+    },
+    {
+     "name": "right_hand",
+     "pivot": [
+      -4.3707,
+      22.9045,
+      1.087
+     ],
+     "parent": "right_forearm"
+    },
+    {
+     "name": "right_fingers",
+     "pivot": [
+      -4.3425,
+      20.9193,
+      1.2726
+     ],
+     "parent": "right_hand"
+    },
+    {
+     "name": "right_index_1",
+     "pivot": [
+      -4.2489,
+      20.1219,
+      0.7126
+     ],
+     "parent": "right_fingers"
+    },
+    {
+     "name": "right_index_2",
+     "pivot": [
+      -4.1087,
+      19.5033,
+      0.7602
+     ],
+     "parent": "right_index_1"
+    },
+    {
+     "name": "right_middle_1",
+     "pivot": [
+      -4.3028,
+      20.1024,
+      1.1417
+     ],
+     "parent": "right_fingers"
+    },
+    {
+     "name": "right_middle_2",
+     "pivot": [
+      -4.1786,
+      19.4494,
+      1.1904
+     ],
+     "parent": "right_middle_1"
+    },
+    {
+     "name": "right_ring_1",
+     "pivot": [
+      -4.3144,
+      20.2883,
+      1.5322
+     ],
+     "parent": "right_fingers"
+    },
+    {
+     "name": "right_ring_2",
+     "pivot": [
+      -4.175,
+      19.6975,
+      1.5887
+     ],
+     "parent": "right_ring_1"
+    },
+    {
+     "name": "right_pinky_1",
+     "pivot": [
+      -4.2736,
+      20.4983,
+      1.9279
+     ],
+     "parent": "right_fingers"
+    },
+    {
+     "name": "right_pinky_2",
+     "pivot": [
+      -4.1613,
+      19.9911,
+      1.97
+     ],
+     "parent": "right_pinky_1"
+    },
+    {
+     "name": "left_arm",
+     "pivot": [
+      4.3707,
+      34.196,
+      1.087
+     ],
+     "parent": "chest"
+    },
+    {
+     "name": "left_forearm",
+     "pivot": [
+      4.3707,
+      28.34,
+      1.087
+     ],
+     "parent": "left_arm"
+    },
+    {
+     "name": "left_hand",
+     "pivot": [
+      4.3707,
+      22.9045,
+      1.087
+     ],
+     "parent": "left_forearm"
+    },
+    {
+     "name": "left_fingers",
+     "pivot": [
+      4.3425,
+      20.9193,
+      1.2726
+     ],
+     "parent": "left_hand"
+    },
+    {
+     "name": "left_index_1",
+     "pivot": [
+      4.2489,
+      20.1219,
+      0.7126
+     ],
+     "parent": "left_fingers"
+    },
+    {
+     "name": "left_index_2",
+     "pivot": [
+      4.1087,
+      19.5033,
+      0.7602
+     ],
+     "parent": "left_index_1"
+    },
+    {
+     "name": "left_middle_1",
+     "pivot": [
+      4.3028,
+      20.1024,
+      1.1417
+     ],
+     "parent": "left_fingers"
+    },
+    {
+     "name": "left_middle_2",
+     "pivot": [
+      4.1786,
+      19.4494,
+      1.1904
+     ],
+     "parent": "left_middle_1"
+    },
+    {
+     "name": "left_ring_1",
+     "pivot": [
+      4.3144,
+      20.2883,
+      1.5322
+     ],
+     "parent": "left_fingers"
+    },
+    {
+     "name": "left_ring_2",
+     "pivot": [
+      4.175,
+      19.6975,
+      1.5887
+     ],
+     "parent": "left_ring_1"
+    },
+    {
+     "name": "left_pinky_1",
+     "pivot": [
+      4.2736,
+      20.4983,
+      1.9279
+     ],
+     "parent": "left_fingers"
+    },
+    {
+     "name": "left_pinky_2",
+     "pivot": [
+      4.1613,
+      19.9911,
+      1.97
+     ],
+     "parent": "left_pinky_1"
+    },
+    {
+     "name": "right_leg",
+     "pivot": [
+      -2.0111,
+      25.0658,
+      -0.0
+     ],
+     "parent": "hips"
+    },
+    {
+     "name": "right_shin",
+     "pivot": [
+      -2.0111,
+      14.3716,
+      -0.0
+     ],
+     "parent": "right_leg"
+    },
+    {
+     "name": "right_foot",
+     "pivot": [
+      -2.0111,
+      2.3744,
+      -0.0
+     ],
+     "parent": "right_shin"
+    },
+    {
+     "name": "left_leg",
+     "pivot": [
+      2.0111,
+      25.0658,
+      -0.0
+     ],
+     "parent": "hips"
+    },
+    {
+     "name": "left_shin",
+     "pivot": [
+      2.0111,
+      14.3716,
+      -0.0
+     ],
+     "parent": "left_leg"
+    },
+    {
+     "name": "left_foot",
+     "pivot": [
+      2.0111,
+      2.3744,
+      -0.0
+     ],
+     "parent": "left_shin"
+    }
+   ]
+  }
+ ]
+}

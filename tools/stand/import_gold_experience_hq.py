@@ -1,17 +1,18 @@
 """Gold Experience's body from the model the user sent (2.155.0, user request: "여기서 골드익스피리언스만 추출해서 지금
-골드익스피리언스를 대체 할 수 있어?"; asked and answered: its own thickness, its own abs, its own proportions).
+골드익스피리언스를 대체 할 수 있어?"; asked and answered: its own thickness, its own abs, its own proportions). Since
+2.156.0 it is a skin, "고퀄리티" (hq): Gold Experience's own look is the box-built figure again.
 
-usage: python3 -I tools/stand/import_gold_experience.py MODEL.glb [OUT]
+usage: python3 -I tools/stand/import_gold_experience_hq.py MODEL.glb [OUT]
 
 The file (Sketchfab, "Giorno Giovanna & gold experience" by shamus, CC-BY 4.0: third_party/gold-experience-model) holds
 two skinned figures on Mixamo skeletons sharing one texture: Giorno (Mesh_0113.rip, the lower half of the texture) and
 Gold Experience (Mesh_0112.rip, the upper half). This takes Gold Experience alone and writes what the game draws it from:
 
-  geo/entity/gold_experience.geo.json   its skeleton for GeckoLib: the bones the stances turn (tools/stand/
-                                        make_gold_experience.py writes the stances), set at this body's joints, no cubes
-  stands/gold_experience_mesh.bin       its body: every vertex where it is in the rest pose, its normal, its place on the
+  geo/entity/gold_experience_hq.geo.json   its skeleton for GeckoLib: the bones the stances turn (tools/stand/
+                                        make_gold_experience_hq.py writes the stances), set at this body's joints, no cubes
+  stands/gold_experience_hq_mesh.bin       its body: every vertex where it is in the rest pose, its normal, its place on the
                                         texture and up to four bones with their weights (client/stand/GoldExperienceMesh)
-  textures/entity/gold_experience.png   the texture's upper half (Gold Experience's)
+  textures/entity/gold_experience_hq.png   the texture's upper half (Gold Experience's)
 
 The skeleton the game turns is the one the stances were made for (the rig's 2.145-2.154 bones, as Gold Experience's
 model has had them, less its wings, rings and hide: this body has its shoulder pads, hooks and loincloth on its legs
@@ -250,14 +251,14 @@ def main():
     tex = Image.open(io.BytesIO(raw)).convert('RGB')
     half = tex.crop((0, 0, tex.width, tex.height // 2))
     geo = {'format_version': '1.12.0', 'minecraft:geometry': [{
-        'description': {'identifier': 'geometry.botand.gold_experience', 'texture_width': half.width,
+        'description': {'identifier': 'geometry.botand.gold_experience_hq', 'texture_width': half.width,
                         'texture_height': half.height, 'visible_bounds_width': 5, 'visible_bounds_height': 4,
                         'visible_bounds_offset': [0, 1.5, 0]},
         'bones': geo_bones}]}
     for d in ('geo/entity', 'textures/entity', 'stands'):
         (ROOT / d).mkdir(parents=True, exist_ok=True)
-    (ROOT / 'geo/entity/gold_experience.geo.json').write_text(json.dumps(geo, indent=1))
-    half.save(ROOT / 'textures/entity/gold_experience.png', optimize=True)
+    (ROOT / 'geo/entity/gold_experience_hq.geo.json').write_text(json.dumps(geo, indent=1))
+    half.save(ROOT / 'textures/entity/gold_experience_hq.png', optimize=True)
 
     out = io.BytesIO()
     out.write(b'GEM1')
@@ -276,7 +277,7 @@ def main():
     out.write(struct.pack('>i', len(tri)))
     for a, b, c in tri:
         out.write(struct.pack('>3i', int(a), int(b), int(c)))
-    (ROOT / 'stands/gold_experience_mesh.bin').write_bytes(out.getvalue())
+    (ROOT / 'stands/gold_experience_hq_mesh.bin').write_bytes(out.getvalue())
 
     lo, hi = rb.min(0), rb.max(0)
     print(f'{len(pos)} vertices, {len(tri)} triangles, {len(order)} bones, texture {half.width}x{half.height}; '

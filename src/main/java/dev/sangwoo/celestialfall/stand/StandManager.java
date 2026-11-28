@@ -29,7 +29,10 @@ public final class StandManager {
             &&p instanceof StandHolder holder&&stand.equals(holder.botand$getStand());
     }
     public static void refresh(ServerPlayerEntity p){
-        ((StandHolder)p).botand$setStand(MapGate.enabled(p.getWorld())?ProgressManager.profile(p).stand():"none");
+        String stand=MapGate.enabled(p.getWorld())?ProgressManager.profile(p).stand():"none";
+        ((StandHolder)p).botand$setStand(stand);
+        // (2.156.0) and the skin it is drawn in, as a number among its skins (StandSkins): its own look, 0, if it has no such skin
+        ((StandHolder)p).botand$setStandSkin(Math.max(0,StandSkins.number(stand,ProgressManager.skin(p))));
     }
     public static void initialize(){
         KagenoManager.initialize();StandSummon.initialize();StarPlatinumAttack.initialize();StarPlatinumRush.initialize();GoldExperienceOverdrive.initialize();GoldExperienceHeal.initialize();GoldExperienceBeatdown.initialize();GoldExperienceLife.initialize();GoldExperienceTree.initialize();GoldExperienceAttack.initialize();StarPlatinumInhale.initialize();StarPlatinumBeatdown.initialize();StarPlatinumTimeStop.initialize();StandArrow.initialize();

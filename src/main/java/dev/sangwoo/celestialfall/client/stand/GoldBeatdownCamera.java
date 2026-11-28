@@ -40,13 +40,6 @@ public final class GoldBeatdownCamera {
         return shot==1?1000+fists(t):shot;
     }
 
-    /**
-     * The stand's face, the top of its head and its chest (blocks up from its feet): the body the user sent (2.155.0),
-     * drawn 2.24 blocks tall (2.155.1), its head from 1.94 to 2.24 and its eyes at 2.06 (at 2.0 blocks, 2.155.0, they
-     * were 1.8, 1.97 and 1.48); the box-built one had them at 1.72, 1.95 and 1.35.
-     */
-    static final double FACE=2.02,CROWN=2.21,CHEST=1.66;
-
     /** The shot at {@code t} on the beatdown's clock (before any blow's jolt). */
     public static Shot at(Beat b,float t){
         Vec3d o=b.from,f=b.f,r=b.r;
@@ -61,6 +54,9 @@ public final class GoldBeatdownCamera {
             return new Shot(b.at(o,from*.6,.8,-2.3+.2*k),b.at(o,from*.6+.4,1.3,0),52+6*k,-5,false,1);
         }
         // the stand where it floats: its face, the top of its head and its chest
+        // (2.156.0: each skin's own, GoldSkin: the box-built figure's at 1.72, 1.95 and 1.35 blocks up from its feet, the body
+        // the user sent's at 2.02, 2.21 and 1.66, drawn 2.24 blocks tall)
+        double FACE=b.skin.face,CROWN=b.skin.crown,CHEST=b.skin.chest;
         Vec3d face=standPoint(b,t,.42,FACE),crown=standPoint(b,t,.2,CROWN),sc=standPoint(b,t,.25,CHEST);
         if(t<C3){
             // muda muda: a cut with every fist, between the face they strike and the stand throwing them
@@ -123,9 +119,9 @@ public final class GoldBeatdownCamera {
         }
         if(t<C9){
             // its fist into the lens: from the one struck's eyes (looking where its face was before it dashed in: the
-            // dash would swing the view; 2.155.0: from the back of their head, as this body stands a little nearer
-            // them for its shorter arms)
-            return new Shot(vh.add(f.multiply(.26)).add(0,.02,0),standPoint(b,Math.min(t,FINAL-.03f),.42,FACE).add(0,-.15,0),70,-6,true,2.4f);
+            // dash would swing the view; 2.155.0: the body the user sent from the back of their head, as it stands a little
+            // nearer them for its shorter arms: GoldSkin.lens)
+            return new Shot(vh.add(f.multiply(b.skin.lens)).add(0,.02,0),standPoint(b,Math.min(t,FINAL-.03f),.42,FACE).add(0,-.15,0),70,-6,true,2.4f);
         }
         if(t<C9B){
             // sent flying: from behind the stand on its left, after them

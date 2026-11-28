@@ -28,17 +28,23 @@ public final class GoldExperience {
     /**
      * "/botand gold" summons the figure three blocks ahead, facing you, floating at rest; "/botand gold hero" in the pose
      * of the picture, "/botand gold stand" standing straight; "/botand gold clear" removes the figures within 32 blocks.
+     * (2.156.0) A skin after the stance draws the figure in it: "/botand gold hero hq" (StandSkins; "original" its own look).
      */
     public static LiteralArgumentBuilder<ServerCommandSource> commands(){
-        var root=literal("gold").requires(source->source.hasPermissionLevel(2)).executes(c->summon(c.getSource(),0));
-        for(int i=0;i<GoldExperienceStance.NAMES.size();i++){int stance=i;root.then(literal(GoldExperienceStance.NAMES.get(i)).executes(c->summon(c.getSource(),stance)));}
+        var root=literal("gold").requires(source->source.hasPermissionLevel(2)).executes(c->summon(c.getSource(),0,0));
+        var skins=StandSkins.of("gold_experience");
+        for(int i=0;i<GoldExperienceStance.NAMES.size();i++){
+            int stance=i;var node=literal(GoldExperienceStance.NAMES.get(i)).executes(c->summon(c.getSource(),stance,0));
+            for(int k=0;k<skins.size();k++){int skin=k;node.then(literal(skins.get(k)).executes(c->summon(c.getSource(),stance,skin)));}
+            root.then(node);
+        }
         root.then(literal("clear").executes(c->clear(c.getSource())));
         return root;
     }
-    private static int summon(ServerCommandSource source,int stance){
+    private static int summon(ServerCommandSource source,int stance,int skin){
         var world=source.getWorld();var figure=TYPE.create(world);if(figure==null)return 0;
         Vec3d at=source.getPosition().add(Vec3d.fromPolar(0,source.getRotation().y).multiply(3));float yaw=source.getRotation().y+180;
-        figure.refreshPositionAndAngles(at.x,at.y,at.z,yaw,0);figure.setHeadYaw(yaw);figure.setBodyYaw(yaw);figure.setStance(stance);
+        figure.refreshPositionAndAngles(at.x,at.y,at.z,yaw,0);figure.setHeadYaw(yaw);figure.setBodyYaw(yaw);figure.setStance(stance);figure.setSkin(skin);
         if(!world.spawnEntity(figure))return 0;
         source.sendFeedback(()->Text.translatable("message.botand.gold_spawned",figure.getName()),true);return 1;
     }

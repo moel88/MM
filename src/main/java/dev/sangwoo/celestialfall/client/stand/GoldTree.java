@@ -56,6 +56,8 @@ public final class GoldTree {
     /** An H as heard. */
     public static final class Tree {
         public final long start;final long serverAge,received;public final float yaw;public Vec3d spot;
+        /** (2.156.0) The skin its user's Gold Experience is drawn in (GoldSkin: its fists and size go by it); set as it begins and every frame it is drawn. */
+        public GoldSkin skin=GoldSkin.ORIGINAL;
         /** Its clock when the tree burst up, when it was stopped short, when the tree began to wither early (NaN: not); the tree's entity. */
         float burst=Float.NaN,stopped=Float.NaN,withered=Float.NaN;int tree=-1;
         /** Whom the burst struck (and whose guard took it), and the blows the tree turned back. */
@@ -102,10 +104,10 @@ public final class GoldTree {
     private static void event(MinecraftClient mc,UUID maker,int type,long start,long serverNow,float yaw,Vec3d at,long ready,int tree,List<Hit> hits,int whom,float amount,boolean flag){
         var t=TREES.get(maker);
         switch(type){
-            case GoldExperienceTree.TOUCH->{if(t!=null)t.sound.cut();t=new Tree(start,serverNow-start,StandRush.ticks,yaw,at);t.ready=ready;TREES.put(maker,t);}
+            case GoldExperienceTree.TOUCH->{if(t!=null)t.sound.cut();t=new Tree(start,serverNow-start,StandRush.ticks,yaw,at);t.ready=ready;t.skin=GoldSkin.of(maker);TREES.put(maker,t);}
             case GoldExperienceTree.BURST->{
                 // (one who came near it only now hears the burst alone)
-                if(t==null||t.start!=start){if(t!=null)t.sound.cut();t=new Tree(start,serverNow-start,StandRush.ticks,yaw,at);TREES.put(maker,t);}
+                if(t==null||t.start!=start){if(t!=null)t.sound.cut();t=new Tree(start,serverNow-start,StandRush.ticks,yaw,at);t.skin=GoldSkin.of(maker);TREES.put(maker,t);}
                 t.burst=(serverNow-start)/20f;t.tree=tree;t.spot=at;t.ready=ready;t.hits.clear();t.hits.addAll(hits);
             }
             case GoldExperienceTree.STOPPED->{
@@ -235,14 +237,14 @@ public final class GoldTree {
         if(!Float.isNaN(t.stopped))off=Math.min(off,1-smooth((a-t.stopped)/.2f));
         return up*off;
     }
-    /** Where its palm lies on the ground (world), its body drawn as {@code body}. */
-    static Vec3d palm(StandPresence.Body body){
-        float[] f=GoldRush.FISTS[GROUND][1];
+    /** Where its palm lies on the ground (world), its body drawn as {@code body} in {@code skin}. */
+    static Vec3d palm(GoldSkin skin,StandPresence.Body body){
+        float[] f=skin.fists()[GROUND][1];
         double r=Math.toRadians(body.yaw()),fx=-Math.sin(r),fz=Math.cos(r),s=body.scale();
         return body.at().add((fx*f[0]-fz*f[1])*s,f[2]*s,(fz*f[0]+fx*f[1])*s);
     }
     /** For the capture tools: where its palm lies, its body drawn as {@code body}. */
-    public static Vec3d palmAt(StandPresence.Body body){return palm(body);}
+    public static Vec3d palmAt(Tree t,StandPresence.Body body){return palm(t.skin,body);}
     static float yawTo(Vec3d from,Vec3d to){return (float)Math.toDegrees(Math.atan2(-(to.x-from.x),to.z-from.z));}
     static float lerp(float k,float a,float b){return MathHelper.lerp(k,a,b);}
 }

@@ -25,6 +25,10 @@ public final class ProgressManager {
     public static boolean awakened(ServerPlayerEntity p){return ProgressState.get(p.getServer()).awakened(p.getUuid());}
     /** Awakens this player or takes it back (an operator's command for now, the awakening quest later); their client is told. */
     public static void awaken(ServerPlayerEntity p,boolean value){ProgressState.get(p.getServer()).awaken(p.getUuid(),value);sync(p);}
+    /** The player's stand skin (2.156.0, StandSkins): an id among their stand's skins, "original" for its own look. */
+    public static String skin(ServerPlayerEntity p){return ProgressState.get(p.getServer()).skin(p.getUuid());}
+    /** Gives the player one of their stand's skins (an operator's command, StandSkins), every client in sight seeing it. */
+    public static void skin(ServerPlayerEntity p,String skin){ProgressState.get(p.getServer()).skin(p.getUuid(),skin);dev.sangwoo.celestialfall.stand.StandManager.refresh(p);}
     public static void joined(ServerPlayerEntity p){
         applyHealth(p);dev.sangwoo.celestialfall.menu.MenuServer.observe(p);sync(p);
     }

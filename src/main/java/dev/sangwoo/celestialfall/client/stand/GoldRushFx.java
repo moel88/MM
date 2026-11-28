@@ -64,13 +64,13 @@ public final class GoldRushFx {
     }
 
     static Vec3d front(StandPresence.Body b){return b.at().add(way(b.yaw()).multiply(FRONT_AHEAD*b.scale())).add(0,FRONT_UP*b.scale(),0);}
-    static float[] stretched(int k,int seed,float arms){return GoldRush.grown(GoldRush.fist(k,seed),k&1,arms*(1+GoldRush.STRETCH));}
-    static float[] drawn(int k,int seed,float arms){return GoldRush.grown(k==0?GUARD:GoldRush.fist(k-1,seed),k&1,arms);}
+    static float[] stretched(GoldSkin skin,int k,int seed,float arms){return GoldRush.grown(skin,GoldRush.fist(k,seed),k&1,arms*(1+GoldRush.STRETCH));}
+    static float[] drawn(GoldSkin skin,int k,int seed,float arms){return GoldRush.grown(skin,k==0?GUARD:GoldRush.fist(k-1,seed),k&1,arms);}
     /** The fist striking {@code u} seconds into a barrage (the body's, or an afterimage's on its own clock), null if none is. */
-    static Fist fist(StandPresence.Body b,float u,float end,int seed,float arms){
+    static Fist fist(GoldSkin skin,StandPresence.Body b,float u,float end,int seed,float arms){
         if(u<=0||u>end)return null;
         int k=(int)Math.floor(u/GoldRush.HALF);float s=GoldRush.smooth(u/GoldRush.HALF-k);
-        Vec3d from=on(drawn(k,seed,arms),b),stop=on(stretched(k,seed,arms),b);
+        Vec3d from=on(drawn(skin,k,seed,arms),b),stop=on(stretched(skin,k,seed,arms),b);
         return new Fist(from,from.lerp(stop,s),stop,s,k);
     }
     /** When the fist {@code j} before the one striking {@code u} seconds in landed (seconds, -1 for none). */
@@ -86,7 +86,7 @@ public final class GoldRushFx {
                 float lands=landed(s.t,j);if(lands<0||lands>s.rush.ends())continue;
                 float u=(s.t-lands)/FIST;if(u<0||u>=1)continue;
                 int k=Math.round(lands/GoldRush.HALF)-1;
-                var p=on(stretched(k,s.seed(),s.arms()),s.body);float a=(float)Math.pow(1-u,.7)*s.on();
+                var p=on(stretched(s.rush.skin,k,s.seed(),s.arms()),s.body);float a=(float)Math.pow(1-u,.7)*s.on();
                 burst(m,p,SIZE*s.arms()*.62*s.body.scale()*(.75+.25*Ease.out(u,0,.4f))*1.14,.36,8,s.seed()+k*7,INK,INK,.6f*a,.6f*a);
             }
             for(var hit:hits(s)){
@@ -116,7 +116,7 @@ public final class GoldRushFx {
      */
     static void fists(EffectMesh m,Shown s,StandPresence.Body b,float u,int seed,float size,float alpha){
         float end=s.rush.ends(),arms=s.arms(),sz=SIZE*size*arms*b.scale();
-        var f=fist(b,u,end,seed,arms);
+        var f=fist(s.rush.skin,b,u,end,seed,arms);
         if(f!=null){
             float a=alpha*Ease.smooth(f.strike,.05f,.3f);
             Vec3d along=f.at.subtract(f.from);
@@ -133,7 +133,7 @@ public final class GoldRushFx {
             float lands=landed(u,j);if(lands<0||lands>end)continue;
             float v=(u-lands)/FIST;if(v<0||v>=1)continue;
             int k=Math.round(lands/GoldRush.HALF)-1;
-            var p=on(stretched(k,seed,arms),b);float a=alpha*(float)Math.pow(1-v,.7)*Ease.smooth(u-lands,0,.012f);
+            var p=on(stretched(s.rush.skin,k,seed,arms),b);float a=alpha*(float)Math.pow(1-v,.7)*Ease.smooth(u-lands,0,.012f);
             double rad=sz*.62*(.75+.25*Ease.out(v,0,.4f));
             burst(m,p,rad,.36,8,seed+k*7,PALE,GOLD,.82f*a,.72f*a);
             m.softDisc(p,rad*.9,AMBER,.3f*a);m.softDisc(p,rad*.3+.02,WHITE,.5f*a*(1-v));

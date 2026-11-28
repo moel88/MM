@@ -3,8 +3,8 @@ the game's own render is what checks a model, through the shots tools).
 
 usage: python3 tools/stand/preview_mesh.py OUT.png [STANCE] [YAW,...] [ROOT]
 
-It reads the skeleton (geo/entity/gold_experience.geo.json), the body (stands/gold_experience_mesh.bin), its texture
-and the stances (stands/gold_experience_poses.json) under ROOT (the game's resources by default), turns the bones as
+It reads the skeleton (geo/entity/gold_experience_hq.geo.json), the body (stands/gold_experience_hq_mesh.bin), its texture
+and the stances (stands/gold_experience_hq_poses.json) under ROOT (the game's resources by default), turns the bones as
 the generator's rig does (tools/stand/rig.py: as GeckoLib does) and skins the body by them, then draws it from the
 front (yaw 0, its left side on the right of the picture), from its left (90), from behind (180) and so on: an
 orthographic view, every texel as the texture has it, lit from one side. Grey lines every 8 units up from the soles.
@@ -47,14 +47,14 @@ def load(path):
 
 def posed(root, stance):
     """The body skinned by a stance, in a frame facing +z with its left side at +x (model units)."""
-    geo = json.loads((root / 'geo/entity/gold_experience.geo.json').read_text())['minecraft:geometry'][0]
+    geo = json.loads((root / 'geo/entity/gold_experience_hq.geo.json').read_text())['minecraft:geometry'][0]
     rig.BONES.clear()
     for b in geo['bones']:
         rig.bone(b['name'], b.get('parent'), b['pivot'], b.get('rotation', (0, 0, 0)))
     world = {}
     for name, b in rig.BONES.items():
         world[name] = (world[b.parent] if b.parent else np.eye(4)) @ rig.bone_matrix(b, stance.get(name, {}))
-    names, pos, nor, uv, bones, weights, tri = load(root / 'stands/gold_experience_mesh.bin')
+    names, pos, nor, uv, bones, weights, tri = load(root / 'stands/gold_experience_hq_mesh.bin')
     g, gn = pos * np.array([-16, 16, 16.0]), nor * np.array([-1, 1, 1.0])
     out, on = np.zeros_like(g), np.zeros_like(g)
     for c in range(4):
@@ -114,10 +114,10 @@ def main():
     root = Path(sys.argv[4]) if len(sys.argv) > 4 else Path(__file__).resolve().parents[2] / 'src/main/resources/assets/celestialfall'
     stance = {}
     if len(sys.argv) > 2 and sys.argv[2] not in ('', 'rest'):
-        stance = json.loads((root / 'stands/gold_experience_poses.json').read_text())[sys.argv[2]]
+        stance = json.loads((root / 'stands/gold_experience_hq_poses.json').read_text())[sys.argv[2]]
     yaws = [float(a) for a in (sys.argv[3] if len(sys.argv) > 3 else '0,90,180,270').split(',')]
     pos, nor, uv, tri = posed(root, stance)
-    tex = np.asarray(Image.open(root / 'textures/entity/gold_experience.png').convert('RGB'))
+    tex = np.asarray(Image.open(root / 'textures/entity/gold_experience_hq.png').convert('RGB'))
     size, centre = (360, 560), np.array([0, 21, 0])
     scale = .92 * size[1] / 46.0
     img = Image.fromarray(np.concatenate([draw(pos, nor, uv, tri, tex, y, size, centre, scale) for y in yaws], 1))

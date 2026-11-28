@@ -15,4 +15,7 @@ public interface StandHolder {
     /** Whether X Chara's hack is on (their Q, 2.115.0, XCharaHack): every player in sight sees their knife lit and the panel in their other hand. */
     boolean botand$isHacking();
     void botand$setHacking(boolean on);
+    /** The skin their stand is drawn in (2.156.0, StandSkins): its number among the stand's skins, 0 its own look. Every player in sight learns it. */
+    int botand$standSkin();
+    void botand$setStandSkin(int number);
 }

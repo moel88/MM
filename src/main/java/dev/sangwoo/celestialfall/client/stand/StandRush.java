@@ -111,6 +111,8 @@ public final class StandRush {
         public final long start;final long serverAge,received;final int seed;
         /** Whose rush it is: Star Platinum's (StarPlatinumRush.STAR) or Gold Experience's (GOLD, 2.147.0). */
         public int kind;
+        /** (2.156.0) The skin its user's Gold Experience is drawn in (GoldSkin: its fists and size go by it); set as it begins and every frame it is drawn. */
+        public GoldSkin skin=GoldSkin.ORIGINAL;
         /** Its clock (seconds) when it ended, NaN while it is on. */
         public float ended=Float.NaN;
         /** The world tick it is ready again once it ended. */
@@ -222,7 +224,7 @@ public final class StandRush {
                 // its start may be a few ticks on (a punch it stopped short turns back to the guard first)
                 r=new Rush(start,serverNow-start,ticks,(int)(start*31+id.getLeastSignificantBits()));
                 r.aim=r.prevAim=yaw;r.kind=kind;
-                RUSHES.put(id,r);
+                r.skin=GoldSkin.of(id);RUSHES.put(id,r);
                 sound(mc,id,r);
             }
             case StarPlatinumRush.BLOW->{
@@ -279,7 +281,7 @@ public final class StandRush {
             if(user!=null){float want=user.getHeadYaw();if(!r.aimed){r.aim=r.prevAim=want;r.aimed=true;}else r.aim+=MathHelper.wrapDegrees(want-r.aim)*(float)(1-Math.exp(-.05/AIM));}
             // where it stands: its fists on whoever is nearest in its way
             float face=user==null?Float.NaN:nearSide(mc,user);
-            float want=Float.isNaN(face)?AHEAD+LUNGE:MathHelper.clamp(face+BITE-(r.gold()?GoldRush.fistReach():fistReach()),NEAR,FAR);
+            float want=Float.isNaN(face)?AHEAD+LUNGE:MathHelper.clamp(face+BITE-(r.gold()?GoldRush.fistReach(r.skin):fistReach()),NEAR,FAR);
             r.place+=(want-r.place)*(float)(1-Math.exp(-.05/PLACE));
             // the blows sound while it strikes someone (or, before the first blow is heard, while someone stands in its way)
             boolean striking=r.on()&&(ticks-r.struckAt<=STRUCK||r.blows==0&&!Float.isNaN(face));
