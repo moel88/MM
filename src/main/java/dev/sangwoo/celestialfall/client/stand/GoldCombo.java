@@ -41,8 +41,8 @@ import static dev.sangwoo.celestialfall.stand.GoldExperienceStance.*;
  * Its sounds (made from recordings, tools/stand/make_gold_sounds.py: nothing synthesized, as its T's and H's): each punch
  * whooshes through the air, loudest as it lands (SWING_PEAK into its file); whoever it lands on is struck with a blow
  * of its own, played as the server's word comes (the punch's clock at its contact: the word and the punch are late the
- * same); the fourth carries the overdrive's shout, "mu-DA!", its "DA" on the blow (the user's choice: "주먹 소리 +
- * 4타에 '무-다!'"). As the stands' other sounds they are loud for its user and whom it strikes and fade to 40 blocks.
+ * same). No shout (2.154.1, user request: "무다 빼자": till then the fourth shouted the overdrive's "mu-DA!"). As the
+ * stands' other sounds they are loud for its user and whom it strikes and fade to 40 blocks.
  */
 public final class GoldCombo {
     // ───────────────────────────── the keys ─────────────────────────────
@@ -93,12 +93,11 @@ public final class GoldCombo {
 
     /** Where in each punch's whoosh its loudest moment is (seconds into its file: tools/stand/make_gold_sounds.py lays it there), so when it is played: that moment as the fist lands. */
     static final float[] SWING_PEAK={0,.07f,.07f,.1f,.12f};
-    /** The fourth's shout: its "DA" (GoldPunch.DA_AT into its file) as the fist lands. */
-    static final float SHOUT_AT=HIT[4]-GoldPunch.DA_AT;
-    static GoldSounds.Cue[] cues(int combo){
-        var swing=new GoldSounds.Cue(HIT[combo]-SWING_PEAK[combo],"gold_punch_swing_"+combo,1);
-        return combo==4?new GoldSounds.Cue[]{swing,new GoldSounds.Cue(SHOUT_AT,"gold_experience_overdrive",1)}:new GoldSounds.Cue[]{swing};
-    }
+    /**
+     * Each punch's whoosh, and nothing more (2.154.1, user request: "무다 빼자": the fourth shouted the overdrive's
+     * "mu-DA!" with its blow; it shouts nothing now).
+     */
+    static GoldSounds.Cue[] cues(int combo){return new GoldSounds.Cue[]{new GoldSounds.Cue(HIT[combo]-SWING_PEAK[combo],"gold_punch_swing_"+combo,1)};}
     /** The blow on whoever a punch lands on (one for each punch, the fourth the heaviest). */
     static String blow(int combo){return "gold_punch_hit_"+combo;}
 

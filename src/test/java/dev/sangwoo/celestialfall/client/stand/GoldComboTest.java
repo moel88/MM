@@ -19,8 +19,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * Gold Experience's punches as they are drawn and heard (2.154.0, its basic attack): thrown at full speed, one by one
  * or stopped short at any moment, the stand moves smoothly at 60 fps and is back at its user's shoulder after; each
  * punch loads, holds and lands on the server's tick, fastest as it lands, its fist then out in front where whoever it is
- * for stands; afterimages show only through the strikes; each whoosh is loudest as its fist lands and the fourth's
- * shout's "DA" comes on its blow.
+ * for stands; afterimages show only through the strikes; each whoosh is loudest as its fist lands and the fourth
+ * shouts nothing (2.154.1, "무다 빼자").
  */
 class GoldComboTest {
     static final float FRAME=1/60f;
@@ -139,7 +139,7 @@ class GoldComboTest {
         for(int c=1;c<4;c++)assertEquals(0,GoldCombo.charge(punch(c,0,Float.NaN),GoldCombo.strikeFrom(c)),1e-6);
         assertTrue(GoldCombo.charge(punch(4,0,Float.NaN),GoldCombo.strikeFrom(4))>.5f);
     }
-    @Test void eachWhooshIsLoudestAsItsFistLandsAndTheShoutsDaOnTheFourthsBlow()throws Exception{
+    @Test void eachWhooshIsLoudestAsItsFistLandsAndTheFourthShoutsNothing()throws Exception{
         String tool=Files.readString(Path.of("tools/stand/make_gold_sounds.py"));
         for(int c=1;c<=4;c++){
             var cues=GoldCombo.cues(c);
@@ -150,12 +150,9 @@ class GoldComboTest {
             assertEquals(GoldCombo.SWING_PEAK[c],Float.parseFloat(m.group(1)),1e-6,"swing "+c+"'s loudest moment");
             assertEquals(GoldCombo.HIT[c],cues[0].at()+GoldCombo.SWING_PEAK[c],1e-6,"swing "+c+" loudest as its fist lands");
             assertTrue(cues[0].at()>=0);
-            assertEquals(c==4?2:1,cues.length);
+            // (2.154.1, "무다 빼자") a whoosh and nothing more: the fourth shouts no "mu-DA!"
+            assertEquals(1,cues.length,"punch "+c+" plays its whoosh alone");
         }
-        var shout=GoldCombo.cues(4)[1];
-        assertEquals("gold_experience_overdrive",shout.sound());
-        assertEquals(GoldCombo.HIT[4],shout.at()+GoldPunch.DA_AT,1e-6,"its DA on the fourth's blow");
-        assertTrue(shout.at()>GoldCombo.strikeFrom(4)-.15f,"its \"mu\" through the coil's hold");
         for(int c=1;c<=4;c++)assertEquals("gold_punch_hit_"+c,GoldCombo.blow(c));
     }
 }

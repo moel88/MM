@@ -3,7 +3,7 @@
 Gold Experience's T (giving life) and H (the tree of life) sounds (2.153.0,
 `src/main/resources/assets/celestialfall/sounds/gold_life_*.ogg`, `gold_tree_*.ogg`) and its basic attack's punches
 (2.154.0, `gold_punch_swing_*.ogg`, `gold_punch_hit_*.ogg`: user request "마지막으로 평타 만들자 효과음도 잘 넣어서", asked
-and answered: "주먹 소리 + 4타에 '무-다!'") are laid together from these
+and answered: "주먹 소리 + 4타에 '무-다!'"; the shout taken out in 2.154.1) are laid together from these
 recordings by `tools/stand/make_gold_sounds.py` (stretches of them, mono, faded at the cuts, some played faster or slower,
 backwards, or under a high-pass filter to take the hum of an outdoor recording off, each at its level among the others,
 the whole set to its loudness under a limiter; nothing synthesized). The user asked for exactly that: "t스킬과 H스킬은
@@ -64,5 +64,5 @@ BigSoundBank (https://bigsoundbank.com/licenses.html): "Creative Commons CC0 1.0
 Dedication"; each sound page: "CC0 (public domain): Free and royalty-free".
 
 Gold Experience's R and Y sounds (`gold_experience_overdrive`, `gold_experience_mend`, `gold_experience_self_heal`) are the
-user's own recordings, only cut (`tools/stand/cut_gold_sounds.py`). The basic attack's fourth punch shouts R's "무-다!"
-(`gold_experience_overdrive`, the same file).
+user's own recordings, only cut (`tools/stand/cut_gold_sounds.py`). The basic attack's fourth punch shouted R's "무-다!"
+(`gold_experience_overdrive`, the same file) in 2.154.0 only; 2.154.1 took it out (user request: "무다 빼자").
