@@ -930,7 +930,9 @@ public final class MpClient implements ClientModInitializer {
      * as a fly of the watcher's, hovering before its face; the caster's blow at the watcher ("M1") goes through the fly;
      * the watcher striking at the caster ("STRIKE+": its attack every 12 ticks) swats its fly: 60 on the watcher, a
      * second down (incapacitated), the part back. The cooldowns on: T on the watcher's guard: no harm, an arm a fly,
-     * which goes back into its place 20 s on untouched: T ready again 1000 ticks after that. Q (the stand back): T: nothing.
+     * which goes back into its place 20 s on untouched: T ready again 1000 ticks after that. The cooldowns off, T punched
+     * and the caster struck before it lands ("HITME", 2.153.0): stopped short on both clients (told with the punch's own
+     * start). Q (the stand back): T: nothing.
      */
     private static final String[] GOLDLIFE_SCRIPT={
         "5 GOLD","8 NOCDOFF","30 HOME","35 HEAL",
@@ -944,14 +946,17 @@ public final class MpClient implements ClientModInitializer {
         "500 NOCDOFF","505 HOME","510 HEAL",
         "520 GUARD+","530 T","560 GUARD-",
         "1000 T",
-        "1010 NOCDON","1015 Q","1040 T",
-        "1050 NOCDOFF","1060 END"};
+        "1010 NOCDON","1012 T","1015 HITME",
+        "1030 Q","1050 T",
+        "1060 NOCDOFF","1070 END"};
     /**
      * Gold Experience's beatdown (2.150.0, MP_ONLY=goldbeat): the caster takes Gold Experience, its cooldowns on, the
      * watcher 2.5 blocks in front. G with the stand in: nothing. Q, then G on the watcher's guard ("GUARD+"): the glow,
      * the opening punch 16 ticks after it, the guard broken, no cutscene, its 3 minutes on from the punch's end. G
      * again: refused. The cooldowns off: G and the watcher strikes as it glows ("JAB+"): cut short. G with the watcher
-     * out of reach ("AWAY"): the punch on no one. G on the watcher: the cutscene, both held, the watcher's health going
+     * out of reach ("AWAY"): the punch on no one. G and the caster struck as its punch flies ("HITME", 2.153.0): stopped
+     * short, the stand back to its guard on both clients (they are told with the punch's own start). G on the watcher:
+     * the cutscene, both held, the watcher's health going
      * down through the rush and never under 1 before it lands, put down where the last blow sent it, 637 ticks from
      * the punch's start; each client's camera, sound and where it draws the watcher.
      */
@@ -962,8 +967,9 @@ public final class MpClient implements ClientModInitializer {
         "160 G",
         "170 NOCDON","175 HOME","180 HEAL","185 JAB+","190 G","215 JAB-",
         "235 AWAY","245 G",
-        "290 HOME","295 HEAL","305 G",
-        "1010 NOCDOFF","1020 END"};
+        "270 HOME","275 HEAL","280 G","297 HITME",
+        "320 HOME","325 HEAL","335 G",
+        "1040 NOCDOFF","1050 END"};
     /**
      * Gold Experience's H, the tree of life (2.152.0, MP_ONLY=goldtree): the caster takes Gold Experience, its cooldowns on.
      * H with the stand in: nothing. Q, the watcher 3 blocks ahead and 1.5 to the left, H: the caster held 10 ticks (the
